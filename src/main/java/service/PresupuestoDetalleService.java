@@ -7,7 +7,9 @@ package service;
 import conexion.Conexion;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import modelo.PresupuestoDetalle;
 import modelo.PresupuestoDetalleDAO;
 
@@ -79,6 +81,22 @@ public class PresupuestoDetalleService {
             if (conn != null) {
                 conn.close();
             }
+        }
+    }
+
+    /**
+     * Obtiene las cantidades totales ya presupuestadas para cada artículo de un pedido de compra.
+     *
+     * @param idPedidoCompra ID del pedido de compra
+     * @return Map con idArticulo como clave y cantidad total presupuestada como valor
+     */
+    public Map<Long, Long> obtenerCantidadesPresupuestadasPorPedido(Long idPedidoCompra) throws SQLException {
+        try (Connection conn = Conexion.getConnection()) {
+            PresupuestoDetalleDAO presupuestoDetalleDAO = new PresupuestoDetalleDAO(conn);
+            return presupuestoDetalleDAO.obtenerCantidadesPresupuestadasPorPedido(idPedidoCompra);
+        } catch (SQLException e) {
+            System.out.println("Error en PresupuestoDetalleService: " + e);
+            return new HashMap<>();
         }
     }
 }

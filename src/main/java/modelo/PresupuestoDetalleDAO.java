@@ -9,8 +9,10 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -170,6 +172,43 @@ public class PresupuestoDetalleDAO {
             }
         }
         return detallesExistentes;
+    }
+
+    /**
+     * Obtiene las cantidades totales ya presupuestadas para cada artículo de un pedido de compra.
+     * Suma las cantidades de todos los presupuestos asociados al pedido.
+     *
+     * @param idPedidoCompra ID del pedido de compra
+     * @return Map con idArticulo como clave y cantidad total presupuestada como valor
+     */
+    public Map<Long, Long> obtenerCantidadesPresupuestadasPorPedido(Long idPedidoCompra) throws SQLException {
+        Map<Long, Long> cantidadesPorArticulo = new HashMap<>();
+
+        if (idPedidoCompra == null) {
+            System.out.println("Error: idPedidoCompra es nulo en obtenerCantidadesPresupuestadasPorPedido");
+            return cantidadesPorArticulo;
+        }
+
+        // Query que suma las cantidades de todos los presupuestos asociados al pedido
+        String sql = "SELECT pd.id_articulo, SUM(pd.presu_det_cantidad) AS cantidad_total " +
+                    "FROM presupuesto_detalle pd " +
+                    "INNER JOIN presupuesto_cabecera pc ON pd.id_presupuesto_cab = pc.id_presupuesto_cab " +
+                    "WHERE pc.id_pedido_cab = ? " +
+                    "AND pc.presu_cab_estado NOT IN ('Anulado', 'Cancelado') " +
+                    "GROUP BY pd.id_articulo";
+
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, idPedidoCompra);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    Long idArticulo = rs.getLong("id_articulo");
+                    Long cantidadTotal = rs.getLong("cantidad_total");
+                    cantidadesPorArticulo.put(idArticulo, cantidadTotal);
+                }
+            }
+        }
+
+        return cantidadesPorArticulo;
     }
 
 }

@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.servlet.ServletException;
@@ -138,31 +139,43 @@ public class PresupuestoServlet extends HttpServlet {
                             listaPresupuestoDetalle = new ArrayList<PresupuestoDetalle>();
                             presupuesto.setPedidoCompra(pedidoCompraService.getPedidoCompra(Long.parseLong(request.getParameter("idPedCompraCab"))));
                             if (presupuesto.getPedidoCompra() != null) {
-                            request.setAttribute("pedidoCompra", presupuesto.getPedidoCompra());
-                            listaPedidoCompraDetalle = pedidoCompraDetalleService.listarDetallesPorPedido(presupuesto.getPedidoCompra().getIdPedido());
+                                request.setAttribute("pedidoCompra", presupuesto.getPedidoCompra());
+                                listaPedidoCompraDetalle = pedidoCompraDetalleService.listarDetallesPorPedido(presupuesto.getPedidoCompra().getIdPedido());
+
+                                // Obtener cantidades ya presupuestadas para este pedido
+                                Map<Long, Long> cantidadesYaPresupuestadas = presupuestoDetalleService
+                                        .obtenerCantidadesPresupuestadasPorPedido(presupuesto.getPedidoCompra().getIdPedido());
+
+                                // Calcular cantidades restantes y solo agregar artículos con cantidad > 0
                                 for (PedidoCompraDetalle pedidoCompraDetalle1 : listaPedidoCompraDetalle) {
-                                    PresupuestoDetalle presupuestoDetalleAux = new PresupuestoDetalle();
-                                    presupuestoDetalleAux.setPresupuesto(presupuesto);
-                                    presupuestoDetalleAux.setArticulo(pedidoCompraDetalle1.getArticulo());
-                                    presupuestoDetalleAux.setCantidad(pedidoCompraDetalle1.getCantidad());
-                                    listaPresupuestoDetalle.add(presupuestoDetalleAux);
+                                    Long idArticulo = pedidoCompraDetalle1.getArticulo().getIdArticulo();
+                                    Long cantidadPedida = pedidoCompraDetalle1.getCantidad();
+                                    Long cantidadPresupuestada = cantidadesYaPresupuestadas.getOrDefault(idArticulo, 0L);
+                                    Long cantidadRestante = cantidadPedida - cantidadPresupuestada;
+
+                                    // Solo agregar si hay cantidad restante por presupuestar
+                                    if (cantidadRestante > 0) {
+                                        PresupuestoDetalle presupuestoDetalleAux = new PresupuestoDetalle();
+                                        presupuestoDetalleAux.setPresupuesto(presupuesto);
+                                        presupuestoDetalleAux.setArticulo(pedidoCompraDetalle1.getArticulo());
+                                        presupuestoDetalleAux.setCantidad(cantidadRestante); // Solo la cantidad restante
+                                        listaPresupuestoDetalle.add(presupuestoDetalleAux);
+                                    }
                                 }
-                            if (listaPresupuestoDetalle == null) {
-                                mostrarMensaje(request, "No se pudo obtener lista de articulos del pedido seleccionado", "alert-warning");
-                                presupuesto = null;
-                                presupuestoDetalle = null;
-                                request.setAttribute("presupuesto", presupuesto); //envia presupuesto vacio
-                                request.getRequestDispatcher("PresupuestoServlet?menu=Presupuesto&accion=ListarModal").forward(request, response);
-                                break;
-                            }
-//                            presupuestoDetalle = null; //vacia presupuseto detalle
-                            request.setAttribute("listPedCompraConDetalle", listaPedidoCompraConDetalle); //mantener lista de pedidos Modal
-                            request.setAttribute("listaPresupuestosConDetalle", presupuestosConDetalle); //mantener lista de presupuestos con detalle Modal
-                            request.setAttribute("listaProveedores", proveedores); // mantener proveedores Modal
-                            request.setAttribute("presupuesto", presupuesto); //mantener datos del presupuesto nuevo cargado
-                            request.setAttribute("newIdPresupuesto", newIdPresupuesto); //si es presupuesto nuevo que mantenga el nuevo id
-                            request.setAttribute("proveedorSeleccionado", proveedor); //mantener proveedor seleccionado
-                            request.setAttribute("listaPresupuestoDetalle", listaPresupuestoDetalle); //carga grilla principal con lista de articulos del pedido seleccionado
+
+                                // Verificar si hay artículos pendientes de presupuestar
+                                if (listaPresupuestoDetalle.isEmpty()) {
+                                    mostrarMensaje(request, "Este pedido ya tiene todos sus artículos presupuestados", "alert-info");
+                                    presupuesto.setPedidoCompra(null);
+                                }
+
+                                request.setAttribute("listPedCompraConDetalle", listaPedidoCompraConDetalle); //mantener lista de pedidos Modal
+                                request.setAttribute("listaPresupuestosConDetalle", presupuestosConDetalle); //mantener lista de presupuestos con detalle Modal
+                                request.setAttribute("listaProveedores", proveedores); // mantener proveedores Modal
+                                request.setAttribute("presupuesto", presupuesto); //mantener datos del presupuesto nuevo cargado
+                                request.setAttribute("newIdPresupuesto", newIdPresupuesto); //si es presupuesto nuevo que mantenga el nuevo id
+                                request.setAttribute("proveedorSeleccionado", proveedor); //mantener proveedor seleccionado
+                                request.setAttribute("listaPresupuestoDetalle", listaPresupuestoDetalle); //carga grilla principal con lista de articulos del pedido seleccionado
                             } else {
                                 request.setAttribute("Message", "No se pudo cargar el Pedido de compra");
                                 request.setAttribute("tipoAlert", "alert-warning");
@@ -170,7 +183,7 @@ public class PresupuestoServlet extends HttpServlet {
                         } catch (NumberFormatException e) {
                             mostrarMensaje(request, "Error al cargar pedio de compra seleccionado", "alert-danger");
                         }
-                        
+
                         request.getRequestDispatcher("presupuesto.jsp").forward(request, response);
 
                         break;
@@ -443,11 +456,12 @@ public class PresupuestoServlet extends HttpServlet {
 
     /**
      * Método para actualizar el estado del Pedido de Compra según los artículos presupuestados.
-     * - Si todos los artículos del pedido están en el presupuesto con las mismas cantidades: "Presupuestado Completo"
-     * - Si faltan artículos o las cantidades son menores: "Presupuestado Parcial"
+     * Verifica el TOTAL de cantidades presupuestadas en TODOS los presupuestos del pedido.
+     * - Si la suma de todos los presupuestos cubre todas las cantidades del pedido: "Presupuestado Completo"
+     * - Si hay artículos o cantidades pendientes: "Presupuestado Parcial"
      *
      * @param pedidoCompra El pedido de compra asociado al presupuesto
-     * @param listaPresupuestoDetalle Lista de detalles del presupuesto
+     * @param listaPresupuestoDetalle Lista de detalles del presupuesto actual (no se usa, se recalcula el total)
      */
     private void actualizarEstadoPedidoCompra(PedidoCompra pedidoCompra, List<PresupuestoDetalle> listaPresupuestoDetalle) {
         if (pedidoCompra == null || pedidoCompra.getIdPedido() == null) {
@@ -464,25 +478,20 @@ public class PresupuestoServlet extends HttpServlet {
                 return;
             }
 
+            // Obtener el TOTAL de cantidades presupuestadas de TODOS los presupuestos para este pedido
+            Map<Long, Long> totalPresupuestado = presupuestoDetalleService
+                    .obtenerCantidadesPresupuestadasPorPedido(pedidoCompra.getIdPedido());
+
             boolean esCompleto = true;
 
-            // Verificar si todos los artículos del pedido están en el presupuesto con las mismas cantidades
+            // Verificar si TODOS los artículos del pedido están completamente presupuestados
             for (PedidoCompraDetalle detallePedido : detallesPedido) {
-                boolean articuloEncontrado = false;
+                Long idArticulo = detallePedido.getArticulo().getIdArticulo();
+                Long cantidadPedida = detallePedido.getCantidad();
+                Long cantidadTotalPresupuestada = totalPresupuestado.getOrDefault(idArticulo, 0L);
 
-                for (PresupuestoDetalle detallePresupuesto : listaPresupuestoDetalle) {
-                    if (detallePedido.getArticulo().getIdArticulo().equals(detallePresupuesto.getArticulo().getIdArticulo())) {
-                        articuloEncontrado = true;
-                        // Verificar si la cantidad presupuestada es igual a la del pedido
-                        if (!detallePedido.getCantidad().equals(detallePresupuesto.getCantidad())) {
-                            esCompleto = false;
-                        }
-                        break;
-                    }
-                }
-
-                // Si el artículo del pedido no está en el presupuesto, es parcial
-                if (!articuloEncontrado) {
+                // Si la cantidad presupuestada es menor que la pedida, es parcial
+                if (cantidadTotalPresupuestada < cantidadPedida) {
                     esCompleto = false;
                     break;
                 }
