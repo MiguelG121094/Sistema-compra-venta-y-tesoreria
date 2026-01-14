@@ -18,6 +18,7 @@ public class PedidoCompra {
     private Sucursal sucursal;
     private Date fecha;
     private String estado;
+    private String observacion;
     private String listaArticulos;
     private List<PedidoCompraDetalle> pedidoCompDetalles;
 
@@ -92,6 +93,14 @@ public class PedidoCompra {
 
     public void setEstado(String estado) {
         this.estado = estado;
+    }
+
+    public String getObservacion() {
+        return observacion;
+    }
+
+    public void setObservacion(String observacion) {
+        this.observacion = observacion;
     }
 
     public List<PedidoCompraDetalle> getDetalles() {

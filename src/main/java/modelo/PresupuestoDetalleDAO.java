@@ -4,7 +4,6 @@
  */
 package modelo;
 
-import conexion.Conexion;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -48,6 +47,7 @@ public class PresupuestoDetalleDAO {
                 Long precioCompra = rs.getLong("presu_det_precio_compra");
 
                 PresupuestoDetalle detalle = new PresupuestoDetalle(presupuesto, articulo, cantidad, precioCompra);
+                detalle.setDescuento(rs.getLong("presu_det_descuento"));
                 detalles.add(detalle);
             }
         }
@@ -60,13 +60,18 @@ public class PresupuestoDetalleDAO {
             return false;
         }
 
-        String sql = "INSERT INTO presupuesto_detalle(id_presupuesto_cab, id_articulo, presu_det_cantidad, presu_det_precio_compra) VALUES (?, ?, ?, ?);";
+        String sql = "INSERT INTO presupuesto_detalle(id_presupuesto_cab, id_articulo, presu_det_cantidad, presu_det_precio_compra, presu_det_descuento) VALUES (?, ?, ?, ?, ?);";
 
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setLong(1, detalle.getPresupuesto().getIdPresupuesto());
             stmt.setLong(2, detalle.getArticulo().getIdArticulo());
             stmt.setLong(3, detalle.getCantidad());
             stmt.setLong(4, detalle.getPrecioCompra());
+            if (detalle.getDescuento() != null) {
+                stmt.setLong(5, detalle.getDescuento());
+            } else {
+                stmt.setNull(5, java.sql.Types.INTEGER);
+            }
 
             int filasAfectadas = stmt.executeUpdate();
             return filasAfectadas > 0;
@@ -91,55 +96,64 @@ public class PresupuestoDetalleDAO {
     }
 
     public void actualizarPresupuestoDetalles(Long idPresupuesto, List<PresupuestoDetalle> detalles) throws SQLException {
-        PreparedStatement stmt = null;
+        if (idPresupuesto == null || detalles == null) {
+            System.out.println("Error: Parámetros inválidos para actualizar detalles");
+            return;
+        }
+
+        boolean autoCommitOriginal = conn.getAutoCommit();
         try {
-            conn = Conexion.getConnection();
-            PreparedStatement stmtUpdate = null;
             conn.setAutoCommit(false); //deshabilitar el autocommit para manejar la transacción manualmente
 
             String updateDetalle = "UPDATE public.presupuesto_detalle " +
-                                "SET presu_det_cantidad=?, presu_det_precio_compra=? " +
+                                "SET presu_det_cantidad=?, presu_det_precio_compra=?, presu_det_descuento=? " +
                                 "WHERE id_presupuesto_cab = ? AND id_articulo = ?";
-            
-            stmtUpdate = conn.prepareStatement(updateDetalle);
 
-            //obteniene los detalles actuales del pedido en la base de datos
-            Set<Long> detallesExistentes = obtenerDetallesExistentes(conn, idPresupuesto);
+            try (PreparedStatement stmtUpdate = conn.prepareStatement(updateDetalle)) {
+                //obtiene los detalles actuales del pedido en la base de datos
+                Set<Long> detallesExistentes = obtenerDetallesExistentes(conn, idPresupuesto);
 
-        for (PresupuestoDetalle detalle : detalles) {
-            Long idArticulo = detalle.getArticulo().getIdArticulo();
+                for (PresupuestoDetalle detalle : detalles) {
+                    Long idArticulo = detalle.getArticulo().getIdArticulo();
 
-            if (detallesExistentes.contains(idArticulo)) {
-                // actualiza el detalle existente
-                stmtUpdate.setLong(1, detalle.getCantidad());
-                stmtUpdate.setLong(2, detalle.getPrecioCompra());
-                stmtUpdate.setLong(3, idPresupuesto);
-                stmtUpdate.setLong(4, idArticulo);
-                stmtUpdate.addBatch(); // Agregar la actualización al batch
-            } else {
-                // sino inserta el detalle
-                insertarDetalle(detalle);
+                    if (detallesExistentes.contains(idArticulo)) {
+                        // actualiza el detalle existente
+                        stmtUpdate.setLong(1, detalle.getCantidad());
+                        stmtUpdate.setLong(2, detalle.getPrecioCompra());
+                        if (detalle.getDescuento() != null) {
+                            stmtUpdate.setLong(3, detalle.getDescuento());
+                        } else {
+                            stmtUpdate.setNull(3, java.sql.Types.INTEGER);
+                        }
+                        stmtUpdate.setLong(4, idPresupuesto);
+                        stmtUpdate.setLong(5, idArticulo);
+                        stmtUpdate.addBatch(); // Agregar la actualización al batch
+                    } else {
+                        // sino inserta el detalle
+                        insertarDetalle(detalle);
+                    }
+
+                    //marcar el detalle como procesado
+                    detallesExistentes.remove(idArticulo);
+                }
+
+                //eliminar los detalles que ya no están en la lista
+                for (Long idArticulo : detallesExistentes) {
+                    eliminarDetalle(idPresupuesto, idArticulo);
+                }
+
+                // Ejecutar los batches
+                stmtUpdate.executeBatch();
             }
 
-            //marcar el detalle como procesado
-            detallesExistentes.remove(idArticulo);
-        }
-
-        //eliminar los detalles que ya no están en la lista
-        for (Long idArticulo : detallesExistentes) {
-            eliminarDetalle(idPresupuesto, idArticulo);
-        }
-
-            // Ejecutar los batches
-            stmtUpdate.executeBatch();
-
             conn.commit(); // Confirmar la transacción
-            conn.setAutoCommit(true); //habilita de vuelta el autocommit
         } catch (SQLException e) {
             if (conn != null) {
                 conn.rollback(); // Revertir la transacción en caso de error
             }
             throw e; // Relanzar la excepción para manejarla en el servlet
+        } finally {
+            conn.setAutoCommit(autoCommitOriginal); // Restaurar el estado original del autocommit
         }
     }
     

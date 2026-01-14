@@ -52,7 +52,7 @@ public class PedidoCompraDAO {
             return null;
         }
         PedidoCompra pedidoCompra = null;
-        String sql = "SELECT id_pedido_cab, id_usuario, id_sucursal, ped_comp_fecha, ped_comp_estado FROM pedido_compra_cabecera WHERE id_pedido_cab = ?";
+        String sql = "SELECT id_pedido_cab, id_usuario, id_sucursal, ped_comp_fecha, ped_comp_estado, ped_comp_observacion FROM pedido_compra_cabecera WHERE id_pedido_cab = ?";
         usuarioDAO = new UsuarioDAO(conn);
         sucursalDAO = new SucursalDAO(conn);
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -66,6 +66,7 @@ public class PedidoCompraDAO {
                         rs.getDate("ped_comp_fecha"),
                         rs.getString("ped_comp_estado")
                     );
+                    pedidoCompra.setObservacion(rs.getString("ped_comp_observacion"));
                 }
             }
         }
@@ -74,7 +75,7 @@ public class PedidoCompraDAO {
 
     public List<PedidoCompra> listarPedidos() throws SQLException {
         List<PedidoCompra> pedidos = new ArrayList<>();
-        String sql = "SELECT id_pedido_cab, id_usuario, id_sucursal, ped_comp_fecha, ped_comp_estado FROM pedido_compra_cabecera";
+        String sql = "SELECT id_pedido_cab, id_usuario, id_sucursal, ped_comp_fecha, ped_comp_estado, ped_comp_observacion FROM pedido_compra_cabecera";
         usuarioDAO = new UsuarioDAO(conn);
         sucursalDAO = new SucursalDAO(conn);
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -87,6 +88,7 @@ public class PedidoCompraDAO {
                             rs.getDate("ped_comp_fecha"),
                             rs.getString("ped_comp_estado")
                     );
+                    pedido.setObservacion(rs.getString("ped_comp_observacion"));
                     pedidos.add(pedido);
                 }
             }
@@ -291,13 +293,14 @@ public class PedidoCompraDAO {
             return null;
         }
 
-        String sql = "INSERT INTO pedido_compra_cabecera (id_usuario, id_sucursal, ped_comp_fecha, ped_comp_estado) VALUES (?, ?, ?, ?)";
+        String sql = "INSERT INTO pedido_compra_cabecera (id_usuario, id_sucursal, ped_comp_fecha, ped_comp_estado, ped_comp_observacion) VALUES (?, ?, ?, ?, ?)";
 
         try (PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             stmt.setLong(1, pedido.getUsuario().getIdUsuario());
             stmt.setLong(2, pedido.getSucursal().getIdSucursal());
             stmt.setDate(3, new java.sql.Date(pedido.getFecha().getTime()));
             stmt.setString(4, pedido.getEstado());
+            stmt.setString(5, pedido.getObservacion());
 
             int filasAfectadas = stmt.executeUpdate();
             if (filasAfectadas == 0) {
@@ -324,14 +327,15 @@ public class PedidoCompraDAO {
             return;
         }
 
-        String sql = "UPDATE pedido_compra_cabecera SET id_usuario = ?, id_sucursal = ?, ped_comp_fecha = ?, ped_comp_estado = ? WHERE id_pedido_cab = ?";
+        String sql = "UPDATE pedido_compra_cabecera SET id_usuario = ?, id_sucursal = ?, ped_comp_fecha = ?, ped_comp_estado = ?, ped_comp_observacion = ? WHERE id_pedido_cab = ?";
 
          try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setLong(1, pedido.getUsuario().getIdUsuario());
             stmt.setLong(2, pedido.getSucursal().getIdSucursal());
             stmt.setDate(3, new java.sql.Date(pedido.getFecha().getTime()));
             stmt.setString(4, pedido.getEstado());
-            stmt.setLong(5, pedido.getIdPedido());
+            stmt.setString(5, pedido.getObservacion());
+            stmt.setLong(6, pedido.getIdPedido());
 
             int filasAfectadas = stmt.executeUpdate();
             if (filasAfectadas == 0) {
@@ -385,14 +389,15 @@ public class PedidoCompraDAO {
 
         // Actualizar la cabecera del pedido
         String updateCabecera = "UPDATE pedido_compra_cabecera "
-                + "SET id_usuario = ?, id_sucursal = ?, ped_comp_fecha = ?, ped_comp_estado = ? "
+                + "SET id_usuario = ?, id_sucursal = ?, ped_comp_fecha = ?, ped_comp_estado = ?, ped_comp_observacion = ? "
                 + "WHERE id_pedido_cab = ?";
         try ( PreparedStatement stmt = conn.prepareStatement(updateCabecera)) {
             stmt.setLong(1, pedidoCompra.getUsuario().getIdUsuario());
             stmt.setLong(2, pedidoCompra.getSucursal().getIdSucursal());
             stmt.setDate(3, new java.sql.Date(pedidoCompra.getFecha().getTime()));
             stmt.setString(4, pedidoCompra.getEstado());
-            stmt.setLong(5, pedidoCompra.getIdPedido());
+            stmt.setString(5, pedidoCompra.getObservacion());
+            stmt.setLong(6, pedidoCompra.getIdPedido());
 
             int filasAfectadas = stmt.executeUpdate();
             if (filasAfectadas == 0) {

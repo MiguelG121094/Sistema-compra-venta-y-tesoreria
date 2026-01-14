@@ -15,10 +15,13 @@ public class Presupuesto {
 
     private Long idPresupuesto;
     private PedidoCompra pedidoCompra;
-    private Proveedor proveedor;    
+    private Proveedor proveedor;
     private Date fecha;
     private String estado;
     private Usuario usuario;
+    private Date fechaVencimiento;
+    private String observacion;
+    private String condicionCompra;
     private String listaArticulos;
     private List<PresupuestoDetalle> presupuestoDetalle;
 
@@ -105,6 +108,30 @@ public class Presupuesto {
 
     public void setUsuario(Usuario usuario) {
         this.usuario = usuario;
+    }
+
+    public Date getFechaVencimiento() {
+        return fechaVencimiento;
+    }
+
+    public void setFechaVencimiento(Date fechaVencimiento) {
+        this.fechaVencimiento = fechaVencimiento;
+    }
+
+    public String getObservacion() {
+        return observacion;
+    }
+
+    public void setObservacion(String observacion) {
+        this.observacion = observacion;
+    }
+
+    public String getCondicionCompra() {
+        return condicionCompra;
+    }
+
+    public void setCondicionCompra(String condicionCompra) {
+        this.condicionCompra = condicionCompra;
     }
 
     public String getListaArticulos() {

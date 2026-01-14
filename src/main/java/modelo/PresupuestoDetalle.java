@@ -13,6 +13,7 @@ public class PresupuestoDetalle {
     private Articulo articulo;
     private Long cantidad;
     private Long precioCompra;
+    private Long descuento;
 
     public PresupuestoDetalle() {
     }
@@ -54,5 +55,13 @@ public class PresupuestoDetalle {
 
     public void setPrecioCompra(Long precioCompra) {
         this.precioCompra = precioCompra;
+    }
+
+    public Long getDescuento() {
+        return descuento;
+    }
+
+    public void setDescuento(Long descuento) {
+        this.descuento = descuento;
     }
 }

@@ -54,8 +54,12 @@ public class PresupuestoDAO {
             return null;
         }
         presupuesto = null;
-        String sql = "SELECT id_presupuesto_cab, id_pedido_cab, id_proveedor, presu_cab_fecha, presu_cab_estado, id_usuario "
+        String sql = "SELECT id_presupuesto_cab, id_pedido_cab, id_proveedor, presu_cab_fecha, presu_cab_estado, id_usuario, "
+                + "presu_fecha_venci, presu_cab_observacion, presu_cab_condicion_comp "
                 + "FROM presupuesto_cabecera WHERE id_presupuesto_cab = ?";
+        pedidoCompraDAO = new PedidoCompraDAO(conn);
+        proveedorDAO = new ProveedorDAO(conn);
+        usuarioDAO = new UsuarioDAO(conn);
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setLong(1, idPresupuesto);
             try (ResultSet rs = stmt.executeQuery()){
@@ -64,6 +68,9 @@ public class PresupuestoDAO {
                     proveedor = proveedorDAO.getProveedor(rs.getLong("id_proveedor"));
                     presupuesto = new Presupuesto(rs.getLong("id_presupuesto_cab"), pedidoCompra, proveedor, rs.getDate("presu_cab_fecha"),
                             rs.getString("presu_cab_estado"), usuarioDAO.getUsuario(rs.getLong("id_usuario")));
+                    presupuesto.setFechaVencimiento(rs.getDate("presu_fecha_venci"));
+                    presupuesto.setObservacion(rs.getString("presu_cab_observacion"));
+                    presupuesto.setCondicionCompra(rs.getString("presu_cab_condicion_comp"));
                 }
             }
         }
@@ -72,8 +79,12 @@ public class PresupuestoDAO {
 
     public List<Presupuesto> listarPresupuesto() throws SQLException {
         List<Presupuesto> pedidos = new ArrayList<>();
-        String sql = "SELECT id_presupuesto_cab, id_pedido_cab, id_proveedor, presu_cab_fecha, presu_cab_estado, id_usuario "
+        String sql = "SELECT id_presupuesto_cab, id_pedido_cab, id_proveedor, presu_cab_fecha, presu_cab_estado, id_usuario, "
+                + "presu_fecha_venci, presu_cab_observacion, presu_cab_condicion_comp "
                 + "FROM presupuesto_cabecera";
+        pedidoCompraDAO = new PedidoCompraDAO(conn);
+        proveedorDAO = new ProveedorDAO(conn);
+        usuarioDAO = new UsuarioDAO(conn);
 
         try (PreparedStatement stmt = conn.prepareStatement(sql);
              ResultSet rs = stmt.executeQuery()) {
@@ -83,6 +94,9 @@ public class PresupuestoDAO {
                     proveedor = proveedorDAO.getProveedor(rs.getLong("id_proveedor"));
                     presupuesto = new Presupuesto(rs.getLong("id_presupuesto_cab"), pedidoCompra, proveedor, rs.getDate("presu_cab_fecha"),
                             rs.getString("presu_cab_estado"), usuarioDAO.getUsuario(rs.getLong("id_usuario")));
+                    presupuesto.setFechaVencimiento(rs.getDate("presu_fecha_venci"));
+                    presupuesto.setObservacion(rs.getString("presu_cab_observacion"));
+                    presupuesto.setCondicionCompra(rs.getString("presu_cab_condicion_comp"));
                 pedidos.add(presupuesto);
             }
         }
@@ -197,8 +211,8 @@ public class PresupuestoDAO {
             return null;
         }
 
-        String sql = "INSERT INTO presupuesto_cabecera(id_pedido_cab, id_proveedor, presu_cab_fecha, presu_cab_estado, id_usuario)" +
-                    "VALUES (?, ?, ?, ?, ?);";
+        String sql = "INSERT INTO presupuesto_cabecera(id_pedido_cab, id_proveedor, presu_cab_fecha, presu_cab_estado, id_usuario, " +
+                    "presu_fecha_venci, presu_cab_observacion, presu_cab_condicion_comp) VALUES (?, ?, ?, ?, ?, ?, ?, ?);";
 
         try (PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             stmt.setLong(1, presupuesto.getPedidoCompra().getIdPedido());
@@ -206,6 +220,9 @@ public class PresupuestoDAO {
             stmt.setDate(3, new java.sql.Date(presupuesto.getFecha().getTime()));
             stmt.setString(4, presupuesto.getEstado());
             stmt.setLong(5, presupuesto.getUsuario().getIdUsuario());
+            stmt.setDate(6, presupuesto.getFechaVencimiento() != null ? new java.sql.Date(presupuesto.getFechaVencimiento().getTime()) : null);
+            stmt.setString(7, presupuesto.getObservacion());
+            stmt.setString(8, presupuesto.getCondicionCompra());
             
             int filasAfectadas = stmt.executeUpdate();
             if (filasAfectadas == 0) {
@@ -231,9 +248,10 @@ public class PresupuestoDAO {
             System.out.println("Error: presupuesto de compra inválido");
             return;
         }
-        
+
         String sql = "UPDATE presupuesto_cabecera SET id_pedido_cab=?, id_proveedor=?, " +
-                    "presu_cab_fecha=?, presu_cab_estado=?, id_usuario=? WHERE id_presupuesto_cab = ?;";
+                    "presu_cab_fecha=?, presu_cab_estado=?, id_usuario=?, presu_fecha_venci=?, " +
+                    "presu_cab_observacion=?, presu_cab_condicion_comp=? WHERE id_presupuesto_cab = ?;";
 
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setLong(1, presupuesto.getPedidoCompra().getIdPedido());
@@ -241,6 +259,10 @@ public class PresupuestoDAO {
             stmt.setDate(3, new java.sql.Date(presupuesto.getFecha().getTime()));
             stmt.setString(4, presupuesto.getEstado());
             stmt.setLong(5, presupuesto.getUsuario().getIdUsuario());
+            stmt.setDate(6, presupuesto.getFechaVencimiento() != null ? new java.sql.Date(presupuesto.getFechaVencimiento().getTime()) : null);
+            stmt.setString(7, presupuesto.getObservacion());
+            stmt.setString(8, presupuesto.getCondicionCompra());
+            stmt.setLong(9, presupuesto.getIdPresupuesto());
 
             int rowsUpdated = stmt.executeUpdate();
             if (rowsUpdated > 0) {
@@ -277,7 +299,7 @@ public class PresupuestoDAO {
         }
         
         // bloquear la cabecera para evitar modificaciones concurrentes
-        String sqlCabecera = "SELECT id_presupuesto_cab, id_pedido_cab, id_proveedor, presu_cab_fecha, presu_cab_estado, id_usuario" +
+        String sqlCabecera = "SELECT id_presupuesto_cab, id_pedido_cab, id_proveedor, presu_cab_fecha, presu_cab_estado, id_usuario " +
                             "FROM presupuesto_cabecera WHERE id_presupuesto_cab = ? FOR UPDATE";
         try(PreparedStatement stmt = conn.prepareStatement(sqlCabecera)) {
             stmt.setLong(1, presupuesto.getIdPresupuesto());
@@ -290,13 +312,18 @@ public class PresupuestoDAO {
         
         // Actualizar la cabecera
         String updateCabecera = "UPDATE presupuesto_cabecera SET id_pedido_cab=?, id_proveedor=?, " +
-                "presu_cab_fecha=?, presu_cab_estado=?, id_usuario=? WHERE id_presupuesto_cab = ?;";
+                "presu_cab_fecha=?, presu_cab_estado=?, id_usuario=?, presu_fecha_venci=?, " +
+                "presu_cab_observacion=?, presu_cab_condicion_comp=? WHERE id_presupuesto_cab = ?;";
         try ( PreparedStatement stmt = conn.prepareStatement(updateCabecera)) {
             stmt.setLong(1, presupuesto.getPedidoCompra().getIdPedido());
             stmt.setLong(2, presupuesto.getProveedor().getIdProveedor());
             stmt.setDate(3, new java.sql.Date(presupuesto.getFecha().getTime()));
             stmt.setString(4, presupuesto.getEstado());
             stmt.setLong(5, presupuesto.getUsuario().getIdUsuario());
+            stmt.setDate(6, presupuesto.getFechaVencimiento() != null ? new java.sql.Date(presupuesto.getFechaVencimiento().getTime()) : null);
+            stmt.setString(7, presupuesto.getObservacion());
+            stmt.setString(8, presupuesto.getCondicionCompra());
+            stmt.setLong(9, presupuesto.getIdPresupuesto());
             stmt.executeUpdate();
         } catch (Exception e) {
             throw e; // relanzar la excepción para manejar en el service
