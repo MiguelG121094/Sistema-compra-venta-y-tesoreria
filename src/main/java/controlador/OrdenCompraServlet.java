@@ -92,7 +92,7 @@ public class OrdenCompraServlet extends HttpServlet {
                         ordenesCompraConDetalle = ordenCompraService.listarOrdenesCompraConDetalles();
                         request.setAttribute("listaOrdenesCompraConDetalle", ordenesCompraConDetalle);
                         // Listar sucursales
-                        listaSucursales = sucursalService.listarSucursals();
+                        listaSucursales = sucursalService.listarSucursles();
                         request.setAttribute("listaSucursales", listaSucursales);
 
                         request.getRequestDispatcher("ordenCompra.jsp").forward(request, response);

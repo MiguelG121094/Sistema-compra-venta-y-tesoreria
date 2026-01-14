@@ -20,7 +20,7 @@ import javax.sql.DataSource;
  */
 public class Conexion {
 
-    private static final String URL = "jdbc:postgresql://localhost:5432/taller_3ro_compras_tesoreria";
+    private static final String URL = "jdbc:postgresql://localhost:5432/sistema_compra_venta_tesoreria";
     private static final String USUARIO = "postgres";
     private static final String CONTRASEÑA = "adolfo94";
 
@@ -50,7 +50,21 @@ public class Conexion {
     
     // manejo de la conexion a la base de datos con pool de conexiones que se administra desde la consola del glassfish en http://localhost:4848/
     private static DataSource dataSource;
-
+    
+    /**
+    cambiar BD en desde la consola de administracion de glassfish:
+    1. Abrir: http://localhost:4848/
+    2. Ir a: Resources → JDBC → JDBC Connection Pools
+    3. Selecciona el pool (probablemente MiDataSource o MiPoolPostgres)
+    4. En la pestaña Additional Properties modificar:
+    - URL o serverName → nuevo servidor
+    - databaseName → nombre de la nueva base de datos
+    - user → usuario
+    - password → contraseña
+    - portNumber → puerto (5432 por defecto para PostgreSQL)
+    5. Click Save
+     */
+    
     static {
         try {
             Context initContext = new InitialContext();
