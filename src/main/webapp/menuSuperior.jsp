@@ -1,8 +1,9 @@
-<%-- 
+<%--
     Document   : menuSuperior
     Created on : 8/03/2025, 12:43:38 AM
     Author     : Miguel
 --%>
+<%@ page contentType="text/html;charset=UTF-8" language="java" pageEncoding="UTF-8" %>
 
 <head>
     <!--Agrega estilo al div de sugerencia para el buscador-->
@@ -28,14 +29,14 @@
 <body>
     <nav class="sb-topnav navbar navbar-expand navbar-dark bg-dark">
         <!-- Navbar Brand-->
-        <a class="navbar-brand ps-3" href="MenuPrincipal.jsp">Sistema <br>Compras y TesorerÌa</a>   
+        <a class="navbar-brand ps-3" href="MenuPrincipal.jsp">Sistema <br>Compras y Tesorer√≠a</a>
         <!-- Sidebar Toggle-->
         <button class="btn btn-link btn-sm order-1 order-lg-0 me-4 me-lg-0" id="sidebarToggle" href="#!"><i class="fas fa-bars"></i></button>
         <!-- Navbar Search-->
         <form class="d-none d-md-inline-block form-inline ms-auto me-0 me-md-3 my-2 my-md-0">
             <div class="search-container">
             <div class="input-group">
-                <input id="searchInput" class="form-control" type="text" placeholder="Buscar P·gina" />
+                <input id="searchInput" class="form-control" type="text" placeholder="Buscar P√°gina" />
                 <div class="input-group-append">
                     <button class="btn btn-primary" id="btnNavbarSearch" type="button"><i class="fas fa-search"></i></button>
                 </div>
@@ -48,15 +49,15 @@
             <li class="nav-item dropdown">
                 <a class="nav-link dropdown-toggle" id="navbarDropdown" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="fas fa-user fa-fw"></i></a>
                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
-                    <li><a class="dropdown-item" href="#!">ConfiguraciÛn</a></li>
+                    <li><a class="dropdown-item" href="#!">Configuraci√≥n</a></li>
                     <li><a class="dropdown-item" href="registrarUsuario.jsp">Agregar Usuario</a></li>
                     <li><hr class="dropdown-divider" /></li>
-                    <li><a class="dropdown-item" href="LogoutServlet">Cerrar sesiÛn</a></li>
+                    <li><a class="dropdown-item" href="LogoutServlet">Cerrar sesi√≥n</a></li>
                 </ul>
             </li>
         </ul>
     </nav>
-    
+
     <!--Script para el buscador del menuSuperior-->
     <script>
         const suggestionsDiv = document.getElementById('suggestions');
@@ -67,7 +68,7 @@
             suggestionsDiv.innerHTML = ''; // Limpiar sugerencias anteriores
 
             if (query) {
-                const filteredSuggestions = Object.keys(searchMap).filter(key => 
+                const filteredSuggestions = Object.keys(searchMap).filter(key =>
                     key.toLowerCase().includes(query)
                 );
 
@@ -86,31 +87,34 @@
                     suggestionsDiv.style.display = 'none'; // Ocultar si no hay coincidencias
                 }
             } else {
-                suggestionsDiv.style.display = 'none'; // Ocultar si el input est· vacÌo
+                suggestionsDiv.style.display = 'none'; // Ocultar si el input est√° vac√≠o
             }
         });
-//      Agregar todas las paginas aqui para que el buscador le pueda ver
+
+        // Agregar todas las p√°ginas aqu√≠ para que el buscador las pueda ver
         var searchMap = {
-        'inicio': 'MenuPrincipal.jsp',
-        'tipo de articulos': 'TipoArticuloServlet?menu=TipoArticulo&accion=Listar',
-        'pedido de compra': 'PedidoCompraServlet?menu=PedidoCompra&accion=Listar',
-        'base': 'base.jsp',
-        'error': 'error.jsp',
-        // Agrega m·s tÈrminos y URLs seg˙n sea necesario
+            'inicio': 'MenuPrincipal.jsp',
+            'tipo de articulos': 'TipoArticuloServlet?menu=TipoArticulo&accion=Listar',
+            'pedido de compra': 'PedidoCompraServlet?menu=PedidoCompra&accion=ListarModal',
+            'presupuesto': 'PresupuestoServlet?menu=Presupuesto&accion=ListarModal',
+            'orden de compra': 'OrdenCompraServlet?menu=OrdenCompra&accion=ListarModal',
+            'base': 'base.jsp',
+            'error': 'error.jsp',
+            // Agregar m√°s t√©rminos y URLs seg√∫n sea necesario
         };
 
         document.getElementById('btnNavbarSearch').addEventListener('click', function() {
-        var searchQuery = document.getElementById('searchInput').value.trim().toLowerCase();
+            var searchQuery = document.getElementById('searchInput').value.trim().toLowerCase();
 
-        if (searchQuery) {
-            if (searchMap[searchQuery]) {
-                window.location.href = searchMap[searchQuery];
+            if (searchQuery) {
+                if (searchMap[searchQuery]) {
+                    window.location.href = searchMap[searchQuery];
+                } else {
+                    alert('No se encontraron resultados para "' + searchQuery + '".');
+                }
             } else {
-                alert('No se encontraron resultados para "' + searchQuery + '".');
+                alert('Por favor, ingresa un t√©rmino de b√∫squeda.');
             }
-        } else {
-            alert('Por favor, ingresa un tÈrmino de b˙squeda.');
-        }
         });
     </script>
 </body>
