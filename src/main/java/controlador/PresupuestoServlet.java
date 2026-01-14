@@ -335,10 +335,14 @@ public class PresupuestoServlet extends HttpServlet {
                                         break;
                                     }
                                 }
-                                Long idPresuInserted = null;
-//                                Long idPresuInserted = presupuestoService.insertarPresupuesto(
-//                                        new Presupuesto(null, presupuesto.getPedidoCompra(),
-//                                        presupuesto.getProveedor(), new Date(), "Pendiente", usuario));
+                                // Crear presupuesto con los datos completos
+                                Presupuesto presupuestoToInsert = new Presupuesto(null, presupuesto.getPedidoCompra(),
+                                        presupuesto.getProveedor(), new Date(), "Pendiente", usuario);
+                                presupuestoToInsert.setFechaVencimiento(presupuesto.getFechaVencimiento());
+                                presupuestoToInsert.setObservacion(presupuesto.getObservacion());
+                                presupuestoToInsert.setCondicionCompra(presupuesto.getCondicionCompra());
+
+                                Long idPresuInserted = presupuestoService.insertarPresupuesto(presupuestoToInsert);
 
                                 if (idPresuInserted == null) {
                                     request.setAttribute("Message", "Error al guardar el presupuesto de compra cabecera");
@@ -371,8 +375,8 @@ public class PresupuestoServlet extends HttpServlet {
                                 if (presupuesto == null || presupuesto.getProveedor() == null || listaPresupuestoDetalle == null || listaPresupuestoDetalle.isEmpty()) {
                                     mostrarMensaje(request, "Datos del presupuesto incompletos", "alert-warning");
                                 } else {
-//                                    presupuestoService.actualizarPresupuestoCabecera(presupuesto);
-//                                    presupuestoDetalleService.actualizarPresupuestoDetalles(presupuesto.getIdPresupuesto(), listaPresupuestoDetalle);
+                                    presupuestoService.actualizarPresupuestoCabecera(presupuesto);
+                                    presupuestoDetalleService.actualizarPresupuestoDetalles(presupuesto.getIdPresupuesto(), listaPresupuestoDetalle);
 
                                     mostrarMensaje(request, "Presupuesto actualizado correctamente", "alert-success");
                                 }
