@@ -364,6 +364,9 @@ public class PresupuestoServlet extends HttpServlet {
                                     presupuestoDetalleService.insertarDetalle(presupuestoDetalle);
                                 }
 
+                                // Actualizar estado del Pedido de Compra según artículos presupuestados
+                                actualizarEstadoPedidoCompra(presupuesto.getPedidoCompra(), listaPresupuestoDetalle);
+
                                 mostrarMensaje(request, "Presupuesto guardado correctamente", "alert-success");
                                 LOGGER.log(Level.INFO, "Presupuesto de compra insertado correctamente");
                             } catch (Exception e) {
@@ -436,6 +439,66 @@ public class PresupuestoServlet extends HttpServlet {
     private void mostrarMensaje(HttpServletRequest request, String mensaje, String tipoAlert) {
         request.setAttribute("Message", mensaje);
         request.setAttribute("tipoAlert", tipoAlert);
+    }
+
+    /**
+     * Método para actualizar el estado del Pedido de Compra según los artículos presupuestados.
+     * - Si todos los artículos del pedido están en el presupuesto con las mismas cantidades: "Presupuestado Completo"
+     * - Si faltan artículos o las cantidades son menores: "Presupuestado Parcial"
+     *
+     * @param pedidoCompra El pedido de compra asociado al presupuesto
+     * @param listaPresupuestoDetalle Lista de detalles del presupuesto
+     */
+    private void actualizarEstadoPedidoCompra(PedidoCompra pedidoCompra, List<PresupuestoDetalle> listaPresupuestoDetalle) {
+        if (pedidoCompra == null || pedidoCompra.getIdPedido() == null) {
+            LOGGER.log(Level.WARNING, "No se puede actualizar estado: pedido de compra es nulo");
+            return;
+        }
+
+        try {
+            // Obtener los detalles originales del pedido de compra
+            List<PedidoCompraDetalle> detallesPedido = pedidoCompraDetalleService.listarDetallesPorPedido(pedidoCompra.getIdPedido());
+
+            if (detallesPedido == null || detallesPedido.isEmpty()) {
+                LOGGER.log(Level.WARNING, "El pedido de compra no tiene detalles");
+                return;
+            }
+
+            boolean esCompleto = true;
+
+            // Verificar si todos los artículos del pedido están en el presupuesto con las mismas cantidades
+            for (PedidoCompraDetalle detallePedido : detallesPedido) {
+                boolean articuloEncontrado = false;
+
+                for (PresupuestoDetalle detallePresupuesto : listaPresupuestoDetalle) {
+                    if (detallePedido.getArticulo().getIdArticulo().equals(detallePresupuesto.getArticulo().getIdArticulo())) {
+                        articuloEncontrado = true;
+                        // Verificar si la cantidad presupuestada es igual a la del pedido
+                        if (!detallePedido.getCantidad().equals(detallePresupuesto.getCantidad())) {
+                            esCompleto = false;
+                        }
+                        break;
+                    }
+                }
+
+                // Si el artículo del pedido no está en el presupuesto, es parcial
+                if (!articuloEncontrado) {
+                    esCompleto = false;
+                    break;
+                }
+            }
+
+            // Actualizar el estado del pedido
+            String nuevoEstado = esCompleto ? "Presupuestado Completo" : "Presupuestado Parcial";
+            pedidoCompra.setEstado(nuevoEstado);
+            pedidoCompraService.actualizarPedidoCabecera(pedidoCompra);
+
+            LOGGER.log(Level.INFO, "Estado del pedido {0} actualizado a: {1}",
+                    new Object[]{pedidoCompra.getIdPedido(), nuevoEstado});
+
+        } catch (SQLException e) {
+            LOGGER.log(Level.SEVERE, "Error al actualizar estado del pedido de compra: " + e.getMessage());
+        }
     }
     
     
