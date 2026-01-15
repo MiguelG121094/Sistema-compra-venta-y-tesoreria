@@ -7,11 +7,14 @@ package service;
 import conexion.Conexion;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import modelo.PedidoCompra;
 import modelo.PedidoCompraDAO;
 import modelo.PedidoCompraDetalle;
 import modelo.PedidoCompraDetalleDAO;
+import modelo.PresupuestoDetalleDAO;
 
 /**
  *
@@ -51,7 +54,83 @@ public class PedidoCompraService {
             return null;
         }
     }
-    
+
+    /**
+     * Lista los pedidos de compra mostrando solo los artículos pendientes de presupuestar.
+     * Útil para el modal de selección de pedidos en el módulo de presupuestos.
+     * NOTA: Toda la lógica se realiza en SQL.
+     *
+     * @return Lista de pedidos con artículos pendientes
+     */
+    public List<PedidoCompra> listarPedidosConArticulosPendientesLogicaSQL() throws SQLException {
+        try (Connection conn = Conexion.getConnection()) {
+            PedidoCompraDAO pedidoCompraDAO = new PedidoCompraDAO(conn);
+            return pedidoCompraDAO.listarPedidosConArticulosPendientesLogicaSQL();
+        } catch (SQLException e) {
+            System.out.println("Error en PedidoCompraService: " + e);
+            return null;
+        }
+    }
+
+    /**
+     * Lista los pedidos de compra mostrando solo los artículos pendientes de presupuestar.
+     * Útil para el modal de selección de pedidos en el módulo de presupuestos.
+     * NOTA: La lógica de cálculo se realiza en Java.
+     *
+     * @return Lista de pedidos con artículos pendientes
+     */
+    public List<PedidoCompra> listarPedidosConArticulosPendientes() throws SQLException {
+        List<PedidoCompra> pedidosConPendientes = new ArrayList<>();
+
+        try (Connection conn = Conexion.getConnection()) {
+            PedidoCompraDAO pedidoCompraDAO = new PedidoCompraDAO(conn);
+            PedidoCompraDetalleDAO pedidoCompraDetalleDAO = new PedidoCompraDetalleDAO(conn);
+            PresupuestoDetalleDAO presupuestoDetalleDAO = new PresupuestoDetalleDAO(conn);
+
+            // Obtener todos los pedidos con sus detalles completos
+            List<PedidoCompra> pedidos = pedidoCompraDAO.listarPedidosConDetalles();
+
+            for (PedidoCompra pedido : pedidos) {
+                // Obtener detalles del pedido
+                List<PedidoCompraDetalle> detallesPedido = pedidoCompraDetalleDAO.listarDetallesPorPedido(pedido.getIdPedido());
+
+                // Obtener cantidades ya presupuestadas para este pedido
+                Map<Long, Long> cantidadesPresupuestadas = presupuestoDetalleDAO
+                        .obtenerCantidadesPresupuestadasPorPedido(pedido.getIdPedido());
+
+                // Construir string de artículos pendientes
+                StringBuilder articulosPendientes = new StringBuilder();
+
+                for (PedidoCompraDetalle detalle : detallesPedido) {
+                    Long idArticulo = detalle.getArticulo().getIdArticulo();
+                    Long cantidadPedida = detalle.getCantidad();
+                    Long cantidadPresupuestada = cantidadesPresupuestadas.getOrDefault(idArticulo, 0L);
+                    Long cantidadPendiente = cantidadPedida - cantidadPresupuestada;
+
+                    // Solo agregar si hay cantidad pendiente
+                    if (cantidadPendiente > 0) {
+                        if (articulosPendientes.length() > 0) {
+                            articulosPendientes.append(", ");
+                        }
+                        articulosPendientes.append(detalle.getArticulo().getDescripcion())
+                                .append(" (Cant: ")
+                                .append(cantidadPendiente)
+                                .append(")");
+                    }
+                }
+
+                // Asignar la lista de artículos pendientes al pedido
+                pedido.setListaArticulos(articulosPendientes.toString());
+                pedidosConPendientes.add(pedido);
+            }
+        } catch (SQLException e) {
+            System.out.println("Error en PedidoCompraService.listarPedidosConArticulosPendientes: " + e);
+            return null;
+        }
+
+        return pedidosConPendientes;
+    }
+
     public Long obtenerProximoIdPedidoCompra() throws SQLException{
         try ( Connection conn = Conexion.getConnection()) {
             PedidoCompraDAO pedidoCompraDAO = new PedidoCompraDAO(conn);

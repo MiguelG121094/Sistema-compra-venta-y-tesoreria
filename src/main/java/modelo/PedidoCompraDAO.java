@@ -371,6 +371,74 @@ public class PedidoCompraDAO {
         }
     }
 
+    /**
+     * Lista los pedidos de compra mostrando solo los artículos pendientes de presupuestar.
+     * Calcula la diferencia entre la cantidad pedida y la cantidad ya presupuestada.
+     * Solo muestra artículos con cantidad pendiente > 0.
+     * NOTA: Toda la lógica se realiza en SQL.
+     *
+     * @return Lista de pedidos con artículos pendientes de presupuestar
+     */
+    public List<PedidoCompra> listarPedidosConArticulosPendientesLogicaSQL() throws SQLException {
+        List<PedidoCompra> pedidos = new ArrayList<>();
+
+        String sql = "SELECT " +
+                "    pc.id_pedido_cab, " +
+                "    pc.id_usuario, " +
+                "    p.per_nombre || ' ' || p.per_apellido AS usuario_nombre, " +
+                "    s.id_sucursal, " +
+                "    s.suc_descripcion, " +
+                "    pc.ped_comp_fecha, " +
+                "    pc.ped_comp_estado, " +
+                "    COALESCE(STRING_AGG( " +
+                "        CASE " +
+                "            WHEN (pd.ped_comp_det_cantidad - COALESCE(presu.cantidad_presupuestada, 0)) > 0 " +
+                "            THEN a.art_descripcion || ' (Cant: ' || (pd.ped_comp_det_cantidad - COALESCE(presu.cantidad_presupuestada, 0)) || ')' " +
+                "        END, ', ' " +
+                "    ), '') AS articulos_pendientes " +
+                "FROM pedido_compra_cabecera pc " +
+                "JOIN usuario u ON pc.id_usuario = u.id_usuario " +
+                "JOIN persona p ON u.id_persona = p.id_persona " +
+                "JOIN sucursal s ON pc.id_sucursal = s.id_sucursal " +
+                "LEFT JOIN pedido_compra_detalle pd ON pc.id_pedido_cab = pd.id_pedido_cab " +
+                "LEFT JOIN articulo a ON pd.id_articulo = a.id_articulo " +
+                "LEFT JOIN ( " +
+                "    SELECT " +
+                "        pres_cab.id_pedido_cab, " +
+                "        pres_det.id_articulo, " +
+                "        SUM(pres_det.presu_det_cantidad) AS cantidad_presupuestada " +
+                "    FROM presupuesto_cabecera pres_cab " +
+                "    JOIN presupuesto_detalle pres_det ON pres_cab.id_presupuesto_cab = pres_det.id_presupuesto_cab " +
+                "    WHERE pres_cab.presu_cab_estado NOT IN ('Anulado', 'Cancelado') " +
+                "    GROUP BY pres_cab.id_pedido_cab, pres_det.id_articulo " +
+                ") presu ON pc.id_pedido_cab = presu.id_pedido_cab AND pd.id_articulo = presu.id_articulo " +
+                "GROUP BY " +
+                "    pc.id_pedido_cab, pc.id_usuario, usuario_nombre, s.id_sucursal, " +
+                "    s.suc_descripcion, pc.ped_comp_fecha, pc.ped_comp_estado " +
+                "ORDER BY pc.id_pedido_cab";
+
+        usuarioDAO = new UsuarioDAO(conn);
+        sucursalDAO = new SucursalDAO(conn);
+
+        try (PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+            while (rs.next()) {
+                usuario = usuarioDAO.getUsuario(rs.getLong("id_usuario"));
+                sucursal = sucursalDAO.getSucursal(rs.getLong("id_sucursal"));
+                PedidoCompra pedCompConDetalleConcat = new PedidoCompra(
+                        rs.getLong("id_pedido_cab"),
+                        usuario,
+                        sucursal,
+                        rs.getDate("ped_comp_fecha"),
+                        rs.getString("ped_comp_estado"),
+                        rs.getString("articulos_pendientes")
+                );
+                pedidos.add(pedCompConDetalleConcat);
+            }
+        }
+        return pedidos;
+    }
+
     public void actualizarPedidoCabecera(PedidoCompra pedidoCompra) throws SQLException {
         if (pedidoCompra == null || pedidoCompra.getIdPedido() == null) {
             throw new IllegalArgumentException("El pedido de compra es nulo");

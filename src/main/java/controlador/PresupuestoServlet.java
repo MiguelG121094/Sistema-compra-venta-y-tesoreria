@@ -106,7 +106,8 @@ public class PresupuestoServlet extends HttpServlet {
             try {
                 switch (accion) {
                     case "ListarModal":
-                        listaPedidoCompraConDetalle = pedidoCompraService.listarPedidosConDetalles();
+                        // Usar método que muestra solo artículos pendientes de presupuestar
+                        listaPedidoCompraConDetalle = pedidoCompraService.listarPedidosConArticulosPendientes();
                         request.setAttribute("listPedCompraConDetalle", listaPedidoCompraConDetalle);
                         presupuestosConDetalle = presupuestoService.listarPresupuestoConDetalles();
                         request.setAttribute("listaPresupuestosConDetalle", presupuestosConDetalle);
@@ -352,13 +353,9 @@ public class PresupuestoServlet extends HttpServlet {
                                         break;
                                     }
                                 }
-                                // Determinar el estado del presupuesto (Presupuestado o Parcial)
-                                String estadoPresupuesto = calcularEstadoPresupuesto(
-                                        presupuesto.getPedidoCompra().getIdPedido(), listaPresupuestoDetalle);
-
-                                // Crear presupuesto con los datos completos
+                                // Crear presupuesto con estado Pendiente
                                 Presupuesto presupuestoToInsert = new Presupuesto(null, presupuesto.getPedidoCompra(),
-                                        presupuesto.getProveedor(), new Date(), estadoPresupuesto, usuario);
+                                        presupuesto.getProveedor(), new Date(), "Pendiente", usuario);
                                 presupuestoToInsert.setFechaVencimiento(presupuesto.getFechaVencimiento());
                                 presupuestoToInsert.setObservacion(presupuesto.getObservacion());
                                 presupuestoToInsert.setCondicionCompra(presupuesto.getCondicionCompra());
@@ -514,55 +511,6 @@ public class PresupuestoServlet extends HttpServlet {
     private void mostrarMensaje(HttpServletRequest request, String mensaje, String tipoAlert) {
         request.setAttribute("Message", mensaje);
         request.setAttribute("tipoAlert", tipoAlert);
-    }
-
-    /**
-     * Calcula el estado del presupuesto basándose en si cubre todos los artículos del pedido.
-     * - "Presupuestado": si este presupuesto cubre todas las cantidades restantes del pedido
-     * - "Parcial": si quedan artículos o cantidades pendientes después de este presupuesto
-     *
-     * @param idPedidoCompra ID del pedido de compra
-     * @param detallesPresupuesto Lista de detalles del presupuesto actual
-     * @return "Presupuestado" o "Parcial"
-     */
-    private String calcularEstadoPresupuesto(Long idPedidoCompra, List<PresupuestoDetalle> detallesPresupuesto) {
-        try {
-            // Obtener los detalles originales del pedido
-            List<PedidoCompraDetalle> detallesPedido = pedidoCompraDetalleService.listarDetallesPorPedido(idPedidoCompra);
-
-            if (detallesPedido == null || detallesPedido.isEmpty()) {
-                return "Parcial";
-            }
-
-            // Obtener cantidades ya presupuestadas en otros presupuestos
-            Map<Long, Long> cantidadesYaPresupuestadas = presupuestoDetalleService
-                    .obtenerCantidadesPresupuestadasPorPedido(idPedidoCompra);
-
-            // Sumar las cantidades del presupuesto actual
-            Map<Long, Long> cantidadesTotales = new java.util.HashMap<>(cantidadesYaPresupuestadas);
-            for (PresupuestoDetalle detalle : detallesPresupuesto) {
-                Long idArticulo = detalle.getArticulo().getIdArticulo();
-                Long cantidadActual = cantidadesTotales.getOrDefault(idArticulo, 0L);
-                cantidadesTotales.put(idArticulo, cantidadActual + detalle.getCantidad());
-            }
-
-            // Verificar si todos los artículos del pedido están cubiertos
-            for (PedidoCompraDetalle detallePedido : detallesPedido) {
-                Long idArticulo = detallePedido.getArticulo().getIdArticulo();
-                Long cantidadPedida = detallePedido.getCantidad();
-                Long cantidadPresupuestada = cantidadesTotales.getOrDefault(idArticulo, 0L);
-
-                if (cantidadPresupuestada < cantidadPedida) {
-                    return "Parcial";
-                }
-            }
-
-            return "Presupuestado";
-
-        } catch (SQLException e) {
-            LOGGER.log(Level.WARNING, "Error al calcular estado del presupuesto: " + e.getMessage());
-            return "Parcial"; // Por defecto, si hay error
-        }
     }
 
     // <editor-fold defaultstate="collapsed" desc="HttpServlet methods. Click on the + sign on the left to edit the code.">
