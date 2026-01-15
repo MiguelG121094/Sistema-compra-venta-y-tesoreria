@@ -3,9 +3,9 @@
     * Copyright 2013-2023 Start Bootstrap
     * Licensed under MIT (https://github.com/StartBootstrap/startbootstrap-sb-admin/blob/master/LICENSE)
     */
-    // 
+    //
 // Scripts
-// 
+//
 
 window.addEventListener('DOMContentLoaded', event => {
 
@@ -23,60 +23,45 @@ window.addEventListener('DOMContentLoaded', event => {
         });
     }
 
-    // Highlight active menu item based on current URL
-    const currentUrl = window.location.href.toLowerCase();
-    const currentPath = window.location.pathname.toLowerCase();
-    const urlParams = new URLSearchParams(window.location.search);
-    const currentMenu = urlParams.get('menu');
+});
 
-    const sidenavLinks = document.querySelectorAll('.sb-sidenav-menu .nav-link');
+// Highlight active menu item - using jQuery for better compatibility
+$(document).ready(function() {
+    var currentUrl = window.location.href;
+    var currentPath = window.location.pathname;
 
-    sidenavLinks.forEach(link => {
-        const linkHref = link.getAttribute('href');
+    // Get the page/servlet name from current URL
+    var currentPage = currentPath.substring(currentPath.lastIndexOf('/') + 1);
 
-        // Skip collapse toggle links (they have # as href)
+    // Find and activate the matching menu link
+    $('.sb-sidenav-menu .nav-link').each(function() {
+        var linkHref = $(this).attr('href');
+
+        // Skip collapse toggles
         if (!linkHref || linkHref === '#') {
             return;
         }
 
-        let isActive = false;
+        // Get the page/servlet name from the link
+        var linkPage = linkHref.split('?')[0];
 
-        // Extract servlet/page name from link href
-        const linkPath = linkHref.split('?')[0].toLowerCase();
-
-        // Check if current path contains the link path (for servlets and jsp pages)
-        if (linkPath && currentPath.includes(linkPath)) {
-            isActive = true;
-        }
-
-        // Also check by menu parameter if present in the link
-        if (!isActive && linkHref.includes('menu=')) {
-            const linkMenu = linkHref.split('menu=')[1].split('&')[0];
-            if (currentMenu && currentMenu.toLowerCase() === linkMenu.toLowerCase()) {
-                isActive = true;
-            }
-        }
-
-        if (isActive) {
-            // Add active class to the link
-            link.classList.add('active');
+        // Check if this link matches the current page
+        if (currentPage && linkPage && currentPage.toLowerCase() === linkPage.toLowerCase()) {
+            // Add active class
+            $(this).addClass('active');
 
             // Expand all parent collapse elements
-            let parent = link.parentElement;
-            while (parent) {
-                if (parent.classList.contains('collapse')) {
-                    parent.classList.add('show');
+            $(this).parents('.collapse').each(function() {
+                $(this).addClass('show');
 
-                    // Find and update the toggle button for this collapse
-                    const toggleBtn = document.querySelector(`[data-bs-target="#${parent.id}"]`);
-                    if (toggleBtn) {
-                        toggleBtn.classList.remove('collapsed');
-                        toggleBtn.setAttribute('aria-expanded', 'true');
-                    }
+                // Update the toggle button
+                var collapseId = $(this).attr('id');
+                var toggleBtn = $('[data-bs-target="#' + collapseId + '"]');
+                if (toggleBtn.length) {
+                    toggleBtn.removeClass('collapsed');
+                    toggleBtn.attr('aria-expanded', 'true');
                 }
-                parent = parent.parentElement;
-            }
+            });
         }
     });
-
 });
