@@ -21,6 +21,7 @@ public class PedidoCompra {
     private String observacion;
     private String listaArticulos;
     private List<PedidoCompraDetalle> pedidoCompDetalles;
+    private boolean presupuestoCompleto; // Indica si todos los articulos ya fueron presupuestados
 
     public PedidoCompra() {
     }
@@ -117,6 +118,14 @@ public class PedidoCompra {
 
     public void setListaArticulos(String listaArticulos) {
         this.listaArticulos = listaArticulos;
+    }
+
+    public boolean isPresupuestoCompleto() {
+        return presupuestoCompleto;
+    }
+
+    public void setPresupuestoCompleto(boolean presupuestoCompleto) {
+        this.presupuestoCompleto = presupuestoCompleto;
     }
 
 }

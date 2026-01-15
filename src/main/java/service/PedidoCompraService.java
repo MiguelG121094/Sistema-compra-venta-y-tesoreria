@@ -74,10 +74,12 @@ public class PedidoCompraService {
 
     /**
      * Lista los pedidos de compra mostrando solo los artículos pendientes de presupuestar.
+     * Si todos los artículos ya fueron presupuestados, muestra el detalle completo y marca
+     * el pedido como presupuestoCompleto = true.
      * Útil para el modal de selección de pedidos en el módulo de presupuestos.
      * NOTA: La lógica de cálculo se realiza en Java.
      *
-     * @return Lista de pedidos con artículos pendientes
+     * @return Lista de pedidos con artículos pendientes o completos
      */
     public List<PedidoCompra> listarPedidosConArticulosPendientes() throws SQLException {
         List<PedidoCompra> pedidosConPendientes = new ArrayList<>();
@@ -98,8 +100,10 @@ public class PedidoCompraService {
                 Map<Long, Long> cantidadesPresupuestadas = presupuestoDetalleDAO
                         .obtenerCantidadesPresupuestadasPorPedido(pedido.getIdPedido());
 
-                // Construir string de artículos pendientes
+                // Construir string de artículos pendientes y completos
                 StringBuilder articulosPendientes = new StringBuilder();
+                StringBuilder articulosCompletos = new StringBuilder();
+                boolean hayPendientes = false;
 
                 for (PedidoCompraDetalle detalle : detallesPedido) {
                     Long idArticulo = detalle.getArticulo().getIdArticulo();
@@ -107,8 +111,18 @@ public class PedidoCompraService {
                     Long cantidadPresupuestada = cantidadesPresupuestadas.getOrDefault(idArticulo, 0L);
                     Long cantidadPendiente = cantidadPedida - cantidadPresupuestada;
 
-                    // Solo agregar si hay cantidad pendiente
+                    // Construir lista de artículos completos (para mostrar si todo está presupuestado)
+                    if (articulosCompletos.length() > 0) {
+                        articulosCompletos.append(", ");
+                    }
+                    articulosCompletos.append(detalle.getArticulo().getDescripcion())
+                            .append(" (Cant: ")
+                            .append(cantidadPedida)
+                            .append(")");
+
+                    // Solo agregar a pendientes si hay cantidad pendiente
                     if (cantidadPendiente > 0) {
+                        hayPendientes = true;
                         if (articulosPendientes.length() > 0) {
                             articulosPendientes.append(", ");
                         }
@@ -119,8 +133,15 @@ public class PedidoCompraService {
                     }
                 }
 
-                // Asignar la lista de artículos pendientes al pedido
-                pedido.setListaArticulos(articulosPendientes.toString());
+                // Si hay artículos pendientes, mostrar solo esos; sino mostrar todos
+                if (hayPendientes) {
+                    pedido.setListaArticulos(articulosPendientes.toString());
+                    pedido.setPresupuestoCompleto(false);
+                } else {
+                    pedido.setListaArticulos(articulosCompletos.toString());
+                    pedido.setPresupuestoCompleto(true);
+                }
+
                 pedidosConPendientes.add(pedido);
             }
         } catch (SQLException e) {
