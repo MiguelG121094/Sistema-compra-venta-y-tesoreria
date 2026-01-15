@@ -341,7 +341,7 @@ public class PedidoCompraServlet extends HttpServlet {
                                     request.setAttribute("listPedCompDetalle", listaPedidoCompraDetalle); //cargar lista de pedidodetalle del pedido seleccionado
                                     mostrarMensaje(request, "Datos del pedido incompletos", "alert-warning");
                                 } else {
-                                    Long idPedCabInserted = pedidoCompraService.insertarPedido(new PedidoCompra(null, usuario, sucursal, new Date(), "Pendiente de compra"));
+                                    Long idPedCabInserted = pedidoCompraService.insertarPedido(new PedidoCompra(null, usuario, sucursal, new Date(), "Pendiente"));
                                     if (idPedCabInserted == null) {
                                         request.setAttribute("Message", "Error al guardar el pedido de compra cabecera");
                                         request.setAttribute("tipoAlert", "alert-danger");
