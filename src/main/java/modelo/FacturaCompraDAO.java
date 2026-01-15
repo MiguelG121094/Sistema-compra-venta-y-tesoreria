@@ -305,4 +305,32 @@ public class FacturaCompraDAO {
         }
         return false;
     }
+
+    /**
+     * Verifica si existe al menos una factura de compra asociada a un presupuesto.
+     * La relación es: Presupuesto -> OrdenCompra -> FacturaCompra
+     * No cuenta facturas anuladas o canceladas.
+     *
+     * @param idPresupuesto ID del presupuesto
+     * @return true si existe al menos una factura de compra, false en caso contrario
+     */
+    public boolean existeFacturaCompraPorPresupuesto(Long idPresupuesto) throws SQLException {
+        if (idPresupuesto == null) {
+            return false;
+        }
+
+        String sql = "SELECT COUNT(*) FROM factura_compra_cabecera fc " +
+                    "INNER JOIN orden_compra_cabecera oc ON fc.id_orden_compra_cab = oc.id_orden_compra_cab " +
+                    "WHERE oc.id_presupuesto_cab = ? AND fc.fact_comp_estado NOT IN ('Anulado', 'Cancelado')";
+
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, idPresupuesto);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
+            }
+        }
+        return false;
+    }
 }

@@ -124,4 +124,20 @@ public class FacturaCompraService {
             return false;
         }
     }
+
+    /**
+     * Verifica si existe al menos una factura de compra asociada a un presupuesto.
+     *
+     * @param idPresupuesto ID del presupuesto
+     * @return true si existe al menos una factura de compra, false en caso contrario
+     */
+    public boolean existeFacturaCompraPorPresupuesto(Long idPresupuesto) throws SQLException {
+        try (Connection conn = Conexion.getConnection()) {
+            FacturaCompraDAO facturaCompraDAO = new FacturaCompraDAO(conn);
+            return facturaCompraDAO.existeFacturaCompraPorPresupuesto(idPresupuesto);
+        } catch (SQLException e) {
+            System.out.println("Error en FacturaCompraService: " + e);
+            return false;
+        }
+    }
 }

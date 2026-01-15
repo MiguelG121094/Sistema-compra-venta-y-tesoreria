@@ -32,6 +32,8 @@ import modelo.Sucursal;
 import modelo.Usuario;
 import service.ArticuloService;
 import service.DepositoService;
+import service.FacturaCompraService;
+import service.OrdenCompraService;
 import service.PedidoCompraDetalleService;
 import service.PedidoCompraService;
 import service.PersonaService;
@@ -79,6 +81,8 @@ public class PresupuestoServlet extends HttpServlet {
     private List<PresupuestoDetalle> listaPresupuestoDetalle;
     private PresupuestoDetalle presupuestoDetalle;
     private PresupuestoDetalleService presupuestoDetalleService = new PresupuestoDetalleService();
+    private OrdenCompraService ordenCompraService = new OrdenCompraService();
+    private FacturaCompraService facturaCompraService = new FacturaCompraService();
     private static final Logger LOGGER = Logger.getLogger(PresupuestoServlet.class.getName());
      
     /**
@@ -348,9 +352,13 @@ public class PresupuestoServlet extends HttpServlet {
                                         break;
                                     }
                                 }
+                                // Determinar el estado del presupuesto (Presupuestado o Parcial)
+                                String estadoPresupuesto = calcularEstadoPresupuesto(
+                                        presupuesto.getPedidoCompra().getIdPedido(), listaPresupuestoDetalle);
+
                                 // Crear presupuesto con los datos completos
                                 Presupuesto presupuestoToInsert = new Presupuesto(null, presupuesto.getPedidoCompra(),
-                                        presupuesto.getProveedor(), new Date(), "Pendiente", usuario);
+                                        presupuesto.getProveedor(), new Date(), estadoPresupuesto, usuario);
                                 presupuestoToInsert.setFechaVencimiento(presupuesto.getFechaVencimiento());
                                 presupuestoToInsert.setObservacion(presupuesto.getObservacion());
                                 presupuestoToInsert.setCondicionCompra(presupuesto.getCondicionCompra());
@@ -407,23 +415,35 @@ public class PresupuestoServlet extends HttpServlet {
                         break;
                     case "Anular":
                         try {
-                            if (pedidoCompra == null || listaPedidoCompraDetalle == null || listaPedidoCompraDetalle.isEmpty()) {
-                                mostrarMensaje(request, "Datos del pedido incompletos", "alert-warning");
+                            if (presupuesto == null || presupuesto.getIdPresupuesto() == null) {
+                                mostrarMensaje(request, "Debe seleccionar un presupuesto para anular", "alert-warning");
                             } else {
-                                pedidoCompra.setEstado("Anulado");
-                                pedidoCompraService.actualizarPedidoCabecera(pedidoCompra);
-                                mostrarMensaje(request, "Pedido anulado correctamente", "alert-success");
+                                // Validar si el presupuesto tiene documentos asociados (no se puede anular)
+                                boolean tieneOrden = ordenCompraService.existeOrdenCompraPorPresupuesto(presupuesto.getIdPresupuesto());
+                                boolean tieneFactura = facturaCompraService.existeFacturaCompraPorPresupuesto(presupuesto.getIdPresupuesto());
+
+                                if (tieneOrden || tieneFactura) {
+                                    String msg = "Este presupuesto no puede ser anulado porque tiene: ";
+                                    if (tieneOrden) msg += "Orden de Compra, ";
+                                    if (tieneFactura) msg += "Factura, ";
+                                    msg = msg.substring(0, msg.length() - 2) + " asociado(s)";
+
+                                    mostrarMensaje(request, msg, "alert-warning");
+                                } else {
+                                    presupuesto.setEstado("Anulado");
+                                    presupuestoService.actualizarPresupuestoCabecera(presupuesto);
+                                    mostrarMensaje(request, "Presupuesto anulado correctamente", "alert-success");
+                                }
                             }
                         } catch (SQLException e) {
-                            request.setAttribute("Message", "Error al actualizar el pedido de compra: " + e.getMessage());
+                            request.setAttribute("Message", "Error al anular el presupuesto: " + e.getMessage());
                             request.setAttribute("tipoAlert", "alert-danger");
                         }
-                        pedidoCompra = null;
-                        listaPedidoCompraDetalle = null;
-                        
-//                        request.getRequestDispatcher("pedidoCompra.jsp").forward(request, response);
+                        presupuesto = null;
+                        listaPresupuestoDetalle = null;
+
                         request.getRequestDispatcher("PresupuestoServlet?menu=Presupuesto&accion=ListarModal").forward(request, response);
-                        
+
                         break;
                     case "Cancelar":
                         request.getRequestDispatcher("PresupuestoServlet?menu=Presupuesto&accion=ListarModal").forward(request, response);
@@ -449,6 +469,55 @@ public class PresupuestoServlet extends HttpServlet {
     private void mostrarMensaje(HttpServletRequest request, String mensaje, String tipoAlert) {
         request.setAttribute("Message", mensaje);
         request.setAttribute("tipoAlert", tipoAlert);
+    }
+
+    /**
+     * Calcula el estado del presupuesto basándose en si cubre todos los artículos del pedido.
+     * - "Presupuestado": si este presupuesto cubre todas las cantidades restantes del pedido
+     * - "Parcial": si quedan artículos o cantidades pendientes después de este presupuesto
+     *
+     * @param idPedidoCompra ID del pedido de compra
+     * @param detallesPresupuesto Lista de detalles del presupuesto actual
+     * @return "Presupuestado" o "Parcial"
+     */
+    private String calcularEstadoPresupuesto(Long idPedidoCompra, List<PresupuestoDetalle> detallesPresupuesto) {
+        try {
+            // Obtener los detalles originales del pedido
+            List<PedidoCompraDetalle> detallesPedido = pedidoCompraDetalleService.listarDetallesPorPedido(idPedidoCompra);
+
+            if (detallesPedido == null || detallesPedido.isEmpty()) {
+                return "Parcial";
+            }
+
+            // Obtener cantidades ya presupuestadas en otros presupuestos
+            Map<Long, Long> cantidadesYaPresupuestadas = presupuestoDetalleService
+                    .obtenerCantidadesPresupuestadasPorPedido(idPedidoCompra);
+
+            // Sumar las cantidades del presupuesto actual
+            Map<Long, Long> cantidadesTotales = new java.util.HashMap<>(cantidadesYaPresupuestadas);
+            for (PresupuestoDetalle detalle : detallesPresupuesto) {
+                Long idArticulo = detalle.getArticulo().getIdArticulo();
+                Long cantidadActual = cantidadesTotales.getOrDefault(idArticulo, 0L);
+                cantidadesTotales.put(idArticulo, cantidadActual + detalle.getCantidad());
+            }
+
+            // Verificar si todos los artículos del pedido están cubiertos
+            for (PedidoCompraDetalle detallePedido : detallesPedido) {
+                Long idArticulo = detallePedido.getArticulo().getIdArticulo();
+                Long cantidadPedida = detallePedido.getCantidad();
+                Long cantidadPresupuestada = cantidadesTotales.getOrDefault(idArticulo, 0L);
+
+                if (cantidadPresupuestada < cantidadPedida) {
+                    return "Parcial";
+                }
+            }
+
+            return "Presupuestado";
+
+        } catch (SQLException e) {
+            LOGGER.log(Level.WARNING, "Error al calcular estado del presupuesto: " + e.getMessage());
+            return "Parcial"; // Por defecto, si hay error
+        }
     }
 
     // <editor-fold defaultstate="collapsed" desc="HttpServlet methods. Click on the + sign on the left to edit the code.">

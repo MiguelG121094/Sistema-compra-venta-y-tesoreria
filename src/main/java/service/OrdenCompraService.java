@@ -134,4 +134,20 @@ public class OrdenCompraService {
             return false;
         }
     }
+
+    /**
+     * Verifica si existe al menos una orden de compra asociada a un presupuesto.
+     *
+     * @param idPresupuesto ID del presupuesto
+     * @return true si existe al menos una orden de compra, false en caso contrario
+     */
+    public boolean existeOrdenCompraPorPresupuesto(Long idPresupuesto) throws SQLException {
+        try (Connection conn = Conexion.getConnection()) {
+            OrdenCompraDAO ordenCompraDAO = new OrdenCompraDAO(conn);
+            return ordenCompraDAO.existeOrdenCompraPorPresupuesto(idPresupuesto);
+        } catch (SQLException e) {
+            System.out.println("Error en OrdenCompraService: " + e);
+            return false;
+        }
+    }
 }
