@@ -448,6 +448,51 @@ public class PresupuestoServlet extends HttpServlet {
                     case "Cancelar":
                         request.getRequestDispatcher("PresupuestoServlet?menu=Presupuesto&accion=ListarModal").forward(request, response);
                         break;
+                    case "CargarPresupuesto":
+                        try {
+                            Long idPresupuestoCargar = Long.parseLong(request.getParameter("idPresupuesto"));
+                            presupuesto = presupuestoService.getPresupuesto(idPresupuestoCargar);
+
+                            if (presupuesto != null) {
+                                // Cargar detalles del presupuesto
+                                listaPresupuestoDetalle = presupuestoDetalleService.listarDetallesPorPresupuesto(idPresupuestoCargar);
+
+                                // Cargar el pedido asociado
+                                pedidoCompra = presupuesto.getPedidoCompra();
+
+                                // Cargar el proveedor
+                                proveedor = presupuesto.getProveedor();
+
+                                // Validar si tiene documentos asociados (solo lectura)
+                                boolean tieneOrden = ordenCompraService.existeOrdenCompraPorPresupuesto(idPresupuestoCargar);
+                                boolean tieneFactura = facturaCompraService.existeFacturaCompraPorPresupuesto(idPresupuestoCargar);
+
+                                if (tieneOrden || tieneFactura) {
+                                    String msg = "Este presupuesto tiene documentos asociados: ";
+                                    if (tieneOrden) msg += "Orden de Compra, ";
+                                    if (tieneFactura) msg += "Factura, ";
+                                    msg = msg.substring(0, msg.length() - 2) + ". No puede ser modificado.";
+                                    mostrarMensaje(request, msg, "alert-warning");
+                                }
+
+                                request.setAttribute("presupuesto", presupuesto);
+                                request.setAttribute("pedidoCompra", pedidoCompra);
+                                request.setAttribute("proveedorSeleccionado", proveedor);
+                                request.setAttribute("listaPresupuestoDetalle", listaPresupuestoDetalle);
+                                request.setAttribute("listPedCompraConDetalle", listaPedidoCompraConDetalle);
+                                request.setAttribute("listaPresupuestosConDetalle", presupuestosConDetalle);
+                                request.setAttribute("listaProveedores", proveedores);
+                            } else {
+                                mostrarMensaje(request, "No se encontró el presupuesto seleccionado", "alert-warning");
+                            }
+                        } catch (NumberFormatException e) {
+                            mostrarMensaje(request, "Error al cargar el presupuesto", "alert-danger");
+                            LOGGER.log(Level.SEVERE, "Error al parsear idPresupuesto: " + e.getMessage());
+                        }
+
+                        request.getRequestDispatcher("presupuesto.jsp").forward(request, response);
+
+                        break;
                     default:
                         request.getRequestDispatcher("error.jsp").forward(request, response);
                 }
