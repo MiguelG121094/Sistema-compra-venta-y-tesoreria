@@ -329,5 +329,31 @@ public class PresupuestoDAO {
             throw e; // relanzar la excepción para manejar en el service
         }
     }
-    
+
+    /**
+     * Verifica si existe al menos un presupuesto asociado a un pedido de compra.
+     * No cuenta presupuestos anulados o cancelados.
+     *
+     * @param idPedidoCompra ID del pedido de compra
+     * @return true si existe al menos un presupuesto, false en caso contrario
+     */
+    public boolean existePresupuestoPorPedido(Long idPedidoCompra) throws SQLException {
+        if (idPedidoCompra == null) {
+            return false;
+        }
+
+        String sql = "SELECT COUNT(*) FROM presupuesto_cabecera " +
+                    "WHERE id_pedido_cab = ? AND presu_cab_estado NOT IN ('Anulado', 'Cancelado')";
+
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, idPedidoCompra);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
+            }
+        }
+        return false;
+    }
+
 }

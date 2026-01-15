@@ -26,9 +26,12 @@ import modelo.Sucursal;
 import modelo.Usuario;
 import service.ArticuloService;
 import service.DepositoService;
+import service.FacturaCompraService;
+import service.OrdenCompraService;
 import service.PedidoCompraDetalleService;
 import service.PedidoCompraService;
 import service.PersonaService;
+import service.PresupuestoService;
 import service.SucursalService;
 import service.UsuarioService;
 
@@ -61,6 +64,9 @@ public class PedidoCompraServlet extends HttpServlet {
     private List<Articulo> articulos = new ArrayList<>();
     private ArticuloService articuloService = new ArticuloService();
     private Long newIdPedido = null;
+    private PresupuestoService presupuestoService = new PresupuestoService();
+    private OrdenCompraService ordenCompraService = new OrdenCompraService();
+    private FacturaCompraService facturaCompraService = new FacturaCompraService();
     
     /**
      * Processes requests for both HTTP <code>GET</code> and <code>POST</code>
@@ -263,7 +269,29 @@ public class PedidoCompraServlet extends HttpServlet {
                     case "CargarPedidoCompra":
                         try {
                             listaPedidoCompraDetalle = null;
-                            pedidoCompra = pedidoCompraService.getPedidoCompra(Long.parseLong(request.getParameter("idPedCompraCab")));
+                            Long idPedidoCargar = Long.parseLong(request.getParameter("idPedCompraCab"));
+
+                            // Validar si el pedido tiene documentos asociados (no se puede modificar)
+                            boolean tienePresupuesto = presupuestoService.existePresupuestoPorPedido(idPedidoCargar);
+                            boolean tieneOrdenCompra = ordenCompraService.existeOrdenCompraPorPedido(idPedidoCargar);
+                            boolean tieneFactura = facturaCompraService.existeFacturaCompraPorPedido(idPedidoCargar);
+
+                            if (tienePresupuesto || tieneOrdenCompra || tieneFactura) {
+                                String mensaje = "Este pedido no puede ser modificado porque tiene: ";
+                                if (tienePresupuesto) mensaje += "Presupuesto, ";
+                                if (tieneOrdenCompra) mensaje += "Orden de Compra, ";
+                                if (tieneFactura) mensaje += "Factura, ";
+                                mensaje = mensaje.substring(0, mensaje.length() - 2) + " asociado(s)";
+
+                                mostrarMensaje(request, mensaje, "alert-warning");
+                                request.setAttribute("listPedCompraConDetalle", listaPedidoCompraConDetalle);
+                                request.setAttribute("listaSucursales", listaSucursales);
+                                request.setAttribute("listaAticulos", articulos);
+                                request.getRequestDispatcher("pedidoCompra.jsp").forward(request, response);
+                                break;
+                            }
+
+                            pedidoCompra = pedidoCompraService.getPedidoCompra(idPedidoCargar);
                             if (pedidoCompra != null) {
                                 listaPedidoCompraDetalle = pedidoCompraDetalleService.listarDetallesPorPedido(pedidoCompra.getIdPedido());
                                 if (listaPedidoCompraDetalle == null) {
@@ -288,9 +316,8 @@ public class PedidoCompraServlet extends HttpServlet {
                         } catch (NumberFormatException e) {
                             mostrarMensaje(request, "Error al cargar pedio de compra", "alert-danger");
                         }
-                        
+
                         request.getRequestDispatcher("pedidoCompra.jsp").forward(request, response);
-//                        request.getRequestDispatcher("PedidoCompraServlet?menu=PedidoCompra&accion=ListarModal").forward(request, response);
 
                         break;
                     case "PersistirPedido":
@@ -365,23 +392,37 @@ public class PedidoCompraServlet extends HttpServlet {
                         break;
                     case "Anular":
                         try {
-                            if (pedidoCompra == null || listaPedidoCompraDetalle == null || listaPedidoCompraDetalle.isEmpty()) {
-                                mostrarMensaje(request, "Datos del pedido incompletos", "alert-warning");
+                            if (pedidoCompra == null || pedidoCompra.getIdPedido() == null) {
+                                mostrarMensaje(request, "Debe seleccionar un pedido para anular", "alert-warning");
                             } else {
-                                pedidoCompra.setEstado("Anulado");
-                                pedidoCompraService.actualizarPedidoCabecera(pedidoCompra);
-                                mostrarMensaje(request, "Pedido anulado correctamente", "alert-success");
+                                // Validar si el pedido tiene documentos asociados (no se puede anular)
+                                boolean tienePresu = presupuestoService.existePresupuestoPorPedido(pedidoCompra.getIdPedido());
+                                boolean tieneOrden = ordenCompraService.existeOrdenCompraPorPedido(pedidoCompra.getIdPedido());
+                                boolean tieneFact = facturaCompraService.existeFacturaCompraPorPedido(pedidoCompra.getIdPedido());
+
+                                if (tienePresu || tieneOrden || tieneFact) {
+                                    String msg = "Este pedido no puede ser anulado porque tiene: ";
+                                    if (tienePresu) msg += "Presupuesto, ";
+                                    if (tieneOrden) msg += "Orden de Compra, ";
+                                    if (tieneFact) msg += "Factura, ";
+                                    msg = msg.substring(0, msg.length() - 2) + " asociado(s)";
+
+                                    mostrarMensaje(request, msg, "alert-warning");
+                                } else {
+                                    pedidoCompra.setEstado("Anulado");
+                                    pedidoCompraService.actualizarPedidoCabecera(pedidoCompra);
+                                    mostrarMensaje(request, "Pedido anulado correctamente", "alert-success");
+                                }
                             }
                         } catch (SQLException e) {
-                            request.setAttribute("Message", "Error al actualizar el pedido de compra: " + e.getMessage());
+                            request.setAttribute("Message", "Error al anular el pedido de compra: " + e.getMessage());
                             request.setAttribute("tipoAlert", "alert-danger");
                         }
                         pedidoCompra = null;
                         listaPedidoCompraDetalle = null;
-                        
-//                        request.getRequestDispatcher("pedidoCompra.jsp").forward(request, response);
+
                         request.getRequestDispatcher("PedidoCompraServlet?menu=PedidoCompra&accion=ListarModal").forward(request, response);
-                        
+
                         break;
                     case "Cancelar":
                         request.getRequestDispatcher("PedidoCompraServlet?menu=PedidoCompra&accion=ListarModal").forward(request, response);

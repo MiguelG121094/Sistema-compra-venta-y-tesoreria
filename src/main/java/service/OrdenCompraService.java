@@ -118,4 +118,20 @@ public class OrdenCompraService {
             }
         }
     }
+
+    /**
+     * Verifica si existe al menos una orden de compra asociada a un pedido de compra.
+     *
+     * @param idPedidoCompra ID del pedido de compra
+     * @return true si existe al menos una orden de compra, false en caso contrario
+     */
+    public boolean existeOrdenCompraPorPedido(Long idPedidoCompra) throws SQLException {
+        try (Connection conn = Conexion.getConnection()) {
+            OrdenCompraDAO ordenCompraDAO = new OrdenCompraDAO(conn);
+            return ordenCompraDAO.existeOrdenCompraPorPedido(idPedidoCompra);
+        } catch (SQLException e) {
+            System.out.println("Error en OrdenCompraService: " + e);
+            return false;
+        }
+    }
 }

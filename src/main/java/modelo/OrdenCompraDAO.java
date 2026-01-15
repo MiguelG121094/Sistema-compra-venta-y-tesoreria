@@ -291,4 +291,30 @@ public class OrdenCompraDAO {
             }
         }
     }
+
+    /**
+     * Verifica si existe al menos una orden de compra asociada a un pedido de compra.
+     * No cuenta órdenes anuladas o canceladas.
+     *
+     * @param idPedidoCompra ID del pedido de compra
+     * @return true si existe al menos una orden de compra, false en caso contrario
+     */
+    public boolean existeOrdenCompraPorPedido(Long idPedidoCompra) throws SQLException {
+        if (idPedidoCompra == null) {
+            return false;
+        }
+
+        String sql = "SELECT COUNT(*) FROM orden_compra_cabecera " +
+                    "WHERE id_pedido_cab = ? AND ord_comp_estado NOT IN ('Anulado', 'Cancelado')";
+
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, idPedidoCompra);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
+            }
+        }
+        return false;
+    }
 }

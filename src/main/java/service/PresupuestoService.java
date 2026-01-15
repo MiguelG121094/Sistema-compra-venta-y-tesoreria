@@ -116,4 +116,20 @@ public class PresupuestoService {
             }
         }
     }
+
+    /**
+     * Verifica si existe al menos un presupuesto asociado a un pedido de compra.
+     *
+     * @param idPedidoCompra ID del pedido de compra
+     * @return true si existe al menos un presupuesto, false en caso contrario
+     */
+    public boolean existePresupuestoPorPedido(Long idPedidoCompra) throws SQLException {
+        try (Connection conn = Conexion.getConnection()) {
+            PresupuestoDAO presupuestoDAO = new PresupuestoDAO(conn);
+            return presupuestoDAO.existePresupuestoPorPedido(idPedidoCompra);
+        } catch (SQLException e) {
+            System.out.println("Error en PresupuestoService: " + e);
+            return false;
+        }
+    }
 }
