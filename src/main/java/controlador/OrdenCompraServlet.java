@@ -130,6 +130,7 @@ public class OrdenCompraServlet extends HttpServlet {
                                 ordenCompra.setPresupuesto(presupuesto);
                                 ordenCompra.setPedidoCompra(presupuesto.getPedidoCompra());
                                 ordenCompra.setProveedor(presupuesto.getProveedor());
+                                ordenCompra.setCondicionCompra(presupuesto.getCondicionCompra());
                                 proveedor = presupuesto.getProveedor();
 
                                 request.setAttribute("presupuesto", presupuesto);

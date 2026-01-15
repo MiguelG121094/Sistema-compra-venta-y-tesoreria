@@ -331,8 +331,17 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                         <input type="text" value="${presupuesto.getEstado()}" class="form-control" disabled="true">
                                     </div>
                                     <div class="col-md-2 d-flex align-items-center">
-                                        <label style="white-space: nowrap;" class="me-2">Pedido N°:</label> 
+                                        <label style="white-space: nowrap;" class="me-2">Pedido N°:</label>
                                         <input type="text" value="${presupuesto.getPedidoCompra().getIdPedido()}" class="form-control" disabled="">
+                                    </div>
+                                    <div class="col-md-2 d-flex align-items-center">
+                                        <label style="white-space: nowrap;" class="me-2">Condición:</label>
+                                        <select id="selectCondicionCompra" class="form-select"
+                                                <c:if test="${presupuesto.getIdPresupuesto() != null}">disabled</c:if>>
+                                            <option value="">Seleccionar...</option>
+                                            <option value="Contado" ${presupuesto.getCondicionCompra() eq 'Contado' ? 'selected' : ''}>Contado</option>
+                                            <option value="Credito" ${presupuesto.getCondicionCompra() eq 'Credito' ? 'selected' : ''}>Crédito</option>
+                                        </select>
                                     </div>
                                 </div>
 
@@ -458,7 +467,8 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                                 <form action="PresupuestoServlet?menu=Presupuesto" method="POST">
                                                   <input type="hidden" name="accion" value="PersistirPresupuesto">
                                                   <input type="hidden" name="id" value="${listaPresuDetalle}">
-                                                  <button type="submit" class="btn btn-primary">Sí</button>
+                                                  <input type="hidden" name="condicionCompra" id="hiddenCondicionCompra" value="">
+                                                  <button type="submit" class="btn btn-primary" onclick="document.getElementById('hiddenCondicionCompra').value = document.getElementById('selectCondicionCompra').value;">Sí</button>
                                                 </form>
                                               </div>
                                             </div>
