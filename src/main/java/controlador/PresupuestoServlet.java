@@ -353,12 +353,15 @@ public class PresupuestoServlet extends HttpServlet {
                                         break;
                                     }
                                 }
+                                // Obtener condición de compra del formulario
+                                String condicionCompra = request.getParameter("condicionCompra");
+
                                 // Crear presupuesto con estado Pendiente
                                 Presupuesto presupuestoToInsert = new Presupuesto(null, presupuesto.getPedidoCompra(),
                                         presupuesto.getProveedor(), new Date(), "Pendiente", usuario);
                                 presupuestoToInsert.setFechaVencimiento(presupuesto.getFechaVencimiento());
                                 presupuestoToInsert.setObservacion(presupuesto.getObservacion());
-                                presupuestoToInsert.setCondicionCompra(presupuesto.getCondicionCompra());
+                                presupuestoToInsert.setCondicionCompra(condicionCompra);
 
                                 Long idPresuInserted = presupuestoService.insertarPresupuesto(presupuestoToInsert);
 

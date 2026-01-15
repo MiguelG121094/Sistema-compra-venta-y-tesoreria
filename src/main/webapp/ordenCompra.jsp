@@ -370,9 +370,7 @@ usuario inicio sesion, se debe agregar esta validacion en cada una de las vistas
                                                     <c:out value="disabled='disabled'"/></c:if>>
                                                 <option value="">Seleccione...</option>
                                                 <option value="Contado" ${ordenCompra.getCondicionCompra() eq 'Contado' ? 'selected' : ''}>Contado</option>
-                                                <option value="Credito 30 dias" ${ordenCompra.getCondicionCompra() eq 'Credito 30 dias' ? 'selected' : ''}>Credito 30 dias</option>
-                                                <option value="Credito 60 dias" ${ordenCompra.getCondicionCompra() eq 'Credito 60 dias' ? 'selected' : ''}>Credito 60 dias</option>
-                                                <option value="Credito 90 dias" ${ordenCompra.getCondicionCompra() eq 'Credito 90 dias' ? 'selected' : ''}>Credito 90 dias</option>
+                                                <option value="Credito" ${ordenCompra.getCondicionCompra() eq 'Credito' ? 'selected' : ''}>Credito</option>
                                             </select>
                                         </div>
                                         <div class="col-md-6">
