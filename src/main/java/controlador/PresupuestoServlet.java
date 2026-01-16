@@ -218,6 +218,26 @@ public class PresupuestoServlet extends HttpServlet {
                         request.getRequestDispatcher("presupuesto.jsp").forward(request, response);
 
                         break;
+                    case "GuardarCondicionCompra":
+                        String condicionCompraParam = request.getParameter("condicionCompra");
+                        if (presupuesto != null && condicionCompraParam != null) {
+                            presupuesto.setCondicionCompra(condicionCompraParam);
+                        }
+
+                        // mantener los datos
+                        request.setAttribute("listPedCompraConDetalle", listaPedidoCompraConDetalle);
+                        request.setAttribute("listaPresupuestosConDetalle", presupuestosConDetalle);
+                        request.setAttribute("listaProveedores", proveedores);
+                        request.setAttribute("proveedorSeleccionado", proveedor);
+                        request.setAttribute("presupuesto", presupuesto);
+                        request.setAttribute("newIdPresupuesto", newIdPresupuesto);
+                        request.setAttribute("listaPresupuestoDetalle", listaPresupuestoDetalle);
+                        request.setAttribute("listPedCompDetalle", listaPedidoCompraDetalle);
+                        request.setAttribute("presupuestoDetSeleccionado", presupuestoDetalle);
+
+                        request.getRequestDispatcher("presupuesto.jsp").forward(request, response);
+
+                        break;
                     case "EditarPrecioArticuloList":
                         Long idArtSeleccionado= null;
                         presupuestoDetalle = new PresupuestoDetalle();
