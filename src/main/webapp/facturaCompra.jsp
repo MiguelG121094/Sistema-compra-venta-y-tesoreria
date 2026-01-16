@@ -20,6 +20,7 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
 <!DOCTYPE html>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt"%>
+<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 
 <%@ page contentType="text/html;charset=UTF-8" language="java"  pageEncoding="UTF-8" %>
 <html>
@@ -176,14 +177,14 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                             <div class="col-md-3">
                                                 <div class="form-floating mb-3 mb-md-0">
                                                     <input class="form-control" id="razonSocial" type="text" placeholder="Razon Social"
-                                                           value="${proveedorSeleccionado.persona.nombre}" readonly />
+                                                           value="${proveedorSeleccionado.razonSocial}" readonly />
                                                     <label for="razonSocial">Razon Social</label>
                                                 </div>
                                             </div>
                                             <div class="col-md-2">
                                                 <div class="form-floating mb-3 mb-md-0">
                                                     <input class="form-control" id="ruc" type="text" placeholder="RUC"
-                                                           value="${proveedorSeleccionado.persona.ruc}" readonly />
+                                                           value="${proveedorSeleccionado.ruc}" readonly />
                                                     <label for="ruc">RUC</label>
                                                 </div>
                                             </div>
@@ -373,12 +374,12 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                                 <c:set var="exenta" value="0" />
 
                                                 <c:choose>
-                                                    <c:when test="${detalle.articulo.tipoImpuesto.porcentaje == 10}">
+                                                    <c:when test="${fn:contains(detalle.articulo.tipoImpuesto.descripcion, '10')}">
                                                         <c:set var="iva10" value="${subtotal / 11}" />
                                                         <c:set var="gravada10" value="${subtotal - iva10}" />
                                                         <c:set var="totalIva10" value="${totalIva10 + iva10}" />
                                                     </c:when>
-                                                    <c:when test="${detalle.articulo.tipoImpuesto.porcentaje == 5}">
+                                                    <c:when test="${fn:contains(detalle.articulo.tipoImpuesto.descripcion, '5')}">
                                                         <c:set var="iva5" value="${subtotal / 21}" />
                                                         <c:set var="gravada5" value="${subtotal - iva5}" />
                                                         <c:set var="totalIva5" value="${totalIva5 + iva5}" />
@@ -484,8 +485,8 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                                         <tr>
                                                             <td class="text-center">${fac.idFacturaCompra}</td>
                                                             <td class="text-center">${fac.numero}</td>
-                                                            <td class="text-center">${fac.proveedor.persona.nombre}</td>
-                                                            <td class="text-center">${fac.proveedor.persona.ruc}</td>
+                                                            <td class="text-center">${fac.proveedor.razonSocial}</td>
+                                                            <td class="text-center">${fac.proveedor.ruc}</td>
                                                             <td class="text-center">${fac.estado}</td>
                                                             <td class="text-center">
                                                                 <fmt:formatDate value="${fac.fechaCarga}" pattern="dd/MM/yyyy"/>
@@ -533,11 +534,11 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                                     <c:forEach var="orden" items="${listaOrdenesCompra}">
                                                         <tr>
                                                             <td class="text-center">${orden.idOrdenCompra}</td>
-                                                            <td class="text-center">${orden.proveedor.persona.nombre}</td>
+                                                            <td class="text-center">${orden.proveedor.razonSocial}</td>
                                                             <td class="text-center">${orden.sucursal.descripcion}</td>
                                                             <td class="text-center">${orden.condicionCompra}</td>
                                                             <td class="text-center">
-                                                                <fmt:formatDate value="${orden.fechaCarga}" pattern="dd/MM/yyyy"/>
+                                                                <fmt:formatDate value="${orden.fecha}" pattern="dd/MM/yyyy"/>
                                                             </td>
                                                             <td class="text-center">${orden.estado}</td>
                                                             <td class="text-center">
@@ -587,9 +588,9 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                                     <c:forEach var="prov" items="${listaProveedores}">
                                                         <tr>
                                                             <td class="text-center">${prov.idProveedor}</td>
-                                                            <td class="text-center">${prov.persona.nombre}</td>
-                                                            <td class="text-center">${prov.persona.ruc}</td>
-                                                            <td class="text-center">${prov.persona.telefono}</td>
+                                                            <td class="text-center">${prov.razonSocial}</td>
+                                                            <td class="text-center">${prov.ruc}</td>
+                                                            <td class="text-center">${prov.telefono}</td>
                                                             <td class="text-center">
                                                                 <a href="FacturaCompraServlet?menu=FacturaCompra&accion=CargarProveedor&token=${token}&idProveedor=${prov.idProveedor}"
                                                                    class="btn btn-primary btn-sm">Seleccionar</a>
