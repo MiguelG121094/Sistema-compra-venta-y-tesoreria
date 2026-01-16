@@ -244,16 +244,9 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                             </div>
                                             <div class="col-md-2">
                                                 <div class="form-floating mb-3 mb-md-0">
-                                                    <input class="form-control" id="fechaIniTimb" name="fechaIniTimbrado" type="date" placeholder="Fecha de inicio"
-                                                           value="<fmt:formatDate value='${facturaCompra.fechaIniTimbrado}' pattern='yyyy-MM-dd'/>" />
-                                                    <label for="fechaIniTimb">Fecha de inicio</label>
-                                                </div>
-                                            </div>
-                                            <div class="col-md-2">
-                                                <div class="form-floating mb-3 mb-md-0">
-                                                    <input class="form-control" id="fechaFinTimb" name="fechaVencTimbrado" type="date" placeholder="Fecha de Vencimiento"
+                                                    <input class="form-control" id="fechaVencTimb" name="fechaVencTimbrado" type="date" placeholder="Fecha Venc. Timbrado"
                                                            value="<fmt:formatDate value='${facturaCompra.fechaVenciTimbrado}' pattern='yyyy-MM-dd'/>" />
-                                                    <label for="fechaFinTimb">Fecha de vencimiento</label>
+                                                    <label for="fechaVencTimb">Fecha Venc. Timbrado</label>
                                                 </div>
                                             </div>
                                             <c:set var="esCredito" value="${facturaCompra.condicion == 'Credito'}" />
