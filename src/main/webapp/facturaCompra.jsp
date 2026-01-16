@@ -84,8 +84,11 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                             <!-- Botones principales -->
                             <div class="col-auto">
                                 <a href="FacturaCompraServlet?menu=FacturaCompra&accion=Nuevo" class="btn btn-success">Nuevo</a>
-                                <a href="" data-bs-toggle="modal" data-bs-target="#modalPedidos" class="btn btn-info text-white">Buscar Orden de Compra</a>
-                                <a href="" data-bs-toggle="modal" data-bs-target="#modalFacturas" class="btn btn-info text-white">Buscar Factura Compra</a>
+                                <button type="button" data-bs-toggle="modal" data-bs-target="#modalPedidos"
+                                        class="btn btn-info text-white"
+                                        <c:if test="${empty token}">disabled</c:if>>Buscar Orden de Compra</button>
+                                <button type="button" data-bs-toggle="modal" data-bs-target="#modalFacturas"
+                                        class="btn btn-info text-white">Buscar Factura Compra</button>
                                 <c:if test="${not empty token and not esNuevo}">
                                     <a href="FacturaCompraServlet?menu=FacturaCompra&accion=Anular&token=${token}"
                                        class="btn btn-danger"
@@ -113,7 +116,7 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                             <div class="col-md-2">
                                                 <div class="form-floating mb-3 mb-md-0">
                                                     <input class="form-control" id="usuario" type="text" placeholder="Usuario"
-                                                           value="${facturaCompra.usuario.nombreUsuario}" readonly />
+                                                           value="${facturaCompra.usuario.username}" readonly />
                                                     <label for="usuario">Usuario</label>
                                                 </div>
                                             </div>

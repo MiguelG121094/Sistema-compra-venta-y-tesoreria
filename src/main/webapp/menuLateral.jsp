@@ -68,7 +68,7 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                             <a class="nav-link" href="PedidoCompraServlet?menu=PedidoCompra&accion=ListarModal">Pedido de compra</a>
                             <a class="nav-link" href="PresupuestoServlet?menu=Presupuesto&accion=ListarModal">Presupuesto del proveedor</a>
                             <a class="nav-link" href="OrdenCompraServlet?menu=OrdenCompra&accion=ListarModal">Orden de compra</a>
-                            <a class="nav-link" href="facturaCompra.jsp">Factura compra</a>
+                            <a class="nav-link" href="FacturaCompraServlet?menu=FacturaCompra&accion=ListarModal">Factura compra</a>
                             <a class="nav-link" href="layout-sidenav-light.html">Notas de Crédito y Débito</a>
                         </nav>
                     </div>
