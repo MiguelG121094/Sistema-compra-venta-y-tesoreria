@@ -111,7 +111,7 @@ public class PresupuestoServlet extends HttpServlet {
                         request.setAttribute("listPedCompraConDetalle", listaPedidoCompraConDetalle);
                         presupuestosConDetalle = presupuestoService.listarPresupuestoConDetalles();
                         request.setAttribute("listaPresupuestosConDetalle", presupuestosConDetalle);
-                        proveedores = proveedorService.listarProveedors();
+                        proveedores = proveedorService.listarProveedores();
                         request.setAttribute("listaProveedores", proveedores);
                         
                         request.getRequestDispatcher("presupuesto.jsp").forward(request, response);
