@@ -28,7 +28,7 @@ public class ProveedorService {
         }
     }
     
-    public List<Proveedor> listarProveedors() throws SQLException{
+    public List<Proveedor> listarProveedores() throws SQLException{
         try (Connection conn = Conexion.getConnection()) {
             ProveedorDAO proveedorDAO = new ProveedorDAO(conn);
             List<Proveedor> proveedores = proveedorDAO.listarProveedors();
