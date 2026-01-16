@@ -113,7 +113,7 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                             <div class="col-md-2">
                                                 <div class="form-floating mb-3 mb-md-0">
                                                     <input class="form-control" id="usuario" type="text" placeholder="Usuario"
-                                                           value="${facturaCompra.usuario.nombreUsuario}" readonly />
+                                                           value="${facturaCompra.usuario.username}" readonly />
                                                     <label for="usuario">Usuario</label>
                                                 </div>
                                             </div>
