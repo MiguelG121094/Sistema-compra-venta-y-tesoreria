@@ -20,6 +20,15 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
 <!DOCTYPE html>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt"%>
+<%--
+    Taglib fn (JSTL Functions): Proporciona funciones para manipular strings.
+    Funciones disponibles: fn:contains, fn:containsIgnoreCase, fn:startsWith,
+    fn:endsWith, fn:indexOf, fn:length, fn:substring, fn:trim, fn:toUpperCase, etc.
+
+    En este JSP se usa fn:contains para verificar si la descripcion del tipo de
+    impuesto contiene "10" o "5" y asi calcular el IVA correspondiente.
+    Ejemplo: ${fn:contains(texto, 'buscar')} retorna true/false
+--%>
 <%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 
 <%@ page contentType="text/html;charset=UTF-8" language="java"  pageEncoding="UTF-8" %>
@@ -366,7 +375,14 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                                 <c:set var="subtotal" value="${detalle.cantidad * detalle.precioCompra}" />
                                                 <c:set var="totalGeneral" value="${totalGeneral + subtotal}" />
 
-                                                <%-- Calcular IVA según el tipo de impuesto del artículo --%>
+                                                <%--
+                                                    Calcular IVA según el tipo de impuesto del artículo.
+                                                    Se usa fn:contains para verificar si la descripcion contiene "10" o "5".
+                                                    Ejemplo: Si descripcion es "IVA 10%", fn:contains(descripcion, '10') = true
+                                                    - IVA 10%: El impuesto es 1/11 del subtotal (subtotal incluye IVA)
+                                                    - IVA 5%: El impuesto es 1/21 del subtotal
+                                                    - Exenta: No tiene IVA
+                                                --%>
                                                 <c:set var="gravada10" value="0" />
                                                 <c:set var="iva10" value="0" />
                                                 <c:set var="gravada5" value="0" />
@@ -374,6 +390,7 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                                 <c:set var="exenta" value="0" />
 
                                                 <c:choose>
+                                                    <%-- fn:contains verifica si el primer string contiene el segundo --%>
                                                     <c:when test="${fn:contains(detalle.articulo.tipoImpuesto.descripcion, '10')}">
                                                         <c:set var="iva10" value="${subtotal / 11}" />
                                                         <c:set var="gravada10" value="${subtotal - iva10}" />
