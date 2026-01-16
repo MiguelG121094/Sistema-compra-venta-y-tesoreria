@@ -345,10 +345,10 @@ usuario inicio sesion, se debe agregar esta validacion en cada una de las vistas
                                         <input type="text" placeholder="Ruc" value="${proveedorSeleccionado.getRuc()}" class="form-control"
                                                disabled="true">
                                     </div>
-                                    <div class="col-md-4">
+                                    <div class="col-md-2 d-flex align-items-center">
+                                        <label class="me-2">Sucursal:</label>
                                         <form action="OrdenCompraServlet?menu=OrdenCompra&accion=CargarSucursal" method="POST">
-                                            <label class="me-2">Sucursal:</label>
-                                            <select name="idSucursal" class="form-control" onchange="this.form.submit()"
+                                            <select name="idSucursal" class="form-select" onchange="this.form.submit()"
                                                 <c:if test="${newIdOrdenCompra == null && ordenCompra.getIdOrdenCompra() == null}">
                                                     disabled</c:if>>
                                                 <option value="">Seleccionar sucursal</option>
@@ -359,22 +359,24 @@ usuario inicio sesion, se debe agregar esta validacion en cada una de las vistas
                                             </select>
                                         </form>
                                     </div>
+                                    <div class="col-md-2 d-flex align-items-center">
+                                        <label style="white-space: nowrap;" class="me-2">Condición:</label>
+                                        <form action="OrdenCompraServlet?menu=OrdenCompra&accion=GuardarCondicionCompra" method="POST">
+                                            <select name="condicionCompra" class="form-select" onchange="this.form.submit()"
+                                                <c:if test="${newIdOrdenCompra == null && ordenCompra.getIdOrdenCompra() == null}">
+                                                    disabled</c:if>>
+                                                <option value="">Seleccionar...</option>
+                                                <option value="Contado" ${ordenCompra.getCondicionCompra() eq 'Contado' ? 'selected' : ''}>Contado</option>
+                                                <option value="Credito" ${ordenCompra.getCondicionCompra() eq 'Credito' ? 'selected' : ''}>Crédito</option>
+                                            </select>
+                                        </form>
+                                    </div>
                                 </div>
 
-                                <!-- Condiciones de compra -->
+                                <!-- Observacion -->
                                 <form action="OrdenCompraServlet?menu=OrdenCompra" method="POST">
                                     <div class="row" style="margin-top: 23px">
-                                        <div class="col-md-3">
-                                            <label class="me-2">Condicion de Compra:</label>
-                                            <select name="txtCondicionCompra" class="form-control"
-                                                <c:if test="${newIdOrdenCompra == null && ordenCompra.getIdOrdenCompra() == null}">
-                                                    <c:out value="disabled='disabled'"/></c:if>>
-                                                <option value="">Seleccione...</option>
-                                                <option value="Contado" ${ordenCompra.getCondicionCompra() eq 'Contado' ? 'selected' : ''}>Contado</option>
-                                                <option value="Credito" ${ordenCompra.getCondicionCompra() eq 'Credito' ? 'selected' : ''}>Credito</option>
-                                            </select>
-                                        </div>
-                                        <div class="col-md-6">
+                                        <div class="col-md-8">
                                             <label class="me-2">Observacion:</label>
                                             <input type="text" name="txtObservacion" value="${ordenCompra.getObservacion()}"
                                                    class="form-control" placeholder="Observaciones..."
@@ -382,7 +384,7 @@ usuario inicio sesion, se debe agregar esta validacion en cada una de las vistas
                                                        <c:out value="disabled='disabled'"/></c:if>>
                                         </div>
                                         <div class="col-md-2 d-flex align-items-end">
-                                            <button type="submit" name="accion" value="GuardarCondiciones" class="btn btn-secondary"
+                                            <button type="submit" name="accion" value="GuardarObservacion" class="btn btn-secondary"
                                                 <c:if test="${newIdOrdenCompra == null && ordenCompra.getIdOrdenCompra() == null}">
                                                     <c:out value="disabled='disabled'"/></c:if>>Aplicar</button>
                                         </div>

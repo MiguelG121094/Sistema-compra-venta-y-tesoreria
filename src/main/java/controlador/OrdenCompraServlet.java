@@ -294,12 +294,29 @@ public class OrdenCompraServlet extends HttpServlet {
                         request.getRequestDispatcher("ordenCompra.jsp").forward(request, response);
                         break;
 
-                    case "GuardarCondiciones":
-                        String condicionCompra = request.getParameter("txtCondicionCompra");
-                        String observacion = request.getParameter("txtObservacion");
-
-                        if (ordenCompra != null) {
+                    case "GuardarCondicionCompra":
+                        String condicionCompra = request.getParameter("condicionCompra");
+                        if (ordenCompra != null && condicionCompra != null) {
                             ordenCompra.setCondicionCompra(condicionCompra);
+                        }
+
+                        // Mantener los datos
+                        request.setAttribute("listaPresupuestosConDetalle", presupuestosConDetalle);
+                        request.setAttribute("listaOrdenesCompraConDetalle", ordenesCompraConDetalle);
+                        request.setAttribute("listaSucursales", listaSucursales);
+                        request.setAttribute("ordenCompra", ordenCompra);
+                        request.setAttribute("newIdOrdenCompra", newIdOrdenCompra);
+                        request.setAttribute("proveedorSeleccionado", proveedor);
+                        request.setAttribute("sucursalSeleccionada", sucursal);
+                        request.setAttribute("listaOrdenCompraDetalle", listaOrdenCompraDetalle);
+                        request.setAttribute("presupuesto", presupuesto);
+
+                        request.getRequestDispatcher("ordenCompra.jsp").forward(request, response);
+                        break;
+
+                    case "GuardarObservacion":
+                        String observacion = request.getParameter("txtObservacion");
+                        if (ordenCompra != null) {
                             ordenCompra.setObservacion(observacion);
                         }
 
@@ -314,7 +331,7 @@ public class OrdenCompraServlet extends HttpServlet {
                         request.setAttribute("listaOrdenCompraDetalle", listaOrdenCompraDetalle);
                         request.setAttribute("presupuesto", presupuesto);
 
-                        mostrarMensaje(request, "Condiciones actualizadas", "alert-success");
+                        mostrarMensaje(request, "Observacion actualizada", "alert-success");
 
                         request.getRequestDispatcher("ordenCompra.jsp").forward(request, response);
                         break;
