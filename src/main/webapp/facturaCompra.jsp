@@ -1,10 +1,11 @@
-<%-- 
+<%--
     Document   : facturaCompra
     Created on : 7/03/2025, 10:37:36 PM
     Author     : Miguel
+    Updated    : Implementación con Session + Token pattern
 --%>
 
-<!--bloque de codigo que hace que las páginas JSP solo sean accesibles si el 
+<!--bloque de codigo que hace que las páginas JSP solo sean accesibles si el
 usuario inicio sesion, se debe agregar esta validación en cada una de las vistas JSP-->
 <%@ page import="modelo.Usuario" %>
 <%
@@ -76,406 +77,268 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                     <h1 style="text-align: center">
                                         <strong>FACTURA COMPRA</strong></h1></span>
                             </div>
-                            
+
                             <!--linea debajo del titulo-->
                             <div style="border-bottom: 1px solid black; width: 100%; margin: 20px 0;"></div>
-                            
+
                             <!-- Botones principales -->
                             <div class="col-auto">
-                                <button class="btn btn-success">Nuevo</button>
+                                <a href="FacturaCompraServlet?menu=FacturaCompra&accion=Nuevo" class="btn btn-success">Nuevo</a>
                                 <a href="" data-bs-toggle="modal" data-bs-target="#modalPedidos" class="btn btn-info text-white">Buscar Orden de Compra</a>
                                 <a href="" data-bs-toggle="modal" data-bs-target="#modalFacturas" class="btn btn-info text-white">Buscar Factura Compra</a>
-                                <button class="btn btn-danger">Anular</button>
+                                <c:if test="${not empty token and not esNuevo}">
+                                    <a href="FacturaCompraServlet?menu=FacturaCompra&accion=Anular&token=${token}"
+                                       class="btn btn-danger"
+                                       onclick="return confirm('¿Está seguro de anular esta factura?');">Anular</a>
+                                </c:if>
+                                <c:if test="${empty token or esNuevo}">
+                                    <button class="btn btn-danger" disabled>Anular</button>
+                                </c:if>
                             </div>
                         </div>
-                        
-                        <form method="post" action="facturaCompra.jsp">
+
+                        <!-- Formulario principal con token -->
+                        <form id="formPrincipal" method="post" action="FacturaCompraServlet">
+                            <input type="hidden" name="menu" value="FacturaCompra">
+                            <input type="hidden" name="token" value="${token}">
+                            <input type="hidden" name="accion" id="accionPrincipal" value="Guardar">
+
                         <!-- Cabecera -->
                         <div class="row mb-4">
                             <div class="col custom-card">
                                 <h3>Cabecera</h3>
-                        <div class="card-body">
+                                <div class="card-body">
                                     <div class="card-body">
-                                            <div class="row mb-3">
-                                                <div class="col-md-2">
-                                                    <div class="form-floating mb-3 mb-md-0">
-                                                        <input class="form-control" id="usuario" type="text" placeholder="Usuario" />
-                                                        <label for="usuario">Usuario</label>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-2">
-                                                    <div class="form-floating mb-3 mb-md-0">
-                                                        <input class="form-control" id="fecha" type="date" placeholder="Fecha" />
-                                                        <label for="fecha">Fecha</label>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-2">
-                                                    <div class="form-floating mb-3 mb-md-0">
-                                                        <input class="form-control" id="estado" type="text" placeholder="Estado" />
-                                                        <label for="estado">Estado</label>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-2">
-                                                    <div class="form-floating mb-3 mb-md-0">
-                                                        <select class="form-control" id="sucursal" name="sucursal" onchange="this.form.submit()">
-                                                            <option>Seleccionar Sucursal</option>
-                                                            <option>Asuncion-Sajonia</option>
-                                                            <option>Asuncion-Mercado 4</option>
-                                                        </select>
-                                                        <label for="tipoFactura" class="me-2">Sucursal</label>
-                                                    </div>
-                                                </div>
-                                                <script>
-                                                    $(document).ready(function(){
-                                                        $('#nOrdenCompra').mask('A.AAA.AAA.AAA'); //la letra A es para numero y letra
-                                                      });
-                                                    </script>
-                                                <div class="col-md-2">
-                                                    <div class="form-floating mb-3 mb-md-0">
-                                                        <input class="form-control" id="nOrdenCompra" type="text" placeholder="Orden de compra" />
-                                                        <label for="ordenCompra">Orden de compra N°</label>
-                                                    </div>
+                                        <div class="row mb-3">
+                                            <div class="col-md-2">
+                                                <div class="form-floating mb-3 mb-md-0">
+                                                    <input class="form-control" id="usuario" type="text" placeholder="Usuario"
+                                                           value="${facturaCompra.usuario.nombreUsuario}" readonly />
+                                                    <label for="usuario">Usuario</label>
                                                 </div>
                                             </div>
+                                            <div class="col-md-2">
+                                                <div class="form-floating mb-3 mb-md-0">
+                                                    <input class="form-control" id="fechaCarga" type="date" placeholder="Fecha"
+                                                           value="<fmt:formatDate value='${facturaCompra.fechaCarga}' pattern='yyyy-MM-dd'/>" readonly />
+                                                    <label for="fechaCarga">Fecha Carga</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <div class="form-floating mb-3 mb-md-0">
+                                                    <input class="form-control" id="estado" type="text" placeholder="Estado"
+                                                           value="${not empty facturaCompra.estado ? facturaCompra.estado : 'Pendiente'}" readonly />
+                                                    <label for="estado">Estado</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <div class="form-floating mb-3 mb-md-0">
+                                                    <select class="form-control" id="sucursal" name="idSucursal"
+                                                            onchange="cambiarSucursal();" <c:if test="${not esNuevo}">disabled</c:if>>
+                                                        <option value="">Seleccionar Sucursal</option>
+                                                        <c:forEach var="suc" items="${listaSucursales}">
+                                                            <option value="${suc.idSucursal}"
+                                                                <c:if test="${sucursalSeleccionada.idSucursal == suc.idSucursal}">selected</c:if>>
+                                                                ${suc.descripcion}
+                                                            </option>
+                                                        </c:forEach>
+                                                    </select>
+                                                    <label for="sucursal">Sucursal</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <div class="form-floating mb-3 mb-md-0">
+                                                    <input class="form-control" id="nOrdenCompra" type="text" placeholder="Orden de compra"
+                                                           value="${ordenCompraSeleccionada.idOrdenCompra}" readonly />
+                                                    <label for="nOrdenCompra">Orden de compra N°</label>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
-                                    </div>
-<!--                                <div class="row" style="margin-top: 23px">
-                                    <div class="col-md-2 d-flex align-items-center">
-                                        <label class="me-2">Usuario:</label>
-                                        <input type="text" class="form-control" value="">
-                                    </div>
-                                    <div class="col-md-2 d-flex align-items-center">
-                                        <label class="me-2">Fecha:</label>
-                                        <input type="date" class="form-control">
-                                    </div>
-                                    <div class="col-md-2 d-flex align-items-center">
-                                        <label class="me-2">Estado:</label>
-                                        <input type="text" class="form-control">
-                                    </div>
-                                    <script>
-                                    $(document).ready(function(){
-                                        $('#nOrdenCompra').mask('A.AAA.AAA.AAA'); //la letra A es para numero y letra
-                                      });
-                                    </script>
-                                    <div class="col-md-2 d-flex align-items-center">
-                                        <label class="me-2">Orden de Compra N°:</label>
-                                        <input id="nOrdenCompra" type="text" class="form-control">
-                                    </div>
-                                    <div class="col-md-2 d-flex align-items-center">
-                                        <label class="me-2">Sucursal:</label>
-                                        <select class="form-control">
-                                            <option>Seleccionar sucursal</option>
-                                        </select>
-                                    </div>
-                                </div>-->
+                                </div>
 
-                        <!-- Información del Proveedor -->
-                        <div class="card-body">
+                                <!-- Información del Proveedor -->
+                                <div class="card-body">
                                     <div class="card-body">
-                                            <div class="row mb-3">
-                                                <div class="col-md-1">
-                                                    <div class="mb-3 mb-md-0">
-                                                        <!--style="overflow: hidden; text-overflow: ellipsis;" oculta el contenido del boton a medida que se achica la ventana-->
-                                                        <button type="button" data-bs-toggle="modal" style="overflow: hidden; text-overflow: ellipsis;"
-                                                                title="Buscar Proveedor"
-                                                                data-bs-target="#modalProveedores" class="btn btn-outline-primary w-100 btn-responsive">Buscar Proveedor
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-3">
-                                                    <div class="form-floating mb-3 mb-md-0">
-                                                        <input class="form-control" id="razonSocial" type="text" placeholder="Razon Social" />
-                                                        <label for="razonSocial">Razon Social</label>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-2">
-                                                    <div class="form-floating mb-3 mb-md-0">
-                                                        <input class="form-control" id="ruc" type="text" placeholder="RUC" />
-                                                        <label for="ruc">RUC</label>
-                                                    </div>
-                                                </div>
-                                                <!--style aplicado al comprobante para que se vea el placeholder con la mascara agregada-->
-                                                <style>
-                                                    /* Ocultar el placeholder inicialmente solo para el input específico */
-                                                    .form-floating #comprobanteN::placeholder {
-                                                        opacity: 0;
-                                                    }
-                                                    /* Mostrar el placeholder cuando el input específico esté enfocado o tenga valor */
-                                                    .form-floating #comprobanteN:focus::placeholder,
-                                                    .form-floating #comprobanteN:not(:placeholder-shown)::placeholder {
-                                                        opacity: 0.8;
-                                                        color: #6c757d;
-                                                    }
-                                                </style>
-                                                <!--mascara para el ruc de plugin de jquery-->
-                                                <script>
-                                                    $(document).ready(function(){
-                                                        $('#comprobanteN').mask('000-000-0000000');
-                                                    });
-                                                </script>
-                                                <div class="col-md-2">
-                                                    <div class="form-floating mb-3 mb-md-0">
-                                                        <input class="form-control" id="comprobanteN" type="text" placeholder="000-000-0000000" />
-                                                        <label for="comprobanteN">Comprobante N°</label>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-2">
-                                                    <div class="form-floating mb-3 mb-md-0">
-                                                        <input class="form-control" id="fehcaEmisionComp" type="date" placeholder="Fecha de emision" />
-                                                        <label for="fehcaEmisionComp">Fecha de emision</label>
-                                                    </div>
-                                                </div>
-                                                <!-- Determinar si el tipo de factura es "gasto" -->
-                                                <c:set var="esGasto" value="${param.tipoFactura == 'gasto'}" />
-                                                <div class="col-md-2">
-                                                    <div class="form-floating mb-3 mb-md-0">
-                                                        <select class="form-control" id="tipoFactura" name="tipoFactura" onchange="this.form.submit()">
-                                                            <option>Seleccionar tipo de factura</option>
-                                                            <option value="compraArt" <c:if test="${param.tipoFactura == 'compraArt'}">selected</c:if>>Factura Compra de Artículos</option>
-                                                            <option value="fondoFijo" <c:if test="${param.tipoFactura == 'fondoFijo'}">selected</c:if>>Factura Fondo Fijo</option>
-                                                            <option value="gasto" <c:if test="${param.tipoFactura == 'gasto'}">selected</c:if>>Factura de Gasto</option>
-                                                        </select>
-                                                        <label for="tipoFactura" class="me-2">Tipo de Factura</label>
-                                                    </div>
+                                        <div class="row mb-3">
+                                            <div class="col-md-1">
+                                                <div class="mb-3 mb-md-0">
+                                                    <button type="button" data-bs-toggle="modal" style="overflow: hidden; text-overflow: ellipsis;"
+                                                            title="Buscar Proveedor"
+                                                            data-bs-target="#modalProveedores" class="btn btn-outline-primary w-100 btn-responsive"
+                                                            <c:if test="${not esNuevo}">disabled</c:if>>Buscar Proveedor
+                                                    </button>
                                                 </div>
                                             </div>
-                                    </div>
-                                    </div>
-<!--                                <div class="row" style="margin-top: 23px">
-                                    <div class="col-auto d-flex align-items-center">
-                                            <div class="form-floating mb-3 mb-md-0">
-                                                <button type="button" href="" data-bs-toggle="modal" 
-                                                        data-bs-target="#modalProveedores" class="btn btn-outline-primary">Buscar Proveedor</button>
+                                            <div class="col-md-3">
+                                                <div class="form-floating mb-3 mb-md-0">
+                                                    <input class="form-control" id="razonSocial" type="text" placeholder="Razon Social"
+                                                           value="${proveedorSeleccionado.persona.nombre}" readonly />
+                                                    <label for="razonSocial">Razon Social</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <div class="form-floating mb-3 mb-md-0">
+                                                    <input class="form-control" id="ruc" type="text" placeholder="RUC"
+                                                           value="${proveedorSeleccionado.persona.ruc}" readonly />
+                                                    <label for="ruc">RUC</label>
+                                                </div>
+                                            </div>
+                                            <style>
+                                                .form-floating #comprobanteN::placeholder {
+                                                    opacity: 0;
+                                                }
+                                                .form-floating #comprobanteN:focus::placeholder,
+                                                .form-floating #comprobanteN:not(:placeholder-shown)::placeholder {
+                                                    opacity: 0.8;
+                                                    color: #6c757d;
+                                                }
+                                            </style>
+                                            <script>
+                                                $(document).ready(function(){
+                                                    $('#comprobanteN').mask('000-000-0000000');
+                                                });
+                                            </script>
+                                            <div class="col-md-2">
+                                                <div class="form-floating mb-3 mb-md-0">
+                                                    <input class="form-control" id="comprobanteN" name="numeroComprobante" type="text"
+                                                           placeholder="000-000-0000000" value="${facturaCompra.numero}" />
+                                                    <label for="comprobanteN">Comprobante N°</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <div class="form-floating mb-3 mb-md-0">
+                                                    <input class="form-control" id="fechaEmision" name="fechaEmision" type="date" placeholder="Fecha de emision"
+                                                           value="<fmt:formatDate value='${facturaCompra.fechaEmision}' pattern='yyyy-MM-dd'/>" />
+                                                    <label for="fechaEmision">Fecha de emision</label>
+                                                </div>
+                                            </div>
+                                            <c:set var="esGasto" value="${facturaCompra.tipoFactura == 'gasto'}" />
+                                            <div class="col-md-2">
+                                                <div class="form-floating mb-3 mb-md-0">
+                                                    <select class="form-control" id="tipoFactura" name="tipoFactura" onchange="cambiarTipoFactura();">
+                                                        <option value="">Seleccionar tipo de factura</option>
+                                                        <option value="compraArt" <c:if test="${facturaCompra.tipoFactura == 'compraArt'}">selected</c:if>>Factura Compra de Artículos</option>
+                                                        <option value="fondoFijo" <c:if test="${facturaCompra.tipoFactura == 'fondoFijo'}">selected</c:if>>Factura Fondo Fijo</option>
+                                                        <option value="gasto" <c:if test="${facturaCompra.tipoFactura == 'gasto'}">selected</c:if>>Factura de Gasto</option>
+                                                    </select>
+                                                    <label for="tipoFactura" class="me-2">Tipo de Factura</label>
+                                                </div>
                                             </div>
                                         </div>
-                                    <div class="col-md-1 d-flex align-items-center">
-                                            <input type="text" name="txtIdProveedor" placeholder="Id. Proveedor" value=""
-                                                   class="form-control" disabled="true">
-                                        </div>
-                                        <div class="col-md-2 d-flex align-items-center">
-                                            <input type="text" placeholder="Razon Social" value="" 
-                                                   class="form-control">
-                                        </div>
-                                        <div class="col-md-1 d-flex align-items-center">
-                                            <input type="text" placeholder="Ruc" value="" class="form-control"
-                                                   required="true">
-                                        </div>
-                                    
-                                    mascara para el ruc de plugin de jquery
-                                    <script>
-                                    $(document).ready(function(){
-                                        $('#ruc').mask('000-000-0000000');
-                                      });
-                                    </script>
-                                    <div class="col-md-2 d-flex align-items-center">
-                                        <label class="me-2">Comprobante N°:</label>
-                                        <input id="ruc" type="text" class="form-control" placeholder="000-000-0000000">
                                     </div>
-                                    <div class="col-md-2 d-flex align-items-center">
-                                        <label class="me-2">Fecha de emisión:</label>
-                                        <input type="date" class="form-control">
-                                    </div>
-                                    <c:set var="esCredito" value="${param.condicionCompra == 'credito'}" />
-                                    <div class="col-md-2 d-flex align-items-center">
-                                        <label class="me-2">Condición de la compra:</label>
-                                        <select class="form-control" id="condicionCompra" name="condicionCompra" onchange="this.form.submit()">
-                                            <option value="contado" <c:if test="${!esCredito}">selected</c:if>>Contado</option>
-                                            <option value="credito" <c:if test="${esCredito}">selected</c:if>>Crédito</option>
-                                        </select>
-                                    </div>
-                                </div>-->
-                                    
-                                    <div class="card-body">
-                                    <div class="card-body">
-                                            <div class="row mb-3">
-                                                <div class="col-md-2">
-                                                    <div class="form-floating mb-3 mb-md-0">
-                                                        <input class="form-control" id="timbrado" type="text" placeholder="Timbrado" />
-                                                        <label for="timbrado">Timbrado</label>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-2">
-                                                    <div class="form-floating mb-3 mb-md-0">
-                                                        <input class="form-control" id="fechaIniTimb" type="date" placeholder="Fecha de inicio" />
-                                                        <label for="fechaIniTimb">Fecha de inicio</label>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-2">
-                                                    <div class="form-floating mb-3 mb-md-0">
-                                                        <input class="form-control" id="fechaFinTimb" type="date" placeholder="Fecha de Vencimineto" />
-                                                        <label for="fechaFinTimb">Fecha de vencimiento</label>
-                                                    </div>
-                                                </div>
-                                                <c:set var="esCredito" value="${param.condicionCompra == 'credito'}" />
-                                                <div class="col-md-2">
-                                                    <div class="form-floating mb-3 mb-md-0">
-                                                        <select class="form-control" id="condicionCompra" name="condicionCompra" onchange="this.form.submit()">
-                                                            <option value="contado" <c:if test="${!esCredito}">selected</c:if>>Contado</option>
-                                                            <option value="credito" <c:if test="${esCredito}">selected</c:if>>Crédito</option>
-                                                        </select>
-                                                        <label for="condicionCompra" class="me-2">Condición de compra</label>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-2">
-                                                    <div class="form-floating mb-3 mb-md-0">
-                                                        <input type="number" id="plazoCredito" name="plazoCredito" class="form-control" 
-                                                               value="<c:out value='${param.plazoCredito != null ? param.plazoCredito : "0"}' />"
-                                                               <c:if test="${!esCredito}">disabled="disabled"</c:if>
-                                                               placeholder="Plazo en días" title="Plazo en días">
-                                                        <label for="plazoCredito">Plazo de condición (días)</label>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                    </div>
-                                    </div>
-                                
-<!--                                <div class="row" style="margin-top: 23px">
-                                    <div class="col-md-2 d-flex align-items-center">
-                                        <label class="me-2">Timbrado:</label>
-                                        <input type="text" class="form-control">
-                                    </div>
-                                    <div class="col-md-2 d-flex align-items-center">
-                                        <label class="me-2">Fecha de inicio:</label>
-                                        <input type="date" class="form-control">
-                                    </div>
-                                    <div class="col-md-2 d-flex align-items-center">
-                                        <label class="me-2">Fecha de vencimiento:</label>
-                                        <input type="date" class="form-control">
-                                    </div>
-                                    <div class="col-md-2 d-flex align-items-center">
-                                        <label class="me-2">Plazo de condición:</label>
-                                            <input type="number" id="plazoCredito" name="plazoCredito" class="form-control" 
-                                                value="<c:out value='${param.plazoCredito != null ? param.plazoCredito : "0"}' />"
-                                                <c:if test="${!esCredito}">disabled="disabled"</c:if>>
-                                            <span class="input-group-text">días</span>
-                                    </div>
-                                            
-                                     Determinar si el tipo de factura es "gasto" 
-                                    <c:set var="esGasto" value="${param.tipoFactura == 'gasto'}" />
-                                    <div class="col-md-2 d-flex align-items-center">
-                                        <label class="me-2">Tipo de Factura:</label>
-                                        <select class="form-control" id="tipoFactura" name="tipoFactura" onchange="this.form.submit()">
-                                            <option>Seleccionar tipo de factura</option>
-                                            <option value="compraArt" <c:if test="${param.tipoFactura == 'compraArt'}">selected</c:if>>Factura Compra de Artículos</option>
-                                            <option value="fondoFijo" <c:if test="${param.tipoFactura == 'fondoFijo'}">selected</c:if>>Factura Fondo Fijo</option>
-                                            <option value="gasto" <c:if test="${param.tipoFactura == 'gasto'}">selected</c:if>>Factura de Gasto</option>
-                                        </select>
-                                    </div>
-                                </div>-->
-                                        
-<!--                                    <div class="card-body">
-                                    <div class="card-body">
-                                            <div class="row mb-3">
-                                                <div class="col-md-2">
-                                                    <div class="form-floating mb-3 mb-md-0">
-                                                        <input class="form-control" id="inputFirstName" type="date" placeholder="Enter your first name" />
-                                                        <label for="inputFirstName">First name</label>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-2">
-                                                    <div class="form-floating mb-3 mb-md-0">
-                                                        <input class="form-control" id="inputLastName" type="text" placeholder="Enter your last name" />
-                                                        <label for="inputLastName">Last name</label>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-2">
-                                                    <div class="form-floating mb-3 mb-md-0">
-                                                        <input class="form-control" id="inputLastName1" type="text" placeholder="Enter your last name" />
-                                                        <label for="inputLastName1">Last name</label>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-2">
-                                                    <div class="form-floating mb-3 mb-md-0">
-                                                        <input class="form-control" id="inputLastName2" type="text" placeholder="Enter your last name" />
-                                                        <label for="inputLastName2">Last name</label>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-2">
-                                                    <div class="form-floating mb-4 mb-md-0">
-                                                        <input type="number" id="plazoCredito" name="plazoCredito" class="form-control" 
-                                                            value="<c:out value='${param.plazoCredito != null ? param.plazoCredito : "0"}' />"
-                                                            <c:if test="${!esCredito}">disabled="disabled"</c:if>>
-                                                        <span class="input-group-text">días</span>
-                                                        <label for="plazoCredito" class="me-2">Plazo de condición:</label>
-                                                        <input class="form-control" id="inputLastName12" type="text" placeholder="Enter your last name" />
-                                                        <label for="inputLastName12">Last name</label>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-2">
-                                                    <div class="form-floating mb-3 mb-md-0">
-                                                        <select class="form-control" id="tipoFactura" name="tipoFactura" onchange="this.form.submit()">
-                                                            <option>Seleccionar tipo de factura</option>
-                                                            <option value="compraArt" <c:if test="${param.tipoFactura == 'compraArt'}">selected</c:if>>Factura Compra de Artículos</option>
-                                                            <option value="fondoFijo" <c:if test="${param.tipoFactura == 'fondoFijo'}">selected</c:if>>Factura Fondo Fijo</option>
-                                                            <option value="gasto" <c:if test="${param.tipoFactura == 'gasto'}">selected</c:if>>Factura de Gasto</option>
-                                                        </select>
-                                                        <label for="tipoFactura" class="me-2">Tipo de Factura:</label>
-                                                        <input class="form-control" id="inputLastName22" type="text" placeholder="Enter your last name" />
-                                                        <label for="inputLastName22">Last name</label>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="form-floating mb-3">
-                                                <input class="form-control" id="inputEmail" type="email" placeholder="name@example.com" />
-                                                <label for="inputEmail">Email address</label>
-                                            </div>
-                                            <div class="row mb-3">
-                                                <div class="col-md-6">
-                                                    <div class="form-floating mb-3 mb-md-0">
-                                                        <input class="form-control" id="inputPassword" type="password" placeholder="Create a password" />
-                                                        <label for="inputPassword">Password</label>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <div class="form-floating mb-3 mb-md-0">
-                                                        <input class="form-control" id="inputPasswordConfirm" type="password" placeholder="Confirm password" />
-                                                        <label for="inputPasswordConfirm">Confirm Password</label>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                    </div>
-                                    </div>              -->
-                            </div>
+                                </div>
 
-                        <!-- Línea separadora -->
-                        <div class="border-section"></div>
-
-                        <!-- Búsqueda de Artículos -->
-                        <!--mostrar el div de agregar articulo si es faactura de fondo fjo o factura por otro gasto--> 
-                        <c:if test="${param.tipoFactura == 'fondoFijo' or param.tipoFactura == 'gasto'}">
-                        <div class="row mb-4">
-                            <div class="col custom-card">
-                                <div class="row" style="margin-top: 10px">
-<!--                                    <div class="col-auto">
-                                        <a href="" data-bs-toggle="modal" data-bs-target="#modalArticulos" class="btn btn-outline-primary">Buscar Artículo</a>
-                                    </div>
-                                    <div class="col-md-1">
-                                        <input type="text" placeholder="Id. Artículo" class="form-control">
-                                    </div>-->
-                                    <div class="col-md-3">
-                                        <input type="text" placeholder="Descripción" class="form-control">
-                                    </div>
-<!--                                    <div class="col-md-2">
-                                        <select class="form-control">
-                                            <option>Depósito Asu 1</option>
-                                            <option>Depósito Asu 2</option>
-                                            <option>Depósito Central</option>
-                                        </select>
-                                    </div>-->
-                                    <div class="col-md-1">
-                                        <input type="number" placeholder="Cantidad" class="form-control">
-                                    </div>
-                                    <div class="col-md-2">
-                                        <input type="number" placeholder="Precio de compra" class="form-control">
-                                    </div>
-                                    <div class="col-md-2">
-                                        <a href="Controlador?menu=Producto&accion=Listar" target="miContenedor" class="btn btn-success">Agregar Artículo</a>
+                                <div class="card-body">
+                                    <div class="card-body">
+                                        <div class="row mb-3">
+                                            <div class="col-md-2">
+                                                <div class="form-floating mb-3 mb-md-0">
+                                                    <input class="form-control" id="timbrado" name="timbrado" type="text" placeholder="Timbrado"
+                                                           value="${facturaCompra.timbrado}" />
+                                                    <label for="timbrado">Timbrado</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <div class="form-floating mb-3 mb-md-0">
+                                                    <input class="form-control" id="fechaIniTimb" name="fechaIniTimbrado" type="date" placeholder="Fecha de inicio"
+                                                           value="<fmt:formatDate value='${facturaCompra.fechaIniTimbrado}' pattern='yyyy-MM-dd'/>" />
+                                                    <label for="fechaIniTimb">Fecha de inicio</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <div class="form-floating mb-3 mb-md-0">
+                                                    <input class="form-control" id="fechaFinTimb" name="fechaVencTimbrado" type="date" placeholder="Fecha de Vencimiento"
+                                                           value="<fmt:formatDate value='${facturaCompra.fechaVenciTimbrado}' pattern='yyyy-MM-dd'/>" />
+                                                    <label for="fechaFinTimb">Fecha de vencimiento</label>
+                                                </div>
+                                            </div>
+                                            <c:set var="esCredito" value="${facturaCompra.condicion == 'Credito'}" />
+                                            <div class="col-md-2">
+                                                <div class="form-floating mb-3 mb-md-0">
+                                                    <select class="form-control" id="condicionCompra" name="condicion" onchange="cambiarCondicion();">
+                                                        <option value="Contado" <c:if test="${!esCredito}">selected</c:if>>Contado</option>
+                                                        <option value="Credito" <c:if test="${esCredito}">selected</c:if>>Crédito</option>
+                                                    </select>
+                                                    <label for="condicionCompra" class="me-2">Condición de compra</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <div class="form-floating mb-3 mb-md-0">
+                                                    <input type="number" id="plazoCredito" name="plazo" class="form-control"
+                                                           value="${facturaCompra.plazo != null ? facturaCompra.plazo : 0}"
+                                                           <c:if test="${!esCredito}">disabled</c:if>
+                                                           placeholder="Plazo en días" title="Plazo en días">
+                                                    <label for="plazoCredito">Plazo de condición (días)</label>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                        </c:if>
+
+                        <!-- Línea separadora -->
+                        <div class="border-section"></div>
                         </form>
+
+                        <!-- Búsqueda de Artículos - para factura de gasto o fondo fijo -->
+                        <c:if test="${facturaCompra.tipoFactura == 'fondoFijo' or facturaCompra.tipoFactura == 'gasto'}">
+                        <form id="formAgregarGasto" method="post" action="FacturaCompraServlet">
+                            <input type="hidden" name="menu" value="FacturaCompra">
+                            <input type="hidden" name="token" value="${token}">
+                            <input type="hidden" name="accion" value="AgregarArticulo">
+                            <div class="row mb-4">
+                                <div class="col custom-card">
+                                    <div class="row" style="margin-top: 10px">
+                                        <div class="col-md-3">
+                                            <input type="text" name="descripcion" placeholder="Descripción" class="form-control">
+                                        </div>
+                                        <div class="col-md-1">
+                                            <input type="number" name="cantidad" placeholder="Cantidad" class="form-control" value="1">
+                                        </div>
+                                        <div class="col-md-2">
+                                            <input type="number" name="precioCompra" placeholder="Precio de compra" class="form-control">
+                                        </div>
+                                        <div class="col-md-2">
+                                            <button type="submit" class="btn btn-success">Agregar Artículo</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                        </c:if>
+
+                        <!-- Búsqueda de Artículos - para factura de compra de artículos -->
+                        <c:if test="${facturaCompra.tipoFactura == 'compraArt' or empty facturaCompra.tipoFactura}">
+                        <form id="formAgregarArticulo" method="post" action="FacturaCompraServlet">
+                            <input type="hidden" name="menu" value="FacturaCompra">
+                            <input type="hidden" name="token" value="${token}">
+                            <input type="hidden" name="accion" value="AgregarArticulo">
+                            <input type="hidden" name="idArticulo" id="idArticuloAgregar" value="">
+                            <div class="row mb-4">
+                                <div class="col custom-card">
+                                    <div class="row" style="margin-top: 10px">
+                                        <div class="col-auto">
+                                            <button type="button" data-bs-toggle="modal" data-bs-target="#modalArticulos" class="btn btn-outline-primary">Buscar Artículo</button>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <input type="text" id="descripcionArticulo" placeholder="Descripción del artículo" class="form-control" readonly>
+                                        </div>
+                                        <div class="col-md-1">
+                                            <input type="number" name="cantidad" placeholder="Cantidad" class="form-control" value="1">
+                                        </div>
+                                        <div class="col-md-2">
+                                            <input type="number" name="precioCompra" id="precioCompraArticulo" placeholder="Precio de compra" class="form-control">
+                                        </div>
+                                        <div class="col-md-2">
+                                            <button type="submit" class="btn btn-success">Agregar Artículo</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                        </c:if>
 
                         <!-- Tabla de Artículos -->
                         <div class="row mb-4">
@@ -486,7 +349,6 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                             <tr>
                                                 <th class="text-bg-dark text-center">Id. Artículo</th>
                                                 <th class="text-bg-dark text-center">Descripción</th>
-                                                <th class="text-bg-dark text-center">Depósito</th>
                                                 <th class="text-bg-dark text-center">Cantidad</th>
                                                 <th class="text-bg-dark text-center">Precio de compra</th>
                                                 <th class="text-bg-dark text-center">Sub. Total</th>
@@ -499,56 +361,107 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            <tr>
-                                                <td class="text-center">2</td>
-                                                <td class="text-center">Jugo de Naranja</td>
-                                                <td class="text-center">Depósito Asu 1</td>
-                                                <td class="text-center">24</td>
-                                                <td class="text-center">5,000</td>
-                                                <td class="text-center">120,000</td>
-                                                <td class="text-center">109,091</td>
-                                                <td class="text-center">10,909</td>
-                                                <td class="text-center">0</td>
-                                                <td class="text-center">0</td>
-                                                <td class="text-center">0</td>
-                                                <td class="text-center">
-                                                    <button class="btn btn-danger btn-sm">Eliminar</button>
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <td class="text-center">3</td>
-                                                <td class="text-center">Licor de Coco</td>
-                                                <td class="text-center">Depósito Asu 1</td>
-                                                <td class="text-center">10</td>
-                                                <td class="text-center">8,000</td>
-                                                <td class="text-center">80,000</td>
-                                                <td class="text-center">72,727</td>
-                                                <td class="text-center">7,273</td>
-                                                <td class="text-center">0</td>
-                                                <td class="text-center">0</td>
-                                                <td class="text-center">0</td>
-                                                <td class="text-center">
-                                                    <button class="btn btn-danger btn-sm">Eliminar</button>
-                                                </td>
-                                            </tr>
+                                            <c:set var="totalGeneral" value="0" />
+                                            <c:set var="totalIva10" value="0" />
+                                            <c:set var="totalIva5" value="0" />
+                                            <c:set var="totalExenta" value="0" />
+                                            <c:forEach var="detalle" items="${listaFacturaCompraDetalle}" varStatus="status">
+                                                <c:set var="subtotal" value="${detalle.cantidad * detalle.precioCompra}" />
+                                                <c:set var="totalGeneral" value="${totalGeneral + subtotal}" />
+
+                                                <%-- Calcular IVA según el tipo de impuesto del artículo --%>
+                                                <c:set var="gravada10" value="0" />
+                                                <c:set var="iva10" value="0" />
+                                                <c:set var="gravada5" value="0" />
+                                                <c:set var="iva5" value="0" />
+                                                <c:set var="exenta" value="0" />
+
+                                                <c:choose>
+                                                    <c:when test="${detalle.articulo.tipoImpuesto.porcentaje == 10}">
+                                                        <c:set var="iva10" value="${subtotal / 11}" />
+                                                        <c:set var="gravada10" value="${subtotal - iva10}" />
+                                                        <c:set var="totalIva10" value="${totalIva10 + iva10}" />
+                                                    </c:when>
+                                                    <c:when test="${detalle.articulo.tipoImpuesto.porcentaje == 5}">
+                                                        <c:set var="iva5" value="${subtotal / 21}" />
+                                                        <c:set var="gravada5" value="${subtotal - iva5}" />
+                                                        <c:set var="totalIva5" value="${totalIva5 + iva5}" />
+                                                    </c:when>
+                                                    <c:otherwise>
+                                                        <c:set var="exenta" value="${subtotal}" />
+                                                        <c:set var="totalExenta" value="${totalExenta + exenta}" />
+                                                    </c:otherwise>
+                                                </c:choose>
+
+                                                <tr>
+                                                    <td class="text-center">${detalle.articulo.idArticulo}</td>
+                                                    <td class="text-center">
+                                                        <c:choose>
+                                                            <c:when test="${not empty detalle.articulo}">
+                                                                ${detalle.articulo.descripcion}
+                                                            </c:when>
+                                                            <c:otherwise>
+                                                                ${detalle.descripcion}
+                                                            </c:otherwise>
+                                                        </c:choose>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <fmt:formatNumber value="${detalle.cantidad}" pattern="#,###"/>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <fmt:formatNumber value="${detalle.precioCompra}" pattern="#,###"/>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <fmt:formatNumber value="${subtotal}" pattern="#,###"/>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <fmt:formatNumber value="${gravada10}" pattern="#,###"/>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <fmt:formatNumber value="${iva10}" pattern="#,###"/>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <fmt:formatNumber value="${gravada5}" pattern="#,###"/>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <fmt:formatNumber value="${iva5}" pattern="#,###"/>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <fmt:formatNumber value="${exenta}" pattern="#,###"/>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <a href="FacturaCompraServlet?menu=FacturaCompra&accion=EditarArticulo&token=${token}&index=${status.index}"
+                                                           class="btn btn-warning btn-sm">Editar</a>
+                                                        <a href="FacturaCompraServlet?menu=FacturaCompra&accion=EliminarArticulo&token=${token}&index=${status.index}"
+                                                           class="btn btn-danger btn-sm"
+                                                           onclick="return confirm('¿Está seguro de eliminar este artículo?');">Eliminar</a>
+                                                    </td>
+                                                </tr>
+                                            </c:forEach>
                                         </tbody>
                                     </table>
                                 </div>
-                                
+
                                 <!-- Botones finales -->
                                 <div class="row mt-3">
                                     <div class="col-md-6">
-                                        <button class="btn btn-success">Guardar</button>
-                                        <button class="btn btn-secondary">Cancelar</button>
+                                        <c:if test="${not empty token}">
+                                            <button type="button" class="btn btn-success" onclick="guardarFactura();">Guardar</button>
+                                            <a href="FacturaCompraServlet?menu=FacturaCompra&accion=Cancelar&token=${token}"
+                                               class="btn btn-secondary">Cancelar</a>
+                                        </c:if>
                                     </div>
                                     <div class="col-md-6 text-end">
-                                        <h5>Total: Gs. 200,000</h5>
+                                        <h5>Total: Gs. <fmt:formatNumber value="${totalGeneral}" pattern="#,###"/></h5>
+                                        <small>IVA 10%: <fmt:formatNumber value="${totalIva10}" pattern="#,###"/> |
+                                               IVA 5%: <fmt:formatNumber value="${totalIva5}" pattern="#,###"/> |
+                                               Exenta: <fmt:formatNumber value="${totalExenta}" pattern="#,###"/></small>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Modal para Buscar Facturas (nuevo modal) -->
+                        <!-- Modal para Buscar Facturas -->
                         <div class="modal fade" id="modalFacturas" tabindex="-1" aria-labelledby="modalFacturasLabel" aria-hidden="true">
                             <div class="modal-dialog modal-lg">
                                 <div class="modal-content">
@@ -561,25 +474,32 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                             <table id="tablaModalFacturas" class="table table-bordered table-striped">
                                                 <thead>
                                                     <tr>
+                                                        <th class="text-bg-dark text-center">ID</th>
                                                         <th class="text-bg-dark text-center">N° Factura</th>
                                                         <th class="text-bg-dark text-center">Proveedor</th>
                                                         <th class="text-bg-dark text-center">RUC</th>
-                                                        <th class="text-bg-dark text-center">Total</th>
+                                                        <th class="text-bg-dark text-center">Estado</th>
                                                         <th class="text-bg-dark text-center">Fecha</th>
                                                         <th class="text-bg-dark text-center no-search">Acciones</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    <tr>
-                                                        <td class="text-center">001-001-0000001</td>
-                                                        <td class="text-center">Distribuidora ABC</td>
-                                                        <td class="text-center">80012345-1</td>
-                                                        <td class="text-center">200,000</td>
-                                                        <td class="text-center">07/03/2025</td>
-                                                        <td class="text-center">
-                                                            <button class="btn btn-primary btn-sm">Seleccionar</button>
-                                                        </td>
-                                                    </tr>
+                                                    <c:forEach var="fac" items="${listaFacturasCompra}">
+                                                        <tr>
+                                                            <td class="text-center">${fac.idFacturaCompra}</td>
+                                                            <td class="text-center">${fac.numero}</td>
+                                                            <td class="text-center">${fac.proveedor.persona.nombre}</td>
+                                                            <td class="text-center">${fac.proveedor.persona.ruc}</td>
+                                                            <td class="text-center">${fac.estado}</td>
+                                                            <td class="text-center">
+                                                                <fmt:formatDate value="${fac.fechaCarga}" pattern="dd/MM/yyyy"/>
+                                                            </td>
+                                                            <td class="text-center">
+                                                                <a href="FacturaCompraServlet?menu=FacturaCompra&accion=CargarFactura&idFactura=${fac.idFacturaCompra}"
+                                                                   class="btn btn-primary btn-sm">Seleccionar</a>
+                                                            </td>
+                                                        </tr>
+                                                    </c:forEach>
                                                 </tbody>
                                             </table>
                                         </div>
@@ -591,7 +511,7 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                             </div>
                         </div>
 
-                        <!-- Los modales existentes para Pedidos y Artículos se mantienen igual -->
+                        <!-- Modal para Buscar Ordenes de Compra -->
                         <div class="modal fade" id="modalPedidos" tabindex="-1" aria-labelledby="modalPedidosLabel" aria-hidden="true">
                             <div class="modal-dialog modal-lg">
                                 <div class="modal-content">
@@ -606,23 +526,36 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                                     <tr>
                                                         <th class="text-bg-dark text-center">N° Orden</th>
                                                         <th class="text-bg-dark text-center">Proveedor</th>
-                                                        <th class="text-bg-dark text-center">Total</th>
+                                                        <th class="text-bg-dark text-center">Sucursal</th>
+                                                        <th class="text-bg-dark text-center">Condición</th>
                                                         <th class="text-bg-dark text-center">Fecha</th>
                                                         <th class="text-bg-dark text-center">Estado</th>
                                                         <th class="text-bg-dark text-center no-search">Acciones</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    <tr>
-                                                        <td class="text-center">OC-001</td>
-                                                        <td class="text-center">Distribuidora ABC</td>
-                                                        <td class="text-center">200,000</td>
-                                                        <td class="text-center">05/03/2025</td>
-                                                        <td class="text-center">Pendiente</td>
-                                                        <td class="text-center">
-                                                            <button class="btn btn-primary btn-sm">Seleccionar</button>
-                                                        </td>
-                                                    </tr>
+                                                    <c:forEach var="orden" items="${listaOrdenesCompra}">
+                                                        <tr>
+                                                            <td class="text-center">${orden.idOrdenCompra}</td>
+                                                            <td class="text-center">${orden.proveedor.persona.nombre}</td>
+                                                            <td class="text-center">${orden.sucursal.descripcion}</td>
+                                                            <td class="text-center">${orden.condicionCompra}</td>
+                                                            <td class="text-center">
+                                                                <fmt:formatDate value="${orden.fechaCarga}" pattern="dd/MM/yyyy"/>
+                                                            </td>
+                                                            <td class="text-center">${orden.estado}</td>
+                                                            <td class="text-center">
+                                                                <c:if test="${not empty token}">
+                                                                    <a href="FacturaCompraServlet?menu=FacturaCompra&accion=CargarOrdenCompra&token=${token}&idOrden=${orden.idOrdenCompra}"
+                                                                       class="btn btn-primary btn-sm">Seleccionar</a>
+                                                                </c:if>
+                                                                <c:if test="${empty token}">
+                                                                    <button class="btn btn-primary btn-sm" disabled
+                                                                            title="Primero debe crear una nueva factura">Seleccionar</button>
+                                                                </c:if>
+                                                            </td>
+                                                        </tr>
+                                                    </c:forEach>
                                                 </tbody>
                                             </table>
                                         </div>
@@ -634,7 +567,51 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                             </div>
                         </div>
 
-                        <!-- Modal Articulos (actualizado) -->
+                        <!-- Modal Proveedores -->
+                        <div class="modal fade" id="modalProveedores" tabindex="-1" aria-labelledby="modalProveedoresLabel" aria-hidden="true">
+                            <div class="modal-dialog modal-lg">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">Buscar Proveedores</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div class="table-responsive">
+                                            <table id="tablaModalProveedores" class="table table-bordered table-striped">
+                                                <thead>
+                                                    <tr>
+                                                        <th class="text-bg-dark text-center">ID</th>
+                                                        <th class="text-bg-dark text-center">Razón Social</th>
+                                                        <th class="text-bg-dark text-center">RUC</th>
+                                                        <th class="text-bg-dark text-center">Teléfono</th>
+                                                        <th class="text-bg-dark text-center no-search">Acciones</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <c:forEach var="prov" items="${listaProveedores}">
+                                                        <tr>
+                                                            <td class="text-center">${prov.idProveedor}</td>
+                                                            <td class="text-center">${prov.persona.nombre}</td>
+                                                            <td class="text-center">${prov.persona.ruc}</td>
+                                                            <td class="text-center">${prov.persona.telefono}</td>
+                                                            <td class="text-center">
+                                                                <a href="FacturaCompraServlet?menu=FacturaCompra&accion=CargarProveedor&token=${token}&idProveedor=${prov.idProveedor}"
+                                                                   class="btn btn-primary btn-sm">Seleccionar</a>
+                                                            </td>
+                                                        </tr>
+                                                    </c:forEach>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Modal Articulos -->
                         <div class="modal fade" id="modalArticulos" tabindex="-1" aria-labelledby="modalArticulosLabel" aria-hidden="true">
                             <div class="modal-dialog modal-lg">
                                 <div class="modal-content">
@@ -649,30 +626,27 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                                     <tr>
                                                         <th class="text-bg-dark text-center">Id. Artículo</th>
                                                         <th class="text-bg-dark text-center">Descripción</th>
-                                                        <th class="text-bg-dark text-center">Precio</th>
-                                                        <th class="text-bg-dark text-center">Stock</th>
+                                                        <th class="text-bg-dark text-center">Precio Compra</th>
+                                                        <th class="text-bg-dark text-center">Tipo Impuesto</th>
                                                         <th class="text-bg-dark text-center no-search">Acciones</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                    <tr>
-                                                        <td class="text-center">2</td>
-                                                        <td class="text-center">Jugo de Naranja</td>
-                                                        <td class="text-center">5,000</td>
-                                                        <td class="text-center">100</td>
-                                                        <td class="text-center">
-                                                            <button class="btn btn-primary btn-sm">Seleccionar</button>
-                                                        </td>
-                                                    </tr>
-                                                    <tr>
-                                                        <td class="text-center">3</td>
-                                                        <td class="text-center">Licor de Coco</td>
-                                                        <td class="text-center">8,000</td>
-                                                        <td class="text-center">50</td>
-                                                        <td class="text-center">
-                                                            <button class="btn btn-primary btn-sm">Seleccionar</button>
-                                                        </td>
-                                                    </tr>
+                                                    <c:forEach var="art" items="${listaArticulos}">
+                                                        <tr>
+                                                            <td class="text-center">${art.idArticulo}</td>
+                                                            <td class="text-center">${art.descripcion}</td>
+                                                            <td class="text-center">
+                                                                <fmt:formatNumber value="${art.precioCompra}" pattern="#,###"/>
+                                                            </td>
+                                                            <td class="text-center">${art.tipoImpuesto.descripcion}</td>
+                                                            <td class="text-center">
+                                                                <button type="button" class="btn btn-primary btn-sm"
+                                                                        onclick="seleccionarArticulo(${art.idArticulo}, '${art.descripcion}', ${art.precioCompra});"
+                                                                        data-bs-dismiss="modal">Seleccionar</button>
+                                                            </td>
+                                                        </tr>
+                                                    </c:forEach>
                                                 </tbody>
                                             </table>
                                         </div>
@@ -702,6 +676,43 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
         </div>
 
         <script>
+            // Funciones para manejar acciones del formulario
+            function guardarFactura() {
+                document.getElementById('accionPrincipal').value = 'Guardar';
+                document.getElementById('formPrincipal').submit();
+            }
+
+            function cambiarSucursal() {
+                document.getElementById('accionPrincipal').value = 'CambiarSucursal';
+                document.getElementById('formPrincipal').submit();
+            }
+
+            function cambiarCondicion() {
+                var condicion = document.getElementById('condicionCompra').value;
+                var plazoInput = document.getElementById('plazoCredito');
+
+                if (condicion === 'Credito') {
+                    plazoInput.disabled = false;
+                } else {
+                    plazoInput.disabled = true;
+                    plazoInput.value = 0;
+                }
+
+                document.getElementById('accionPrincipal').value = 'CambiarCondicion';
+                document.getElementById('formPrincipal').submit();
+            }
+
+            function cambiarTipoFactura() {
+                document.getElementById('accionPrincipal').value = 'CambiarTipoFactura';
+                document.getElementById('formPrincipal').submit();
+            }
+
+            function seleccionarArticulo(idArticulo, descripcion, precioCompra) {
+                document.getElementById('idArticuloAgregar').value = idArticulo;
+                document.getElementById('descripcionArticulo').value = descripcion;
+                document.getElementById('precioCompraArticulo').value = precioCompra;
+            }
+
             // Inicialización de DataTables para todas las tablas
             $(document).ready(function () {
                 // Tabla principal de artículos en factura
@@ -728,79 +739,34 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
 
                 // Tabla modal de facturas
                 $('#tablaModalFacturas').DataTable({
-                    initComplete: function () {
-                        this.api().columns().every(function () {
-                            var column = this;
-                            var title = column.footer().textContent;
-                            if (title !== "Acciones" && !$(column.header()).hasClass('no-search') && !$(column.footer()).hasClass('no-search')) {
-                                $('<input style="width: 100%" type="text" placeholder="Buscar ' + title + '" />')
-                                    .appendTo($(column.footer()).empty())
-                                    .on('keyup change clear', function () {
-                                        if (column.search() !== this.value) {
-                                            column.search(this.value).draw();
-                                        }
-                                    });
-                            } else {
-                                $(column.footer()).empty();
-                            }
-                        });
-                    },
                     language: { url: "DataTables 2/es-ES.json" }
                 });
 
-                // Las inicializaciones existentes para tablas modalPedidos y modalArticulos se mantienen
+                // Tabla modal de pedidos/ordenes
                 $('#tablaModalPedidos').DataTable({
-                    initComplete: function () {
-                        this.api().columns().every(function () {
-                            var column = this;
-                            var title = column.footer().textContent;
-                            if (title !== "Acciones" && !$(column.header()).hasClass('no-search') && !$(column.footer()).hasClass('no-search')) {
-                                $('<input style="width: 100%" type="text" placeholder="Buscar ' + title + '" />')
-                                    .appendTo($(column.footer()).empty())
-                                    .on('keyup change clear', function () {
-                                        if (column.search() !== this.value) {
-                                            column.search(this.value).draw();
-                                        }
-                                    });
-                            } else {
-                                $(column.footer()).empty();
-                            }
-                        });
-                    },
                     language: { url: "DataTables 2/es-ES.json" }
                 });
 
+                // Tabla modal de proveedores
+                $('#tablaModalProveedores').DataTable({
+                    language: { url: "DataTables 2/es-ES.json" }
+                });
+
+                // Tabla modal de artículos
                 $('#tablaModalArticulos').DataTable({
-                    initComplete: function () {
-                        this.api().columns().every(function () {
-                            var column = this;
-                            var title = column.footer().textContent;
-                            if (title !== "Acciones" && !$(column.header()).hasClass('no-search') && !$(column.footer()).hasClass('no-search')) {
-                                $('<input style="width: 100%" type="text" placeholder="Buscar ' + title + '" />')
-                                    .appendTo($(column.footer()).empty())
-                                    .on('keyup change clear', function () {
-                                        if (column.search() !== this.value) {
-                                            column.search(this.value).draw();
-                                        }
-                                    });
-                            } else {
-                                $(column.footer()).empty();
-                            }
-                        });
-                    },
                     language: { url: "DataTables 2/es-ES.json" }
                 });
             });
         </script>
 
-        <!-- Código para mostrar mensajes (se mantiene igual) -->
+        <!-- Código para mostrar mensajes -->
         <% String Message = (String) request.getAttribute("Message");%>
         <% String tipoAlert = (String) request.getAttribute("tipoAlert");%>
         <c:if test="${not empty Message}">
             <div id="mensaje" class="alert <%= tipoAlert != null ? tipoAlert : "alert-info"%>"
                  style="position:absolute; top: 80px; right: 10px; opacity: 80%; transition: opacity 1s ease; min-width: 200px;" role="alert">
                 <%= Message%>
-                <button type="button" style="border: none; width: 25px; height: 25px; float:right; display:inline-block; padding:0px 5px;" 
+                <button type="button" style="border: none; width: 25px; height: 25px; float:right; display:inline-block; padding:0px 5px;"
                         class="btn <%= tipoAlert != null ? tipoAlert + " btn-close" : "alert-info"%>" data-bs-dismiss="alert" aria-label="Close">
                 </button>
             </div>
@@ -816,30 +782,5 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                 }
             }, 7000);
         </script>
-        
-        <!--mensaje con libreria de toastr-->
-        <script>
-        $(function () {
-            // Success Type
-            $('#ts-success').on('click', function () {
-                toastr.success('Have fun storming the castle!', 'Miracle Max Says');
-            });
-
-            // Success Type
-            $('#ts-info').on('click', function () {
-                toastr.info('We do have the Kapua suite available.', 'Turtle Bay Resort');
-            });
-
-            // Success Type
-            $('#ts-warning').on('click', function () {
-                toastr.warning('My name is Inigo Montoya. You killed my father, prepare to die!');
-            });
-
-            // Success Type
-            $('#ts-error').on('click', function () {
-                toastr.error('I do not think that word means what you think it means.', 'Inconceivable!');
-            });
-        });
-    </script>
     </body>
 </html>
