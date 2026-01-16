@@ -133,6 +133,12 @@ public class OrdenCompraServlet extends HttpServlet {
                                 ordenCompra.setCondicionCompra(presupuesto.getCondicionCompra());
                                 proveedor = presupuesto.getProveedor();
 
+                                // Cargar sucursal desde el pedido de compra
+                                if (presupuesto.getPedidoCompra() != null && presupuesto.getPedidoCompra().getSucursal() != null) {
+                                    sucursal = presupuesto.getPedidoCompra().getSucursal();
+                                    ordenCompra.setSucursal(sucursal);
+                                }
+
                                 request.setAttribute("presupuesto", presupuesto);
 
                                 // Cargar detalles del presupuesto a la orden de compra

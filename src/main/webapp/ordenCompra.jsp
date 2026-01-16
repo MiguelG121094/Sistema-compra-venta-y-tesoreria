@@ -345,18 +345,19 @@ usuario inicio sesion, se debe agregar esta validacion en cada una de las vistas
                                         <input type="text" placeholder="Ruc" value="${proveedorSeleccionado.getRuc()}" class="form-control"
                                                disabled="true">
                                     </div>
-                                    <div class="col-auto">
-                                        <button type="button" href="" data-bs-toggle="modal" data-bs-target="#modalSucursales" class="btn btn-outline-primary"
+                                    <div class="col-md-4">
+                                        <form action="OrdenCompraServlet?menu=OrdenCompra&accion=CargarSucursal" method="POST">
+                                            <label class="me-2">Sucursal:</label>
+                                            <select name="idSucursal" class="form-control" onchange="this.form.submit()"
                                                 <c:if test="${newIdOrdenCompra == null && ordenCompra.getIdOrdenCompra() == null}">
-                                                    <c:out value="disabled='disabled'"/></c:if>>Buscar Sucursal</button>
-                                    </div>
-                                    <div class="col-md-1">
-                                        <input type="text" placeholder="Id. Suc" value="${sucursalSeleccionada.getIdSucursal()}"
-                                               class="form-control" disabled="true">
-                                    </div>
-                                    <div class="col-md-3">
-                                        <input type="text" placeholder="Sucursal" value="${sucursalSeleccionada.getDescripcion()}"
-                                               class="form-control" disabled="true">
+                                                    disabled</c:if>>
+                                                <option value="">Seleccionar sucursal</option>
+                                                <c:forEach var="suc" items="${listaSucursales}">
+                                                    <option value="${suc.getIdSucursal()}" ${suc.getIdSucursal() == sucursalSeleccionada.getIdSucursal() ? 'selected' : ''}>
+                                                        ${suc.getDescripcion()}</option>
+                                                </c:forEach>
+                                            </select>
+                                        </form>
                                     </div>
                                 </div>
 
