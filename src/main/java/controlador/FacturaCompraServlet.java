@@ -42,6 +42,7 @@ public class FacturaCompraServlet extends HttpServlet {
     private final FacturaCompraService facturaCompraService = new FacturaCompraService();
     private final FacturaCompraDetalleService facturaCompraDetalleService = new FacturaCompraDetalleService();
     private final OrdenCompraService ordenCompraService = new OrdenCompraService();
+    private final OrdenCompraDetalleService ordenCompraDetalleService = new OrdenCompraDetalleService();
     private final ProveedorService proveedorService = new ProveedorService();
     private final SucursalService sucursalService = new SucursalService();
     private final ArticuloService articuloService = new ArticuloService();
@@ -321,7 +322,7 @@ public class FacturaCompraServlet extends HttpServlet {
             estado.sucursalSeleccionada = ordenCompra.getSucursal();
 
             // Cargar detalles de la orden como detalles de factura
-            List<OrdenCompraDetalle> ordenDetalles = ordenCompraService.listarDetallesPorOrden(idOrden);
+            List<OrdenCompraDetalle> ordenDetalles = ordenCompraDetalleService.listarDetallesPorOrdenCompra(idOrden);
             estado.listaDetalle.clear();
             for (OrdenCompraDetalle od : ordenDetalles) {
                 FacturaCompraDetalle fd = new FacturaCompraDetalle();
