@@ -42,7 +42,7 @@ public class DepositoService {
     public List<Deposito> listarDepostioPorSucursal(Long idSucursal) throws SQLException {
         try (Connection conn = Conexion.getConnection()) {
             DepositoDAO depositoDAO = new DepositoDAO(conn);
-            List<Deposito> depositos = depositoDAO.listarDepostio();
+            List<Deposito> depositos = depositoDAO.listarDepostioPorSucursal(idSucursal);
             return depositos;
         } catch (SQLException e) {
             System.out.println("Error en DepositoService: "+ e);
