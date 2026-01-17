@@ -139,6 +139,76 @@ public class FacturaCompraServlet extends HttpServlet {
         request.setAttribute("tipoAlert", tipoAlert);
     }
 
+    /**
+     * Lee los datos del formulario y los guarda en el estado.
+     * Se usa para mantener los datos cuando se hacen cambios parciales (cambiar condición, tipo, etc.)
+     */
+    private void leerDatosFormulario(HttpServletRequest request, FacturaCompraState estado) {
+        String numeroComprobanteStr = request.getParameter("numeroComprobante");
+        String timbradoStr = request.getParameter("timbrado");
+        String fechaEmisionStr = request.getParameter("fechaEmision");
+        String fechaVencTimbradoStr = request.getParameter("fechaVencTimbrado");
+        String condicion = request.getParameter("condicion");
+        String plazoStr = request.getParameter("plazo");
+        String tipoFactura = request.getParameter("tipoFactura");
+        String observacion = request.getParameter("observacion");
+
+        // Numero de comprobante
+        if (numeroComprobanteStr != null && !numeroComprobanteStr.isEmpty()) {
+            try {
+                estado.facturaCompra.setNumero(Integer.parseInt(numeroComprobanteStr.replace("-", "")));
+            } catch (NumberFormatException e) {
+                // Ignorar si no se puede parsear
+            }
+        }
+
+        // Timbrado
+        if (timbradoStr != null && !timbradoStr.isEmpty()) {
+            try {
+                estado.facturaCompra.setTimbrado(Integer.parseInt(timbradoStr));
+            } catch (NumberFormatException e) {
+                // Ignorar si no se puede parsear
+            }
+        }
+
+        // Fechas
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+        try {
+            if (fechaEmisionStr != null && !fechaEmisionStr.isEmpty()) {
+                estado.facturaCompra.setFechaEmision(sdf.parse(fechaEmisionStr));
+            }
+            if (fechaVencTimbradoStr != null && !fechaVencTimbradoStr.isEmpty()) {
+                estado.facturaCompra.setFechaVenciTimbrado(sdf.parse(fechaVencTimbradoStr));
+            }
+        } catch (ParseException e) {
+            LOGGER.log(Level.WARNING, "Error al parsear fecha en leerDatosFormulario", e);
+        }
+
+        // Condicion
+        if (condicion != null && !condicion.isEmpty()) {
+            estado.facturaCompra.setCondicion(condicion);
+        }
+
+        // Plazo
+        if (plazoStr != null && !plazoStr.isEmpty()) {
+            try {
+                estado.facturaCompra.setPlazo(Integer.parseInt(plazoStr));
+            } catch (NumberFormatException e) {
+                // Ignorar si no se puede parsear
+            }
+        }
+
+        // Tipo de factura
+        if (tipoFactura != null && !tipoFactura.isEmpty()) {
+            estado.facturaCompra.setTipoFactura(tipoFactura);
+        }
+
+        // Observacion
+        if (observacion != null) {
+            estado.facturaCompra.setObservacion(observacion);
+        }
+    }
+
     // ==================== PROCESO PRINCIPAL ====================
 
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
@@ -397,14 +467,15 @@ public class FacturaCompraServlet extends HttpServlet {
         FacturaCompraState estado = obtenerEstadoORedireccionar(request, response, session, token);
         if (estado == null) return;
 
-        String condicion = request.getParameter("condicion");
-        estado.facturaCompra.setCondicion(condicion);
+        // Leer todos los datos del formulario para mantenerlos
+        leerDatosFormulario(request, estado);
 
         // Si es contado, limpiar plazo
-        if ("Contado".equals(condicion)) {
+        if ("Contado".equals(estado.facturaCompra.getCondicion())) {
             estado.facturaCompra.setPlazo(0);
         }
 
+        guardarEstado(session, token, estado);
         cargarDatosParaVista(request, estado, token);
         forward(request, response, JSP_FACTURA);
     }
@@ -418,9 +489,10 @@ public class FacturaCompraServlet extends HttpServlet {
         FacturaCompraState estado = obtenerEstadoORedireccionar(request, response, session, token);
         if (estado == null) return;
 
-        String tipoFactura = request.getParameter("tipoFactura");
-        estado.facturaCompra.setTipoFactura(tipoFactura);
+        // Leer todos los datos del formulario para mantenerlos
+        leerDatosFormulario(request, estado);
 
+        guardarEstado(session, token, estado);
         cargarDatosParaVista(request, estado, token);
         forward(request, response, JSP_FACTURA);
     }
