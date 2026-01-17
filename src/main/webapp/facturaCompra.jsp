@@ -315,7 +315,7 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                         </form>
                         </c:if>
 
-                        <!-- Búsqueda de Artículos - para factura de compra de artículos -->
+                        <!-- Búsqueda de Artículos - para factura de compra por fondo fijo o gastos -->
                         <c:if test="${facturaCompra.tipoFactura == 'compraArt' or empty facturaCompra.tipoFactura}">
                         <form id="formAgregarArticulo" method="post" action="FacturaCompraServlet">
                             <input type="hidden" name="menu" value="FacturaCompra">
