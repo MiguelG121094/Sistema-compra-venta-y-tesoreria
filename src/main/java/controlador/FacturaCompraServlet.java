@@ -631,6 +631,28 @@ public class FacturaCompraServlet extends HttpServlet {
             estado.facturaCompra.setObservacion(observacion);
         }
 
+        // Copiar entidades seleccionadas al objeto factura
+        estado.facturaCompra.setProveedor(estado.proveedorSeleccionado);
+        estado.facturaCompra.setSucursal(estado.sucursalSeleccionada);
+        if (estado.ordenCompraSeleccionada != null) {
+            estado.facturaCompra.setOrdenCompra(estado.ordenCompraSeleccionada);
+        }
+
+        // Validar campos obligatorios antes de guardar
+        if (estado.facturaCompra.getNumero() == null) {
+            mostrarMensaje(request, "Debe ingresar el número de comprobante", "alert-warning");
+            cargarDatosParaVista(request, estado, token);
+            forward(request, response, JSP_FACTURA);
+            return;
+        }
+
+        if (estado.sucursalSeleccionada == null) {
+            mostrarMensaje(request, "Debe seleccionar una sucursal", "alert-warning");
+            cargarDatosParaVista(request, estado, token);
+            forward(request, response, JSP_FACTURA);
+            return;
+        }
+
         // Guardar en BD
         if (estado.esNuevo) {
             Long idInsertado = facturaCompraService.insertarFacturaCompra(estado.facturaCompra);
