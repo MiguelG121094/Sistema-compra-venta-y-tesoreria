@@ -102,7 +102,7 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                 <c:if test="${not empty token and not esNuevo}">
                                     <a href="FacturaCompraServlet?menu=FacturaCompra&accion=Anular&token=${token}"
                                        class="btn btn-danger"
-                                       onclick="return confirm('¿Está seguro de anular esta factura?');">Anular</a>
+                                       onclick="return confirm('¿Está seguro que desea anular esta factura?');">Anular</a>
                                 </c:if>
                                 <c:if test="${empty token or esNuevo}">
                                     <button class="btn btn-danger" disabled>Anular</button>
