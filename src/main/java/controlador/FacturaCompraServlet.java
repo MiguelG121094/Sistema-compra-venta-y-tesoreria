@@ -153,13 +153,9 @@ public class FacturaCompraServlet extends HttpServlet {
         String tipoFactura = request.getParameter("tipoFactura");
         String observacion = request.getParameter("observacion");
 
-        // Numero de comprobante
+        // Numero de comprobante (ahora es String, se guarda con formato de máscara)
         if (numeroComprobanteStr != null && !numeroComprobanteStr.isEmpty()) {
-            try {
-                estado.facturaCompra.setNumero(Integer.parseInt(numeroComprobanteStr.replace("-", "")));
-            } catch (NumberFormatException e) {
-                // Ignorar si no se puede parsear
-            }
+            estado.facturaCompra.setNumero(numeroComprobanteStr);
         }
 
         // Timbrado
@@ -662,13 +658,9 @@ public class FacturaCompraServlet extends HttpServlet {
             return;
         }
 
-        // Setear datos en el objeto factura
+        // Setear datos en el objeto factura (numero es String con formato de máscara)
         if (numeroComprobanteStr != null && !numeroComprobanteStr.isEmpty()) {
-            try {
-                estado.facturaCompra.setNumero(Integer.parseInt(numeroComprobanteStr.replace("-", "")));
-            } catch (NumberFormatException e) {
-                // Mantener el valor anterior si no se puede parsear
-            }
+            estado.facturaCompra.setNumero(numeroComprobanteStr);
         }
 
         if (timbradoStr != null && !timbradoStr.isEmpty()) {
@@ -711,7 +703,7 @@ public class FacturaCompraServlet extends HttpServlet {
         }
 
         // Validar campos obligatorios antes de guardar
-        if (estado.facturaCompra.getNumero() == null) {
+        if (estado.facturaCompra.getNumero() == null || estado.facturaCompra.getNumero().isEmpty()) {
             mostrarMensaje(request, "Debe ingresar el número de comprobante", "alert-warning");
             cargarDatosParaVista(request, estado, token);
             forward(request, response, JSP_FACTURA);

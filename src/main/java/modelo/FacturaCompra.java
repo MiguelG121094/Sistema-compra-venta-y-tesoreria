@@ -14,7 +14,7 @@ import java.util.List;
 public class FacturaCompra {
 
     private Long idFacturaCompra;
-    private Integer numero;
+    private String numero;
     private Integer timbrado;
     private Date fechaVenciTimbrado;
     private Date fechaEmision;
@@ -39,7 +39,7 @@ public class FacturaCompra {
         this.idFacturaCompra = idFacturaCompra;
     }
 
-    public FacturaCompra(Long idFacturaCompra, Integer numero, Integer timbrado, Date fechaVenciTimbrado,
+    public FacturaCompra(Long idFacturaCompra, String numero, Integer timbrado, Date fechaVenciTimbrado,
             Date fechaEmision, Date fechaCarga, String condicion, Integer plazo, Date fechaVencimiento,
             String observacion, String estado, String tipoFactura, Proveedor proveedor, Sucursal sucursal,
             Usuario usuario, OrdenCompra ordenCompra) {
@@ -69,11 +69,11 @@ public class FacturaCompra {
         this.idFacturaCompra = idFacturaCompra;
     }
 
-    public Integer getNumero() {
+    public String getNumero() {
         return numero;
     }
 
-    public void setNumero(Integer numero) {
+    public void setNumero(String numero) {
         this.numero = numero;
     }
 

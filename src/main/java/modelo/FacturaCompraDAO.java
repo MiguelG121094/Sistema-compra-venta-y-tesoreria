@@ -57,7 +57,7 @@ public class FacturaCompraDAO {
 
                     facturaCompra = new FacturaCompra(
                         rs.getLong("id_fact_comp_cab"),
-                        rs.getInt("fact_comp_numero"),
+                        rs.getString("fact_comp_numero"),
                         rs.getInt("fact_comp_timbrado"),
                         rs.getDate("fact_comp_fecha_venci_timb"),
                         rs.getDate("fact_comp_fecha_emision"),
@@ -100,7 +100,7 @@ public class FacturaCompraDAO {
 
                 FacturaCompra facturaCompra = new FacturaCompra(
                     rs.getLong("id_fact_comp_cab"),
-                    rs.getInt("fact_comp_numero"),
+                    rs.getString("fact_comp_numero"),
                     rs.getInt("fact_comp_timbrado"),
                     rs.getDate("fact_comp_fecha_venci_timb"),
                     rs.getDate("fact_comp_fecha_emision"),
@@ -169,11 +169,11 @@ public class FacturaCompraDAO {
                     "id_orden_compra_cab) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         try (PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-            // Manejar valores nulos con setObject para Integer
+            // Manejar valores nulos para String
             if (facturaCompra.getNumero() != null) {
-                stmt.setInt(1, facturaCompra.getNumero());
+                stmt.setString(1, facturaCompra.getNumero());
             } else {
-                stmt.setNull(1, java.sql.Types.INTEGER);
+                stmt.setNull(1, java.sql.Types.VARCHAR);
             }
             if (facturaCompra.getTimbrado() != null) {
                 stmt.setInt(2, facturaCompra.getTimbrado());
@@ -261,7 +261,7 @@ public class FacturaCompraDAO {
                     "WHERE id_fact_comp_cab = ?";
 
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setInt(1, facturaCompra.getNumero());
+            stmt.setString(1, facturaCompra.getNumero());
             stmt.setInt(2, facturaCompra.getTimbrado());
             stmt.setDate(3, new java.sql.Date(facturaCompra.getFechaVenciTimbrado().getTime()));
             stmt.setDate(4, new java.sql.Date(facturaCompra.getFechaEmision().getTime()));
