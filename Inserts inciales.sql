@@ -255,10 +255,10 @@ INSERT INTO public.usuario
 VALUES(4, 'Maria Stella', '123', 'inactivo', 3);
 INSERT INTO public.usuario
 (id_persona, usu_user, usu_pass, usu_estado, id_grupo)
-VALUES(3, 'Gustavo', '123', 'activo', 2);
+VALUES(2, 'Gustavo', '123', 'activo', 2);
 INSERT INTO public.usuario
 (id_persona, usu_user, usu_pass, usu_estado, id_grupo)
-VALUES(5, 'Adolfo Gustavo', '123', 'activo', 4);
+VALUES(3, 'Adolfo Gustavo', '123', 'activo', 4);
 
 
 
