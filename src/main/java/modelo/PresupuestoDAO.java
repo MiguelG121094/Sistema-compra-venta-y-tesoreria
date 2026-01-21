@@ -107,7 +107,8 @@ public class PresupuestoDAO {
     public List<Presupuesto> listarPresupuestoConDetalles() throws SQLException {
         List<Presupuesto> presupuestos = new ArrayList<>();
 
-        // con este query obtenemos el pedido de compra con su detalle, los articulos se concatenan en una sola columna por pedido
+        // con este query obtenemos el presupuesto con su detalle, los articulos se concatenan en una sola columna
+        // tambien verificamos si el presupuesto ya tiene una orden de compra asociada
         String sql = "SELECT \n" +
                     "    pc.id_presupuesto_cab, \n" +
                     "    pc.id_pedido_cab,\n" +
@@ -117,7 +118,8 @@ public class PresupuestoDAO {
                     "    pr.prov_razon_social,\n" +
                     "    pc.presu_cab_fecha,\n" +
                     "    pc.presu_cab_estado,\n" +
-                    "    STRING_AGG(a.art_descripcion || ' (Cant: ' || pd.presu_det_cantidad || ' Precio: ' || pd.presu_det_precio_compra || ')', ', ') AS articulos\n" +
+                    "    STRING_AGG(a.art_descripcion || ' (Cant: ' || pd.presu_det_cantidad || ' Precio: ' || pd.presu_det_precio_compra || ')', ', ') AS articulos,\n" +
+                    "    CASE WHEN EXISTS (SELECT 1 FROM orden_compra_cabecera oc WHERE oc.id_presupuesto_cab = pc.id_presupuesto_cab) THEN true ELSE false END AS tiene_orden_compra\n" +
                     "FROM presupuesto_cabecera pc\n" +
                     "JOIN usuario u ON pc.id_usuario = u.id_usuario\n" +
                     "JOIN persona p ON u.id_persona = p.id_persona\n" +
@@ -136,9 +138,10 @@ public class PresupuestoDAO {
                 usuarioDAO = new UsuarioDAO(conn);
                 proveedorDAO = new ProveedorDAO(conn);
                 pedidoCompra = pedidoCompraDAO.getPedidoCompra(rs.getLong("id_pedido_cab"));
-                Presupuesto presupuestoConDetalle = new Presupuesto(rs.getLong("id_presupuesto_cab"), pedidoCompra, 
-                        proveedorDAO.getProveedor(rs.getLong("id_proveedor")), rs.getDate("presu_cab_fecha"), 
+                Presupuesto presupuestoConDetalle = new Presupuesto(rs.getLong("id_presupuesto_cab"), pedidoCompra,
+                        proveedorDAO.getProveedor(rs.getLong("id_proveedor")), rs.getDate("presu_cab_fecha"),
                         rs.getString("presu_cab_estado"), usuarioDAO.getUsuario(rs.getLong("id_usuario")), rs.getString("articulos"));
+                presupuestoConDetalle.setOrdenCompraCompleta(rs.getBoolean("tiene_orden_compra"));
                 presupuestos.add(presupuestoConDetalle);
             }
         }

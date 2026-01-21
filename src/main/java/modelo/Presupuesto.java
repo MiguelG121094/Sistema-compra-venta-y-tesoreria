@@ -24,6 +24,7 @@ public class Presupuesto {
     private String condicionCompra;
     private String listaArticulos;
     private List<PresupuestoDetalle> presupuestoDetalle;
+    private boolean ordenCompraCompleta;
 
     public Presupuesto() {
     }
@@ -150,5 +151,12 @@ public class Presupuesto {
         this.presupuestoDetalle = presupuestoDetalle;
     }
 
-    
+    public boolean isOrdenCompraCompleta() {
+        return ordenCompraCompleta;
+    }
+
+    public void setOrdenCompraCompleta(boolean ordenCompraCompleta) {
+        this.ordenCompraCompleta = ordenCompraCompleta;
+    }
+
 }
