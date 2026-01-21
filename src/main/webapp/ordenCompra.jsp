@@ -157,6 +157,7 @@ usuario inicio sesion, se debe agregar esta validacion en cada una de las vistas
                                                         <tr>
                                                             <th class="text-bg-dark text-center">Nro Orden</th>
                                                             <th class="text-bg-dark text-center">Nro Presupuesto</th>
+                                                            <th class="text-bg-dark text-center">Nro Pedido</th>
                                                             <th class="text-bg-dark text-center">Proveedor</th>
                                                             <th class="text-bg-dark text-center">Sucursal</th>
                                                             <th class="text-bg-dark text-center">Fecha</th>
@@ -170,6 +171,7 @@ usuario inicio sesion, se debe agregar esta validacion en cada una de las vistas
                                                             <tr class="${OrdenCompraConDet.getEstado() eq 'Anulado' ? 'table-danger' : (OrdenCompraConDet.getEstado() eq 'Completado' || OrdenCompraConDet.getEstado() eq 'Aprobado' ? 'table-success' : '')}">
                                                                 <td align="center" valign="middle" class="text-center">${OrdenCompraConDet.getIdOrdenCompra()}</td>
                                                                 <td align="center" valign="middle" class="text-center">${OrdenCompraConDet.getPresupuesto().getIdPresupuesto()}</td>
+                                                                <td align="center" valign="middle" class="text-center">${OrdenCompraConDet.getPedidoCompra().getIdPedido()}</td>
                                                                 <td align="center" valign="middle" class="text-center">${OrdenCompraConDet.getProveedor().getRazonSocial()}</td>
                                                                 <td align="center" valign="middle" class="text-center">${OrdenCompraConDet.getSucursal().getDescripcion()}</td>
                                                                 <td align="center" valign="middle" class="text-center">${OrdenCompraConDet.getFecha()}</td>
@@ -196,6 +198,7 @@ usuario inicio sesion, se debe agregar esta validacion en cada una de las vistas
                                                         <tr>
                                                             <th class="text-bg-dark text-center">Nro Orden</th>
                                                             <th class="text-bg-dark text-center">Nro Presupuesto</th>
+                                                            <th class="text-bg-dark text-center">Nro Pedido</th>
                                                             <th class="text-bg-dark text-center">Proveedor</th>
                                                             <th class="text-bg-dark text-center">Sucursal</th>
                                                             <th class="text-bg-dark text-center">Fecha</th>
@@ -600,6 +603,7 @@ usuario inicio sesion, se debe agregar esta validacion en cada una de las vistas
                     },
                     autoWidth: false,
                     columns: [
+                        {width: '5%'},
                         {width: '5%'},
                         {width: '5%'},
                         null,
