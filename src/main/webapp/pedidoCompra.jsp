@@ -105,9 +105,9 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                                     </thead>
                                                     <tbody>
                                                         <c:forEach var="PedCompra" items="${listPedCompraConDetalle}">
-                                                            <tr class="${PedCompra.getEstado() eq 'Anulado' ? 'table-danger' : ''}">
+                                                            <tr class="${PedCompra.getEstado() eq 'Anulado' ? 'table-danger' : (PedCompra.getEstado() eq 'Completado' ? 'table-success' : '')}">
                                                                 <td align="center" valign="middle" class="text-center">${PedCompra.getIdPedido()}</td>
-                                                                <td align="center" valign="middle" class="text-center">${PedCompra.getUsuario().getPersona().getNombre()} 
+                                                                <td align="center" valign="middle" class="text-center">${PedCompra.getUsuario().getPersona().getNombre()}
                                                                     ${PedCompra.getUsuario().getPersona().getApellido()}</td>
                                                                 <td align="center" valign="middle" class="text-center">${PedCompra.getSucursal().getDescripcion()}</td>
                                                                 <td align="center" valign="middle" class="text-center">
@@ -115,13 +115,18 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                                                 <td align="center" valign="middle" class="text-center">${PedCompra.getEstado()}</td>
                                                                 <td align="center" valign="middle" class="text-center">${PedCompra.getListaArticulos()}</td>
                                                                 <td align="center" valign="middle" class="text-center">
-                                                                <form action="PedidoCompraServlet?menu=PedidoCompra" method="POST">
-                                                                    <input type="hidden" name="idPedCompraCab" value="${PedCompra.getIdPedido()}">
-                                                                    <button name="accion" value="CargarPedidoCompra" type="submit" class="btn btn-primary" 
-                                                                            <c:if test="${PedCompra.getEstado() eq 'Anulado'}"><c:out value="disabled='disabled'"/></c:if>>Seleccionar</button>
-                                                                </form>
-<!--                                                                    <a href="PedidoCompraServlet?menu=PedidoCompra&accion=CargarPedidoCompra&idPedCompraCab=${PedCompra.getIdPedido()}"
-                                                                        class="btn btn-primary disable">Seleccionar</a>-->
+                                                                    <c:choose>
+                                                                        <c:when test="${PedCompra.getEstado() eq 'Pendiente'}">
+                                                                            <form action="PedidoCompraServlet?menu=PedidoCompra" method="POST">
+                                                                                <input type="hidden" name="idPedCompraCab" value="${PedCompra.getIdPedido()}">
+                                                                                <button name="accion" value="CargarPedidoCompra" type="submit" class="btn btn-primary">Seleccionar</button>
+                                                                            </form>
+                                                                        </c:when>
+                                                                        <c:otherwise>
+                                                                            <button class="btn btn-secondary" disabled
+                                                                                    title="${PedCompra.getEstado() eq 'Completado' ? 'Pedido ya procesado' : 'Pedido anulado'}">Seleccionar</button>
+                                                                        </c:otherwise>
+                                                                    </c:choose>
                                                                 </td>
                                                             </tr>
                                                         </c:forEach>

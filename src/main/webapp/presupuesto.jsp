@@ -171,7 +171,7 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                                     </thead>
                                                     <tbody>
                                                         <c:forEach var="PresupuestosConDet" items="${listaPresupuestosConDetalle}">
-                                                            <tr class="${PresupuestosConDet.getEstado() eq 'Anulado' ? 'table-danger' : ''}">
+                                                            <tr class="${PresupuestosConDet.getEstado() eq 'Anulado' ? 'table-danger' : (PresupuestosConDet.getEstado() eq 'Completado' ? 'table-success' : '')}">
                                                                 <td align="center" valign="middle" class="text-center">${PresupuestosConDet.getIdPresupuesto()}</td>
                                                                 <td align="center" valign="middle" class="text-center">${PresupuestosConDet.getPedidoCompra().getIdPedido()}</td>
                                                                 <td align="center" valign="middle" class="text-center">${PresupuestosConDet.getUsuario().getPersona().getNombre()}
@@ -181,11 +181,18 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                                                 <td align="center" valign="middle" class="text-center">${PresupuestosConDet.getEstado()}</td>
                                                                 <td align="center" valign="middle" class="text-center">${PresupuestosConDet.getListaArticulos()}</td>
                                                                 <td align="center" valign="middle" class="text-center">
-                                                                <form action="PresupuestoServlet?menu=Presupuesto" method="POST">
-                                                                    <input type="hidden" name="idPresupuesto" value="${PresupuestosConDet.getIdPresupuesto()}">
-                                                                    <button name="accion" value="CargarPresupuesto" type="submit" class="btn btn-primary"
-                                                                            <c:if test="${PresupuestosConDet.getEstado() eq 'Anulado'}"><c:out value="disabled='disabled'"/></c:if>>Seleccionar</button>
-                                                                </form>
+                                                                    <c:choose>
+                                                                        <c:when test="${PresupuestosConDet.getEstado() eq 'Pendiente'}">
+                                                                            <form action="PresupuestoServlet?menu=Presupuesto" method="POST">
+                                                                                <input type="hidden" name="idPresupuesto" value="${PresupuestosConDet.getIdPresupuesto()}">
+                                                                                <button name="accion" value="CargarPresupuesto" type="submit" class="btn btn-primary">Seleccionar</button>
+                                                                            </form>
+                                                                        </c:when>
+                                                                        <c:otherwise>
+                                                                            <button class="btn btn-secondary" disabled
+                                                                                    title="${PresupuestosConDet.getEstado() eq 'Completado' ? 'Presupuesto ya procesado' : 'Presupuesto anulado'}">Seleccionar</button>
+                                                                        </c:otherwise>
+                                                                    </c:choose>
                                                                 </td>
                                                             </tr>
                                                         </c:forEach>

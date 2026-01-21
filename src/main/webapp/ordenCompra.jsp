@@ -168,7 +168,7 @@ usuario inicio sesion, se debe agregar esta validacion en cada una de las vistas
                                                     </thead>
                                                     <tbody>
                                                         <c:forEach var="OrdenCompraConDet" items="${listaOrdenesCompraConDetalle}">
-                                                            <tr class="${OrdenCompraConDet.getEstado() eq 'Anulado' ? 'table-danger' : (OrdenCompraConDet.getEstado() eq 'Aprobado' ? 'table-success' : '')}">
+                                                            <tr class="${OrdenCompraConDet.getEstado() eq 'Anulado' ? 'table-danger' : (OrdenCompraConDet.getEstado() eq 'Completado' || OrdenCompraConDet.getEstado() eq 'Aprobado' ? 'table-success' : '')}">
                                                                 <td align="center" valign="middle" class="text-center">${OrdenCompraConDet.getIdOrdenCompra()}</td>
                                                                 <td align="center" valign="middle" class="text-center">${OrdenCompraConDet.getPresupuesto().getIdPresupuesto()}</td>
                                                                 <td align="center" valign="middle" class="text-center">${OrdenCompraConDet.getProveedor().getRazonSocial()}</td>
@@ -177,10 +177,18 @@ usuario inicio sesion, se debe agregar esta validacion en cada una de las vistas
                                                                 <td align="center" valign="middle" class="text-center">${OrdenCompraConDet.getEstado()}</td>
                                                                 <td align="center" valign="middle" class="text-center">${OrdenCompraConDet.getListaArticulos()}</td>
                                                                 <td align="center" valign="middle" class="text-center">
-                                                                <form action="OrdenCompraServlet?menu=OrdenCompra" method="POST">
-                                                                    <input type="hidden" name="idOrdenCompra" value="${OrdenCompraConDet.getIdOrdenCompra()}">
-                                                                    <button name="accion" value="CargarOrdenCompra" type="submit" class="btn btn-primary">Seleccionar</button>
-                                                                </form>
+                                                                    <c:choose>
+                                                                        <c:when test="${OrdenCompraConDet.getEstado() eq 'Pendiente'}">
+                                                                            <form action="OrdenCompraServlet?menu=OrdenCompra" method="POST">
+                                                                                <input type="hidden" name="idOrdenCompra" value="${OrdenCompraConDet.getIdOrdenCompra()}">
+                                                                                <button name="accion" value="CargarOrdenCompra" type="submit" class="btn btn-primary">Seleccionar</button>
+                                                                            </form>
+                                                                        </c:when>
+                                                                        <c:otherwise>
+                                                                            <button class="btn btn-secondary" disabled
+                                                                                    title="${OrdenCompraConDet.getEstado() eq 'Anulado' ? 'Orden anulada' : 'Orden ya procesada'}">Seleccionar</button>
+                                                                        </c:otherwise>
+                                                                    </c:choose>
                                                                 </td>
                                                             </tr>
                                                         </c:forEach>
