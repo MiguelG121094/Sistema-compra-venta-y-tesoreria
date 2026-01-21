@@ -383,7 +383,7 @@ usuario inicio sesion, se debe agregar esta validacion en cada una de las vistas
                                     </div>
                                 </div>
 
-                                <!-- Observacion -->
+                                <%-- Observacion
                                 <form action="OrdenCompraServlet?menu=OrdenCompra" method="POST">
                                     <div class="row" style="margin-top: 23px">
                                         <div class="col-md-8">
@@ -400,8 +400,9 @@ usuario inicio sesion, se debe agregar esta validacion en cada una de las vistas
                                         </div>
                                     </div>
                                 </form>
+                                --%>
 
-                                <!-- Articulo seleccionado para editar -->
+                                <%-- Articulo seleccionado para editar
                                 <form action="OrdenCompraServlet?menu=OrdenCompra" method="POST">
                                     <div class="row" style="margin-top: 23px">
                                         <div class="col-md-1">
@@ -432,6 +433,7 @@ usuario inicio sesion, se debe agregar esta validacion en cada una de las vistas
                                         </div>
                                     </div>
                                 </form>
+                                --%>
                             </div>
                         </div>
 
@@ -463,8 +465,8 @@ usuario inicio sesion, se debe agregar esta validacion en cada una de las vistas
                                                     <td class="text-center">${listaOrdenDet.getPrecioCompra()}</td>
                                                     <td class="text-center">${subtotal}</td>
                                                     <td class="text-center">
-                                                        <a href="OrdenCompraServlet?menu=OrdenCompra&accion=EditarArticuloList&idArt=${listaOrdenDet.getArticulo().getIdArticulo()}"
-                                                           class="btn btn-warning btn-sm">Editar</a>
+                                                        <%--<a href="OrdenCompraServlet?menu=OrdenCompra&accion=EditarArticuloList&idArt=${listaOrdenDet.getArticulo().getIdArticulo()}"
+                                                           class="btn btn-warning btn-sm">Editar</a>--%>
                                                         <a href="OrdenCompraServlet?menu=OrdenCompra&accion=EliminarArticuloList&idArt=${listaOrdenDet.getArticulo().getIdArticulo()}"
                                                            class="btn btn-danger btn-sm">Eliminar</a>
                                                     </td>
