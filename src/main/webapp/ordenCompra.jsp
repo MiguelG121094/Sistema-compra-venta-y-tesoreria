@@ -218,7 +218,7 @@ usuario inicio sesion, se debe agregar esta validacion en cada una de las vistas
                             </div>
 
                             <!-- Modal Sucursales -->
-                            <div class="modal fade" id="modalSucursales" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+<!--                            <div class="modal fade" id="modalSucursales" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
                                 <div class="modal-dialog modal-lg">
                                     <div class="modal-content">
                                         <div class="modal-header">
@@ -265,7 +265,7 @@ usuario inicio sesion, se debe agregar esta validacion en cada una de las vistas
                                         </div>
                                     </div>
                                 </div>
-                            </div>
+                            </div>-->
 
                             <div class="col-auto">
                                 <form action="OrdenCompraServlet?menu=OrdenCompra" method="POST">
@@ -275,9 +275,9 @@ usuario inicio sesion, se debe agregar esta validacion en cada una de las vistas
                                             data-bs-target="#modalPresupuestos" class="btn btn-info text-white"
                                             <c:if test="${newIdOrdenCompra == null}"><c:out value="disabled='disabled'"/></c:if>>Buscar Presupuesto</button>
                                     <a href="" data-bs-toggle="modal" data-bs-target="#modalOrdenesCompra" class="btn btn-info text-white">Buscar Orden</a>
-                                    <button name="accion" value="Aprobar" type="submit" class="btn btn-primary"
+<!--                                    <button name="accion" value="Aprobar" type="submit" class="btn btn-primary"
                                        <c:if test="${ordenCompra.getIdOrdenCompra() == null || ordenCompra.getEstado() eq 'Aprobado' || ordenCompra.getEstado() eq 'Anulado'}">
-                                           <c:out value="disabled='disabled'"/></c:if>>Aprobar</button>
+                                           <c:out value="disabled='disabled'"/></c:if>>Aprobar</button>-->
                                     <button name="accion" value="Anular" type="button" data-bs-toggle="modal"
                                         data-bs-target="#modalAnular${ordenCompra.getIdOrdenCompra()}" class="btn btn-danger"
                                         <c:if test="${ordenCompra.getIdOrdenCompra() == null || ordenCompra.getEstado() eq 'Anulado'}">
