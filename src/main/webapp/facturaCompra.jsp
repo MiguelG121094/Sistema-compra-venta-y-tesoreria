@@ -511,6 +511,7 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                                     <tr>
                                                         <th class="text-bg-dark text-center">ID</th>
                                                         <th class="text-bg-dark text-center">N° Factura</th>
+                                                        <th class="text-bg-dark text-center">Tipo</th>
                                                         <th class="text-bg-dark text-center">Proveedor</th>
                                                         <th class="text-bg-dark text-center">RUC</th>
                                                         <th class="text-bg-dark text-center">Estado</th>
@@ -523,6 +524,7 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                                         <tr class="${fac.estado == 'Anulado' ? 'table-danger' : (fac.estado == 'Completado' ? 'table-success' : '')}">
                                                             <td class="text-center">${fac.idFacturaCompra}</td>
                                                             <td class="text-center">${fac.numero}</td>
+                                                            <td class="text-center">${fac.tipoFactura}</td>
                                                             <td class="text-center">${fac.proveedor.razonSocial}</td>
                                                             <td class="text-center">${fac.proveedor.ruc}</td>
                                                             <td class="text-center">${fac.estado}</td>
