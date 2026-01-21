@@ -401,10 +401,10 @@ public class OrdenCompraServlet extends HttpServlet {
                                 }
 
                                 // Actualizar estado del presupuesto a "Orden Generada"
-                                if (presupuesto != null) {
-                                    presupuesto.setEstado("Orden Generada");
-                                    presupuestoService.actualizarPresupuestoCabecera(presupuesto);
-                                }
+//                                if (presupuesto != null) {
+//                                    presupuesto.setEstado("Orden Generada");
+//                                    presupuestoService.actualizarPresupuestoCabecera(presupuesto);
+//                                }
 
                                 mostrarMensaje(request, "Orden de compra guardada correctamente", "alert-success");
                                 LOGGER.log(Level.INFO, "Orden de compra insertada correctamente con ID: " + idOrdenInserted);
