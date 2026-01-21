@@ -49,6 +49,7 @@ public class FacturaCompraServlet extends HttpServlet {
     private final ProveedorService proveedorService = new ProveedorService();
     private final SucursalService sucursalService = new SucursalService();
     private final ArticuloService articuloService = new ArticuloService();
+    private final TipoImpuestoService tipoImpuestoService = new TipoImpuestoService();
 
     // ==================== CLASE DE ESTADO ====================
 
@@ -74,6 +75,7 @@ public class FacturaCompraServlet extends HttpServlet {
         List<Proveedor> listaProveedores;
         List<Sucursal> listaSucursales;
         List<Articulo> listaArticulos;
+        List<TipoImpuesto> listaTipoImpuesto;
     }
 
     // ==================== MÉTODOS HELPER PARA SESIÓN ====================
@@ -115,6 +117,7 @@ public class FacturaCompraServlet extends HttpServlet {
         request.setAttribute("listaProveedores", estado.listaProveedores);
         request.setAttribute("listaSucursales", estado.listaSucursales);
         request.setAttribute("listaArticulos", estado.listaArticulos);
+        request.setAttribute("listaTipoImpuesto", estado.listaTipoImpuesto);
     }
 
     /**
@@ -314,6 +317,7 @@ public class FacturaCompraServlet extends HttpServlet {
         estado.listaProveedores = proveedorService.listarProveedores();
         estado.listaSucursales = sucursalService.listarSucursles();
         estado.listaArticulos = articuloService.listarArticulo();
+        estado.listaTipoImpuesto = tipoImpuestoService.listarTipoImpuesto();
 
         guardarEstado(session, nuevoToken, estado);
         cargarDatosParaVista(request, estado, nuevoToken);
@@ -365,6 +369,7 @@ public class FacturaCompraServlet extends HttpServlet {
         estado.listaOrdenesCompra = ordenCompraService.listarOrdenesCompraConDetalles();
         estado.listaSucursales = sucursalService.listarSucursles();
         estado.listaArticulos = articuloService.listarArticulo();
+        estado.listaTipoImpuesto = tipoImpuestoService.listarTipoImpuesto();
 
         guardarEstado(session, nuevoToken, estado);
         cargarDatosParaVista(request, estado, nuevoToken);

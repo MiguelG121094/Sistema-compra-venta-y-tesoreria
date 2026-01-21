@@ -9,6 +9,8 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  *
@@ -39,5 +41,18 @@ public class TipoImpuestoDAO {
         }
         return tipoImpuesto;
     }
-    
+
+    public List<TipoImpuesto> listarTipoImpuesto() throws SQLException {
+        List<TipoImpuesto> lista = new ArrayList<>();
+        String sql = "SELECT id_impuesto, imp_descripcion FROM impuesto ORDER BY id_impuesto";
+        try (PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+            while (rs.next()) {
+                TipoImpuesto tipo = new TipoImpuesto(rs.getLong("id_impuesto"), rs.getString("imp_descripcion"));
+                lista.add(tipo);
+            }
+        }
+        return lista;
+    }
+
 }

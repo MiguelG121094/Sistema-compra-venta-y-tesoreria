@@ -305,6 +305,14 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                             <input type="number" name="precioCompra" placeholder="Precio de compra" class="form-control">
                                         </div>
                                         <div class="col-md-2">
+                                            <select name="idTipoImpuesto" class="form-control">
+                                                <option value="">Seleccionar Impuesto</option>
+                                                <c:forEach var="imp" items="${listaTipoImpuesto}">
+                                                    <option value="${imp.idTipoImpuesto}">${imp.descripcion}</option>
+                                                </c:forEach>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-2">
                                             <button type="submit" class="btn btn-success">Agregar Artículo</button>
                                         </div>
                                     </div>
@@ -313,7 +321,7 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                         </form>
                         </c:if>
 
-                        <!-- Búsqueda de Artículos - para factura de compra por fondo fijo o gastos -->
+                        <%-- Búsqueda de Artículos - para factura de compra de articulos
                         <c:if test="${facturaCompra.tipoFactura == 'compraArt' or empty facturaCompra.tipoFactura}">
                         <form id="formAgregarArticulo" method="post" action="FacturaCompraServlet">
                             <input type="hidden" name="menu" value="FacturaCompra">
@@ -343,6 +351,7 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                             </div>
                         </form>
                         </c:if>
+                        --%>
 
                         <!-- Tabla de Artículos -->
                         <div class="row mb-4">
