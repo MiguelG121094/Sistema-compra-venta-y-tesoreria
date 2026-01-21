@@ -361,6 +361,8 @@ public class FacturaCompraServlet extends HttpServlet {
         estado.esNuevo = false;
 
         // Cargar listas para modales
+        estado.listaFacturasCompra = facturaCompraService.listarFacturasCompra();
+        estado.listaOrdenesCompra = ordenCompraService.listarOrdenesCompraConDetalles();
         estado.listaSucursales = sucursalService.listarSucursles();
         estado.listaArticulos = articuloService.listarArticulo();
 
@@ -822,7 +824,7 @@ public class FacturaCompraServlet extends HttpServlet {
                 if (pedidoCompra != null) {
                     pedidoCompra.setEstado("Completado");
                     pedidoCompraService.actualizarPedidoCabecera(pedidoCompra);
-                    LOGGER.log(Level.INFO, "Pedido de compra {0} actualizado a Completado", pedidoCompra.getIdPedidoCab());
+                    LOGGER.log(Level.INFO, "Pedido de compra {0} actualizado a Completado", pedidoCompra.getIdPedido());
                 }
 
                 // Actualizar estado del Presupuesto si existe
@@ -830,7 +832,7 @@ public class FacturaCompraServlet extends HttpServlet {
                 if (presupuesto != null) {
                     presupuesto.setEstado("Completado");
                     presupuestoService.actualizarPresupuestoCabecera(presupuesto);
-                    LOGGER.log(Level.INFO, "Presupuesto {0} actualizado a Completado", presupuesto.getIdPresupuestoCab());
+                    LOGGER.log(Level.INFO, "Presupuesto {0} actualizado a Completado", presupuesto.getIdPresupuesto());
                 }
             }
         } catch (SQLException e) {
