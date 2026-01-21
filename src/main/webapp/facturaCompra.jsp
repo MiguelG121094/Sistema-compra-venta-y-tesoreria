@@ -100,9 +100,7 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                 <button type="button" data-bs-toggle="modal" data-bs-target="#modalFacturas"
                                         class="btn btn-info text-white">Buscar Factura Compra</button>
                                 <c:if test="${not empty token and not esNuevo}">
-                                    <a href="FacturaCompraServlet?menu=FacturaCompra&accion=Anular&token=${token}"
-                                       class="btn btn-danger"
-                                       onclick="return confirm('¿Está seguro que desea anular esta factura?');">Anular</a>
+                                    <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#modalConfirmarAnular">Anular</button>
                                 </c:if>
                                 <c:if test="${empty token or esNuevo}">
                                     <button class="btn btn-danger" disabled>Anular</button>
@@ -446,9 +444,32 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                                     <td class="text-center">
                                                         <a href="FacturaCompraServlet?menu=FacturaCompra&accion=EditarArticulo&token=${token}&index=${status.index}"
                                                            class="btn btn-warning btn-sm">Editar</a>
-                                                        <a href="FacturaCompraServlet?menu=FacturaCompra&accion=EliminarArticulo&token=${token}&index=${status.index}"
-                                                           class="btn btn-danger btn-sm"
-                                                           onclick="return confirm('¿Está seguro de eliminar este artículo?');">Eliminar</a>
+                                                        <button type="button" class="btn btn-danger btn-sm"
+                                                                data-bs-toggle="modal" data-bs-target="#modalEliminar${status.index}">Eliminar</button>
+                                                        <!-- Modal de confirmación para eliminar artículo -->
+                                                        <div class="modal fade" id="modalEliminar${status.index}" tabindex="-1" aria-hidden="true">
+                                                            <div class="modal-dialog modal-dialog-centered">
+                                                                <div class="modal-content">
+                                                                    <div class="modal-header bg-warning">
+                                                                        <h5 class="modal-title">Confirmación</h5>
+                                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                                    </div>
+                                                                    <div class="modal-body">
+                                                                        ¿Está seguro de eliminar este artículo del detalle?
+                                                                    </div>
+                                                                    <div class="modal-footer">
+                                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">No</button>
+                                                                        <form action="FacturaCompraServlet" method="POST">
+                                                                            <input type="hidden" name="menu" value="FacturaCompra">
+                                                                            <input type="hidden" name="accion" value="EliminarArticulo">
+                                                                            <input type="hidden" name="token" value="${token}">
+                                                                            <input type="hidden" name="index" value="${status.index}">
+                                                                            <button type="submit" class="btn btn-danger">Sí, Eliminar</button>
+                                                                        </form>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             </c:forEach>
@@ -499,7 +520,7 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                                 </thead>
                                                 <tbody>
                                                     <c:forEach var="fac" items="${listaFacturasCompra}">
-                                                        <tr>
+                                                        <tr class="${fac.estado == 'Anulado' ? 'table-danger' : (fac.estado == 'Completado' ? 'table-success' : '')}">
                                                             <td class="text-center">${fac.idFacturaCompra}</td>
                                                             <td class="text-center">${fac.numero}</td>
                                                             <td class="text-center">${fac.proveedor.razonSocial}</td>
@@ -509,8 +530,15 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                                                 <fmt:formatDate value="${fac.fechaCarga}" pattern="dd/MM/yyyy"/>
                                                             </td>
                                                             <td class="text-center">
-                                                                <a href="FacturaCompraServlet?menu=FacturaCompra&accion=CargarFactura&idFactura=${fac.idFacturaCompra}"
-                                                                   class="btn btn-primary btn-sm">Seleccionar</a>
+                                                                <c:choose>
+                                                                    <c:when test="${fac.estado == 'Anulado'}">
+                                                                        <button class="btn btn-secondary btn-sm" disabled>Seleccionar</button>
+                                                                    </c:when>
+                                                                    <c:otherwise>
+                                                                        <a href="FacturaCompraServlet?menu=FacturaCompra&accion=CargarFactura&idFactura=${fac.idFacturaCompra}"
+                                                                           class="btn btn-primary btn-sm">Seleccionar</a>
+                                                                    </c:otherwise>
+                                                                </c:choose>
                                                             </td>
                                                         </tr>
                                                     </c:forEach>
@@ -549,7 +577,7 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                                 </thead>
                                                 <tbody>
                                                     <c:forEach var="orden" items="${listaOrdenesCompra}">
-                                                        <tr>
+                                                        <tr class="${orden.estado == 'Anulado' ? 'table-danger' : (orden.estado == 'Completado' ? 'table-success' : '')}">
                                                             <td class="text-center">${orden.idOrdenCompra}</td>
                                                             <td class="text-center">${orden.proveedor.razonSocial}</td>
                                                             <td class="text-center">${orden.sucursal.descripcion}</td>
@@ -559,14 +587,20 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                                             </td>
                                                             <td class="text-center">${orden.estado}</td>
                                                             <td class="text-center">
-                                                                <c:if test="${not empty token}">
-                                                                    <a href="FacturaCompraServlet?menu=FacturaCompra&accion=CargarOrdenCompra&token=${token}&idOrden=${orden.idOrdenCompra}"
-                                                                       class="btn btn-primary btn-sm">Seleccionar</a>
-                                                                </c:if>
-                                                                <c:if test="${empty token}">
-                                                                    <button class="btn btn-primary btn-sm" disabled
-                                                                            title="Primero debe crear una nueva factura">Seleccionar</button>
-                                                                </c:if>
+                                                                <c:choose>
+                                                                    <c:when test="${orden.estado == 'Completado' || orden.estado == 'Anulado'}">
+                                                                        <button class="btn btn-secondary btn-sm" disabled
+                                                                                title="${orden.estado == 'Completado' ? 'Orden ya completada' : 'Orden anulada'}">Seleccionar</button>
+                                                                    </c:when>
+                                                                    <c:when test="${not empty token}">
+                                                                        <a href="FacturaCompraServlet?menu=FacturaCompra&accion=CargarOrdenCompra&token=${token}&idOrden=${orden.idOrdenCompra}"
+                                                                           class="btn btn-primary btn-sm">Seleccionar</a>
+                                                                    </c:when>
+                                                                    <c:otherwise>
+                                                                        <button class="btn btn-primary btn-sm" disabled
+                                                                                title="Primero debe crear una nueva factura">Seleccionar</button>
+                                                                    </c:otherwise>
+                                                                </c:choose>
                                                             </td>
                                                         </tr>
                                                     </c:forEach>
@@ -667,6 +701,31 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                     </div>
                                     <div class="modal-footer">
                                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Modal de confirmación para Anular Factura -->
+                        <div class="modal fade" id="modalConfirmarAnular" tabindex="-1" aria-labelledby="modalConfirmarAnularLabel" aria-hidden="true">
+                            <div class="modal-dialog modal-dialog-centered">
+                                <div class="modal-content">
+                                    <div class="modal-header bg-danger text-white">
+                                        <h5 class="modal-title" id="modalConfirmarAnularLabel">Confirmación</h5>
+                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <p>¿Está seguro que desea anular esta factura?</p>
+                                        <p class="text-muted small">Esta acción revertirá los estados de los documentos relacionados a "Pendiente".</p>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">No</button>
+                                        <form action="FacturaCompraServlet" method="POST">
+                                            <input type="hidden" name="menu" value="FacturaCompra">
+                                            <input type="hidden" name="accion" value="Anular">
+                                            <input type="hidden" name="token" value="${token}">
+                                            <button type="submit" class="btn btn-danger">Sí, Anular</button>
+                                        </form>
                                     </div>
                                 </div>
                             </div>

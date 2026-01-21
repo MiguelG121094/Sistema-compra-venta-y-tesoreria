@@ -727,6 +727,32 @@ public class FacturaCompraServlet extends HttpServlet {
             return;
         }
 
+        // Validar fecha de vencimiento del timbrado sea mayor o igual a la fecha actual
+        if (estado.facturaCompra.getFechaVenciTimbrado() != null) {
+            Date fechaActual = new Date();
+            // Comparar solo las fechas (sin hora)
+            java.util.Calendar calVenc = java.util.Calendar.getInstance();
+            calVenc.setTime(estado.facturaCompra.getFechaVenciTimbrado());
+            calVenc.set(java.util.Calendar.HOUR_OF_DAY, 0);
+            calVenc.set(java.util.Calendar.MINUTE, 0);
+            calVenc.set(java.util.Calendar.SECOND, 0);
+            calVenc.set(java.util.Calendar.MILLISECOND, 0);
+
+            java.util.Calendar calActual = java.util.Calendar.getInstance();
+            calActual.setTime(fechaActual);
+            calActual.set(java.util.Calendar.HOUR_OF_DAY, 0);
+            calActual.set(java.util.Calendar.MINUTE, 0);
+            calActual.set(java.util.Calendar.SECOND, 0);
+            calActual.set(java.util.Calendar.MILLISECOND, 0);
+
+            if (calVenc.before(calActual)) {
+                mostrarMensaje(request, "La fecha de vencimiento del timbrado debe ser mayor o igual a la fecha actual", "alert-warning");
+                cargarDatosParaVista(request, estado, token);
+                forward(request, response, JSP_FACTURA);
+                return;
+            }
+        }
+
         // Guardar en BD
         if (estado.esNuevo) {
             Long idInsertado = facturaCompraService.insertarFacturaCompra(estado.facturaCompra);
@@ -782,6 +808,9 @@ public class FacturaCompraServlet extends HttpServlet {
         if (estado.facturaCompra.getIdFacturaCompra() != null) {
             estado.facturaCompra.setEstado("Anulado");
             facturaCompraService.actualizarFacturaCompra(estado.facturaCompra);
+
+            // Revertir estados de documentos relacionados a "Pendiente"
+            revertirEstadosDocumentosRelacionados(estado);
 
             limpiarEstado(session, token);
 
@@ -881,6 +910,41 @@ public class FacturaCompraServlet extends HttpServlet {
             }
         } catch (SQLException e) {
             LOGGER.log(Level.WARNING, "Error al crear cuenta a pagar", e);
+        }
+    }
+
+    /**
+     * Revierte los estados de los documentos relacionados a "Pendiente"
+     * cuando se anula una factura de compra.
+     * Documentos: OrdenCompra, PedidoCompra, Presupuesto
+     */
+    private void revertirEstadosDocumentosRelacionados(FacturaCompraState estado) {
+        try {
+            OrdenCompra ordenCompra = estado.ordenCompraSeleccionada;
+            if (ordenCompra != null) {
+                // Revertir estado de la Orden de Compra a Pendiente
+                ordenCompra.setEstado("Pendiente");
+                ordenCompraService.actualizarOrdenCompra(ordenCompra);
+                LOGGER.log(Level.INFO, "Orden de compra {0} revertida a Pendiente", ordenCompra.getIdOrdenCompra());
+
+                // Revertir estado del Pedido de Compra si existe
+                PedidoCompra pedidoCompra = ordenCompra.getPedidoCompra();
+                if (pedidoCompra != null) {
+                    pedidoCompra.setEstado("Pendiente");
+                    pedidoCompraService.actualizarPedidoCabecera(pedidoCompra);
+                    LOGGER.log(Level.INFO, "Pedido de compra {0} revertido a Pendiente", pedidoCompra.getIdPedido());
+                }
+
+                // Revertir estado del Presupuesto si existe
+                Presupuesto presupuesto = ordenCompra.getPresupuesto();
+                if (presupuesto != null) {
+                    presupuesto.setEstado("Pendiente");
+                    presupuestoService.actualizarPresupuestoCabecera(presupuesto);
+                    LOGGER.log(Level.INFO, "Presupuesto {0} revertido a Pendiente", presupuesto.getIdPresupuesto());
+                }
+            }
+        } catch (SQLException e) {
+            LOGGER.log(Level.WARNING, "Error al revertir estados de documentos relacionados", e);
         }
     }
 
