@@ -103,7 +103,7 @@ usuario inicio sesion, se debe agregar esta validacion en cada una de las vistas
                                                     </thead>
                                                     <tbody>
                                                         <c:forEach var="PresupuestosConDet" items="${listaPresupuestosConDetalle}">
-                                                            <tr class="${PresupuestosConDet.getEstado() eq 'Anulado' ? 'table-danger' : (PresupuestosConDet.getEstado() eq 'Orden Generada' ? 'table-secondary' : '')}">
+                                                            <tr class="${PresupuestosConDet.getEstado() eq 'Anulado' ? 'table-danger' : (PresupuestosConDet.getEstado() eq 'Orden Generada' || PresupuestosConDet.getEstado() eq 'Completado' ? 'table-success' : '')}">
                                                                 <td align="center" valign="middle" class="text-center">${PresupuestosConDet.getIdPresupuesto()}</td>
                                                                 <td align="center" valign="middle" class="text-center">${PresupuestosConDet.getPedidoCompra().getIdPedido()}</td>
                                                                 <td align="center" valign="middle" class="text-center">${PresupuestosConDet.getProveedor().getRazonSocial()}</td>
@@ -111,12 +111,18 @@ usuario inicio sesion, se debe agregar esta validacion en cada una de las vistas
                                                                 <td align="center" valign="middle" class="text-center">${PresupuestosConDet.getEstado()}</td>
                                                                 <td align="center" valign="middle" class="text-center">${PresupuestosConDet.getListaArticulos()}</td>
                                                                 <td align="center" valign="middle" class="text-center">
-                                                                <form action="OrdenCompraServlet?menu=OrdenCompra" method="POST">
-                                                                    <input type="hidden" name="idPresupuestoCab" value="${PresupuestosConDet.getIdPresupuesto()}">
-                                                                    <button name="accion" value="CargarPresupuesto" type="submit" class="btn btn-primary"
-                                                                            <c:if test="${PresupuestosConDet.getEstado() eq 'Anulado' || PresupuestosConDet.getEstado() eq 'Orden Generada'}">
-                                                                                <c:out value="disabled='disabled'"/></c:if>>Seleccionar</button>
-                                                                </form>
+                                                                    <c:choose>
+                                                                        <c:when test="${PresupuestosConDet.getEstado() eq 'Pendiente'}">
+                                                                            <form action="OrdenCompraServlet?menu=OrdenCompra" method="POST">
+                                                                                <input type="hidden" name="idPresupuestoCab" value="${PresupuestosConDet.getIdPresupuesto()}">
+                                                                                <button name="accion" value="CargarPresupuesto" type="submit" class="btn btn-primary">Seleccionar</button>
+                                                                            </form>
+                                                                        </c:when>
+                                                                        <c:otherwise>
+                                                                            <button class="btn btn-secondary" disabled
+                                                                                    title="${PresupuestosConDet.getEstado() eq 'Anulado' ? 'Presupuesto anulado' : 'Presupuesto ya tiene orden de compra'}">Seleccionar</button>
+                                                                        </c:otherwise>
+                                                                    </c:choose>
                                                                 </td>
                                                             </tr>
                                                         </c:forEach>
