@@ -85,19 +85,26 @@ Usuario A: Ve Pedido #200 (datos de Usuario B)
 /**
  * Clase que encapsula todo el estado de trabajo de una factura.
  * Se guarda en sesión con un token único.
+ * Implementa Serializable para permitir persistencia de sesión.
  */
-private static class FacturaCompraState {
+private static class FacturaCompraState implements Serializable {
+    private static final long serialVersionUID = 1L;
+
     FacturaCompra facturaCompra = new FacturaCompra();
     List<FacturaCompraDetalle> listaDetalle = new ArrayList<>();
     Proveedor proveedorSeleccionado;
     Sucursal sucursalSeleccionada;
     OrdenCompra ordenCompraSeleccionada;
+    FacturaCompraDetalle detalleSeleccionado;  // Para edición de artículo
     boolean esNuevo = false;
 
-    // Datos para modales (se pueden cargar bajo demanda)
+    // Datos para modales (se cargan una vez)
     List<OrdenCompra> listaOrdenesCompra;
+    List<FacturaCompra> listaFacturasCompra;
     List<Proveedor> listaProveedores;
     List<Sucursal> listaSucursales;
+    List<Articulo> listaArticulos;
+    List<TipoImpuesto> listaTipoImpuesto;  // Para facturas de gasto/fondo fijo
 }
 ```
 
@@ -150,12 +157,16 @@ private void cargarDatosParaVista(HttpServletRequest request, FacturaCompraState
     request.setAttribute("proveedorSeleccionado", estado.proveedorSeleccionado);
     request.setAttribute("sucursalSeleccionada", estado.sucursalSeleccionada);
     request.setAttribute("ordenCompraSeleccionada", estado.ordenCompraSeleccionada);
+    request.setAttribute("detalleSeleccionado", estado.detalleSeleccionado);
     request.setAttribute("esNuevo", estado.esNuevo);
 
     // Listas para modales
     request.setAttribute("listaOrdenesCompra", estado.listaOrdenesCompra);
+    request.setAttribute("listaFacturasCompra", estado.listaFacturasCompra);
     request.setAttribute("listaProveedores", estado.listaProveedores);
     request.setAttribute("listaSucursales", estado.listaSucursales);
+    request.setAttribute("listaArticulos", estado.listaArticulos);
+    request.setAttribute("listaTipoImpuesto", estado.listaTipoImpuesto);
 }
 ```
 
@@ -191,9 +202,16 @@ public class FacturaCompraServlet extends HttpServlet {
 
     // Services (estos sí pueden ser de instancia, son stateless)
     private final FacturaCompraService facturaCompraService = new FacturaCompraService();
+    private final FacturaCompraDetalleService facturaCompraDetalleService = new FacturaCompraDetalleService();
     private final OrdenCompraService ordenCompraService = new OrdenCompraService();
+    private final OrdenCompraDetalleService ordenCompraDetalleService = new OrdenCompraDetalleService();
+    private final PedidoCompraService pedidoCompraService = new PedidoCompraService();
+    private final PresupuestoService presupuestoService = new PresupuestoService();
+    private final CuentaPagarService cuentaPagarService = new CuentaPagarService();
     private final ProveedorService proveedorService = new ProveedorService();
     private final SucursalService sucursalService = new SucursalService();
+    private final ArticuloService articuloService = new ArticuloService();
+    private final TipoImpuestoService tipoImpuestoService = new TipoImpuestoService();
 
     // ==================== CLASE INTERNA PARA ESTADO DEL DOCUMENTO ====================
 
@@ -263,159 +281,170 @@ public class FacturaCompraServlet extends HttpServlet {
             return;
         }
 
+        // La implementación actual usa métodos delegados para cada acción
+        // Esto mejora la legibilidad y mantenibilidad del código
         try {
             switch (accion) {
-
-                // ==================== INICIAR NUEVO DOCUMENTO ====================
                 case "Nuevo":
-                    String nuevoToken = generarToken();
-                    FacturaCompraState nuevoEstado = new FacturaCompraState();
-                    nuevoEstado.esNuevo = true;
-                    nuevoEstado.facturaCompra.setUsuario(usuario);
-                    nuevoEstado.facturaCompra.setFechaCarga(new Date());
-                    nuevoEstado.facturaCompra.setEstado("Pendiente");
-
-                    // Cargar datos para modales
-                    nuevoEstado.listaOrdenesCompra = ordenCompraService.listarOrdenesCompraConDetalles();
-                    nuevoEstado.listaProveedores = proveedorService.listarProveedores();
-                    nuevoEstado.listaSucursales = sucursalService.listarSucursles();
-
-                    guardarEstado(session, nuevoToken, nuevoEstado);
-                    cargarDatosParaVista(request, nuevoEstado, nuevoToken);
-
-                    request.getRequestDispatcher("facturaCompra.jsp").forward(request, response);
+                    accionNuevo(request, response, session, usuario);
                     break;
-
-                // ==================== CARGAR DOCUMENTO EXISTENTE ====================
-                case "Cargar":
-                    Long idFactura = Long.parseLong(request.getParameter("idFactura"));
-                    String tokenCargar = generarToken();
-                    FacturaCompraState estadoCargar = new FacturaCompraState();
-
-                    estadoCargar.facturaCompra = facturaCompraService.getFacturaCompra(idFactura);
-                    estadoCargar.listaDetalle = facturaCompraService.listarDetallesPorFactura(idFactura);
-                    estadoCargar.proveedorSeleccionado = estadoCargar.facturaCompra.getProveedor();
-                    estadoCargar.sucursalSeleccionada = estadoCargar.facturaCompra.getSucursal();
-                    estadoCargar.ordenCompraSeleccionada = estadoCargar.facturaCompra.getOrdenCompra();
-                    estadoCargar.esNuevo = false;
-                    estadoCargar.listaSucursales = sucursalService.listarSucursles();
-
-                    guardarEstado(session, tokenCargar, estadoCargar);
-                    cargarDatosParaVista(request, estadoCargar, tokenCargar);
-
-                    request.getRequestDispatcher("facturaCompra.jsp").forward(request, response);
-                    break;
-
-                // ==================== SELECCIONAR ORDEN DE COMPRA ====================
-                case "CargarOrdenCompra":
-                    FacturaCompraState estadoOrden = obtenerEstado(session, token);
-                    if (estadoOrden == null) {
-                        mostrarMensaje(request, "Sesión expirada, inicie de nuevo", "alert-danger");
-                        response.sendRedirect("FacturaCompraServlet?menu=FacturaCompra&accion=ListarModal");
-                        return;
-                    }
-
-                    Long idOrden = Long.parseLong(request.getParameter("idOrden"));
-                    OrdenCompra ordenCompra = ordenCompraService.getOrdenCompra(idOrden);
-
-                    if (ordenCompra != null) {
-                        estadoOrden.ordenCompraSeleccionada = ordenCompra;
-                        estadoOrden.facturaCompra.setOrdenCompra(ordenCompra);
-                        estadoOrden.facturaCompra.setProveedor(ordenCompra.getProveedor());
-                        estadoOrden.facturaCompra.setSucursal(ordenCompra.getSucursal());
-                        estadoOrden.facturaCompra.setCondicion(ordenCompra.getCondicionCompra());
-                        estadoOrden.proveedorSeleccionado = ordenCompra.getProveedor();
-                        estadoOrden.sucursalSeleccionada = ordenCompra.getSucursal();
-
-                        mostrarMensaje(request, "Orden de compra cargada", "alert-success");
-                    }
-
-                    guardarEstado(session, token, estadoOrden);
-                    cargarDatosParaVista(request, estadoOrden, token);
-
-                    request.getRequestDispatcher("facturaCompra.jsp").forward(request, response);
-                    break;
-
-                // ==================== CAMBIAR CONDICIÓN DE COMPRA ====================
-                case "CambiarCondicion":
-                    FacturaCompraState estadoCond = obtenerEstado(session, token);
-                    if (estadoCond == null) {
-                        response.sendRedirect("FacturaCompraServlet?menu=FacturaCompra&accion=ListarModal");
-                        return;
-                    }
-
-                    String condicion = request.getParameter("condicion");
-                    estadoCond.facturaCompra.setCondicion(condicion);
-
-                    if ("Contado".equals(condicion)) {
-                        estadoCond.facturaCompra.setPlazo(0);
-                    }
-
-                    cargarDatosParaVista(request, estadoCond, token);
-                    request.getRequestDispatcher("facturaCompra.jsp").forward(request, response);
-                    break;
-
-                // ==================== GUARDAR FACTURA ====================
-                case "Guardar":
-                    FacturaCompraState estadoGuardar = obtenerEstado(session, token);
-                    if (estadoGuardar == null) {
-                        mostrarMensaje(request, "Sesión expirada", "alert-danger");
-                        response.sendRedirect("FacturaCompraServlet?menu=FacturaCompra&accion=ListarModal");
-                        return;
-                    }
-
-                    // Validaciones
-                    if (estadoGuardar.listaDetalle.isEmpty()) {
-                        mostrarMensaje(request, "Debe agregar al menos un artículo", "alert-warning");
-                        cargarDatosParaVista(request, estadoGuardar, token);
-                        request.getRequestDispatcher("facturaCompra.jsp").forward(request, response);
-                        return;
-                    }
-
-                    // Guardar en BD
-                    Long idInsertado = facturaCompraService.insertarFacturaCompra(
-                        estadoGuardar.facturaCompra,
-                        estadoGuardar.listaDetalle
-                    );
-
-                    if (idInsertado != null) {
-                        // LIMPIAR SESIÓN después de guardar exitosamente
-                        limpiarEstado(session, token);
-
-                        mostrarMensaje(request, "Factura guardada correctamente. ID: " + idInsertado, "alert-success");
-                        response.sendRedirect("FacturaCompraServlet?menu=FacturaCompra&accion=ListarModal");
-                    } else {
-                        mostrarMensaje(request, "Error al guardar la factura", "alert-danger");
-                        cargarDatosParaVista(request, estadoGuardar, token);
-                        request.getRequestDispatcher("facturaCompra.jsp").forward(request, response);
-                    }
-                    break;
-
-                // ==================== CANCELAR / LIMPIAR ====================
-                case "Cancelar":
-                    limpiarEstado(session, token);
-                    response.sendRedirect("FacturaCompraServlet?menu=FacturaCompra&accion=ListarModal");
-                    break;
-
-                // ==================== LISTAR (PANTALLA INICIAL) ====================
                 case "ListarModal":
+                    accionListarModal(request, response);
+                    break;
+                case "CargarFactura":
+                    accionCargarFactura(request, response, session);
+                    break;
+                case "CargarOrdenCompra":
+                    accionCargarOrdenCompra(request, response, session, token);
+                    break;
+                case "CargarProveedor":
+                    accionCargarProveedor(request, response, session, token);
+                    break;
+                case "CambiarSucursal":
+                    accionCambiarSucursal(request, response, session, token);
+                    break;
+                case "CambiarCondicion":
+                    accionCambiarCondicion(request, response, session, token);
+                    break;
+                case "CambiarTipoFactura":
+                    accionCambiarTipoFactura(request, response, session, token);
+                    break;
+                case "AgregarArticulo":
+                    accionAgregarArticulo(request, response, session, token);
+                    break;
+                case "EditarArticulo":
+                    accionEditarArticulo(request, response, session, token);
+                    break;
+                case "ActualizarArticulo":
+                    accionActualizarArticulo(request, response, session, token);
+                    break;
+                case "EliminarArticulo":
+                    accionEliminarArticulo(request, response, session, token);
+                    break;
+                case "Guardar":
+                    accionGuardar(request, response, session, token);
+                    break;
+                case "Anular":
+                    accionAnular(request, response, session, token);
+                    break;
+                case "Cancelar":
+                    accionCancelar(request, response, session, token);
+                    break;
                 default:
-                    List<FacturaCompra> listaFacturas = facturaCompraService.listarFacturasCompra();
-                    List<OrdenCompra> listaOrdenes = ordenCompraService.listarOrdenesCompraConDetalles();
-
-                    request.setAttribute("listaFacturasCompra", listaFacturas);
-                    request.setAttribute("listaOrdenesCompra", listaOrdenes);
-
-                    request.getRequestDispatcher("facturaCompra.jsp").forward(request, response);
+                    accionListarModal(request, response);
                     break;
             }
-
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "Error en FacturaCompraServlet", e);
-            mostrarMensaje(request, "Error: " + e.getMessage(), "alert-danger");
-            request.getRequestDispatcher("facturaCompra.jsp").forward(request, response);
+            mostrarMensaje(request, "Error de base de datos: " + e.getMessage(), "alert-danger");
+            forward(request, response, JSP_FACTURA);
         }
     }
+
+    // ==================== ACCIONES (Métodos Delegados) ====================
+
+    /**
+     * Crear nueva factura de compra
+     */
+    private void accionNuevo(HttpServletRequest request, HttpServletResponse response,
+            HttpSession session, Usuario usuario) throws ServletException, IOException, SQLException {
+
+        String nuevoToken = generarToken();
+        FacturaCompraState estado = new FacturaCompraState();
+
+        estado.esNuevo = true;
+        estado.facturaCompra.setUsuario(usuario);
+        estado.facturaCompra.setFechaCarga(new Date());
+        estado.facturaCompra.setEstado("Pendiente");
+
+        // Cargar datos para modales
+        estado.listaFacturasCompra = facturaCompraService.listarFacturasCompra();
+        estado.listaOrdenesCompra = ordenCompraService.listarOrdenesCompraConDetalles();
+        estado.listaProveedores = proveedorService.listarProveedores();
+        estado.listaSucursales = sucursalService.listarSucursles();
+        estado.listaArticulos = articuloService.listarArticulo();
+        estado.listaTipoImpuesto = tipoImpuestoService.listarTipoImpuesto();
+
+        guardarEstado(session, nuevoToken, estado);
+        cargarDatosParaVista(request, estado, nuevoToken);
+
+        forward(request, response, JSP_FACTURA);
+    }
+
+    /**
+     * Cambiar tipo de factura (mercadería, gasto, fondo fijo)
+     * Se usa para mostrar/ocultar campos según el tipo
+     */
+    private void accionCambiarTipoFactura(HttpServletRequest request, HttpServletResponse response,
+            HttpSession session, String token) throws ServletException, IOException {
+
+        FacturaCompraState estado = obtenerEstadoORedireccionar(request, response, session, token);
+        if (estado == null) return;
+
+        leerDatosFormulario(request, estado);
+
+        guardarEstado(session, token, estado);
+        cargarDatosParaVista(request, estado, token);
+        forward(request, response, JSP_FACTURA);
+    }
+
+    /**
+     * Agregar artículo al detalle
+     * Soporta artículos con código (mercadería) y sin código (gastos con descripción libre)
+     */
+    private void accionAgregarArticulo(HttpServletRequest request, HttpServletResponse response,
+            HttpSession session, String token) throws ServletException, IOException, SQLException {
+
+        FacturaCompraState estado = obtenerEstadoORedireccionar(request, response, session, token);
+        if (estado == null) return;
+
+        leerDatosFormulario(request, estado);
+
+        String idArticuloStr = request.getParameter("idArticulo");
+        String cantidadStr = request.getParameter("cantidad");
+        String precioStr = request.getParameter("precioCompra");
+        String descripcion = request.getParameter("descripcion");
+        String idTipoImpuestoStr = request.getParameter("idTipoImpuesto");
+
+        if (idArticuloStr == null || idArticuloStr.isEmpty()) {
+            // Factura de gasto: solo descripción, sin artículo
+            if (descripcion != null && !descripcion.isEmpty() && cantidadStr != null && precioStr != null) {
+                FacturaCompraDetalle detalle = new FacturaCompraDetalle();
+                detalle.setDescripcion(descripcion);
+                detalle.setCantidad(Long.parseLong(cantidadStr));
+                detalle.setPrecioCompra(Long.parseLong(precioStr));
+
+                // Asignar tipo de impuesto para cálculo de IVA
+                if (idTipoImpuestoStr != null && !idTipoImpuestoStr.isEmpty()) {
+                    TipoImpuesto tipoImpuesto = tipoImpuestoService.getTipoImpuesto(Long.parseLong(idTipoImpuestoStr));
+                    detalle.setTipoImpuesto(tipoImpuesto);
+                }
+
+                estado.listaDetalle.add(detalle);
+                mostrarMensaje(request, "Artículo agregado", "alert-success");
+            }
+        } else {
+            // Factura con artículo codificado
+            Long idArticulo = Long.parseLong(idArticuloStr);
+            Articulo articulo = articuloService.getArticulo(idArticulo);
+
+            if (articulo != null && cantidadStr != null && precioStr != null) {
+                FacturaCompraDetalle detalle = new FacturaCompraDetalle();
+                detalle.setArticulo(articulo);
+                detalle.setCantidad(Long.parseLong(cantidadStr));
+                detalle.setPrecioCompra(Long.parseLong(precioStr));
+                estado.listaDetalle.add(detalle);
+                mostrarMensaje(request, "Artículo agregado correctamente", "alert-success");
+            }
+        }
+
+        estado.detalleSeleccionado = null;
+        guardarEstado(session, token, estado);
+        cargarDatosParaVista(request, estado, token);
+        forward(request, response, JSP_FACTURA);
+    }
+
+    // ... otros métodos delegados (CargarFactura, CargarOrdenCompra, etc.)
 
     private void mostrarMensaje(HttpServletRequest request, String mensaje, String tipoAlert) {
         request.setAttribute("Message", mensaje);
@@ -1088,6 +1117,59 @@ public class FacturaCompraBean implements Serializable {
 
 ---
 
+## Funcionalidades Específicas
+
+### Facturas de Gasto y Fondo Fijo
+
+Las facturas de compra pueden ser de tres tipos:
+- **Mercadería**: Requiere selección de artículos codificados
+- **Gasto**: Permite descripción libre sin artículo, con selección manual de impuesto
+- **Fondo Fijo**: Similar a gasto, para rendiciones de fondo fijo
+
+Para gastos y fondo fijo:
+1. El botón "Buscar Artículo" está oculto
+2. Se muestra un select para elegir el tipo de impuesto (10%, 5%, Exento)
+3. El detalle se guarda con `tipoImpuesto` en lugar de usar el del artículo
+4. El cálculo de IVA usa `detalle.tipoImpuesto.descripcion`
+
+**En el JSP (facturaCompra.jsp):**
+```jsp
+<!-- Mostrar select de impuesto solo para gasto/fondo fijo -->
+<c:if test="${fn:contains(facturaCompra.tipoFactura, 'gasto') or fn:contains(facturaCompra.tipoFactura, 'fondoFijo')}">
+    <select name="idTipoImpuesto" class="form-control">
+        <option value="">Seleccionar Impuesto</option>
+        <c:forEach var="imp" items="${listaTipoImpuesto}">
+            <option value="${imp.idTipoImpuesto}">${imp.descripcion}</option>
+        </c:forEach>
+    </select>
+</c:if>
+
+<!-- Cálculo de IVA (usa tipoImpuesto del detalle si no hay artículo) -->
+<c:set var="descImpuesto" value="${not empty detalle.articulo ? detalle.articulo.tipoImpuesto.descripcion : detalle.tipoImpuesto.descripcion}" />
+```
+
+**En el modelo (FacturaCompraDetalle.java):**
+```java
+private TipoImpuesto tipoImpuesto;  // Para gastos sin artículo
+
+public FacturaCompraDetalle(FacturaCompra facturaCompra, Articulo articulo, Long cantidad,
+        Long precioCompra, String descripcion, TipoImpuesto tipoImpuesto) {
+    // Constructor con tipoImpuesto
+}
+```
+
+**En el DAO (FacturaCompraDetalleDAO.java):**
+```java
+// INSERT incluye id_impuesto
+String sql = "INSERT INTO factura_compra_detalle (..., id_impuesto) VALUES (..., ?)";
+
+// SELECT incluye id_impuesto
+Long idImpuesto = rs.getLong("id_impuesto");
+TipoImpuesto tipoImpuesto = idImpuesto != 0 ? tipoImpuestoDAO.getTipoImpuesto(idImpuesto) : null;
+```
+
+---
+
 ## Notas Adicionales
 
 ### Limpieza de Sesión
@@ -1116,3 +1198,14 @@ Configurar en `web.xml`:
 
 *Documento creado: Enero 2026*
 *Última actualización: Enero 2026*
+
+---
+
+## Historial de Cambios
+
+| Fecha | Cambio |
+|-------|--------|
+| Enero 2026 | Documento inicial con patrón Session + Token |
+| Enero 2026 | Actualizado FacturaCompraState con campos adicionales (listaTipoImpuesto, listaArticulos, etc.) |
+| Enero 2026 | Documentada funcionalidad de facturas de gasto/fondo fijo con selección de impuesto |
+| Enero 2026 | Actualizado patrón a "Switch-Case con Métodos Delegados" |
