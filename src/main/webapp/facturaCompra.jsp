@@ -396,14 +396,17 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                                 <c:set var="iva5" value="0" />
                                                 <c:set var="exenta" value="0" />
 
+                                                <%-- Obtener descripcion del impuesto (del articulo o del detalle) --%>
+                                                <c:set var="descImpuesto" value="${not empty detalle.articulo ? detalle.articulo.tipoImpuesto.descripcion : detalle.tipoImpuesto.descripcion}" />
+
                                                 <c:choose>
                                                     <%-- fn:contains verifica si el primer string contiene el segundo --%>
-                                                    <c:when test="${fn:contains(detalle.articulo.tipoImpuesto.descripcion, '10')}">
+                                                    <c:when test="${fn:contains(descImpuesto, '10')}">
                                                         <c:set var="iva10" value="${subtotal / 11}" />
                                                         <c:set var="gravada10" value="${subtotal - iva10}" />
                                                         <c:set var="totalIva10" value="${totalIva10 + iva10}" />
                                                     </c:when>
-                                                    <c:when test="${fn:contains(detalle.articulo.tipoImpuesto.descripcion, '5')}">
+                                                    <c:when test="${fn:contains(descImpuesto, '5')}">
                                                         <c:set var="iva5" value="${subtotal / 21}" />
                                                         <c:set var="gravada5" value="${subtotal - iva5}" />
                                                         <c:set var="totalIva5" value="${totalIva5 + iva5}" />

@@ -15,6 +15,7 @@ public class FacturaCompraDetalle {
     private Long cantidad;
     private Long precioCompra;
     private String descripcion;
+    private TipoImpuesto tipoImpuesto;
 
     public FacturaCompraDetalle() {
     }
@@ -66,5 +67,13 @@ public class FacturaCompraDetalle {
 
     public void setDescripcion(String descripcion) {
         this.descripcion = descripcion;
+    }
+
+    public TipoImpuesto getTipoImpuesto() {
+        return tipoImpuesto;
+    }
+
+    public void setTipoImpuesto(TipoImpuesto tipoImpuesto) {
+        this.tipoImpuesto = tipoImpuesto;
     }
 }

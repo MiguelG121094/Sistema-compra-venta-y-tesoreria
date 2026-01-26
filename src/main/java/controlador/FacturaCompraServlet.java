@@ -520,6 +520,7 @@ public class FacturaCompraServlet extends HttpServlet {
         String cantidadStr = request.getParameter("cantidad");
         String precioStr = request.getParameter("precioCompra");
         String descripcion = request.getParameter("descripcion");
+        String idTipoImpuestoStr = request.getParameter("idTipoImpuesto");
 
         // Validaciones
         if (idArticuloStr == null || idArticuloStr.isEmpty()) {
@@ -529,6 +530,13 @@ public class FacturaCompraServlet extends HttpServlet {
                 detalle.setDescripcion(descripcion);
                 detalle.setCantidad(Long.parseLong(cantidadStr));
                 detalle.setPrecioCompra(Long.parseLong(precioStr));
+
+                // Asignar tipo de impuesto si se seleccionó
+                if (idTipoImpuestoStr != null && !idTipoImpuestoStr.isEmpty()) {
+                    TipoImpuesto tipoImpuesto = tipoImpuestoService.getTipoImpuesto(Long.parseLong(idTipoImpuestoStr));
+                    detalle.setTipoImpuesto(tipoImpuesto);
+                }
+
                 estado.listaDetalle.add(detalle);
                 mostrarMensaje(request, "Artículo agregado", "alert-success");
             } else {
