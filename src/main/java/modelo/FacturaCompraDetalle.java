@@ -29,6 +29,16 @@ public class FacturaCompraDetalle {
         this.descripcion = descripcion;
     }
 
+    public FacturaCompraDetalle(FacturaCompra facturaCompra, Articulo articulo, Long cantidad,
+            Long precioCompra, String descripcion, TipoImpuesto tipoImpuesto) {
+        this.facturaCompra = facturaCompra;
+        this.articulo = articulo;
+        this.cantidad = cantidad;
+        this.precioCompra = precioCompra;
+        this.descripcion = descripcion;
+        this.tipoImpuesto = tipoImpuesto;
+    }
+
     public FacturaCompra getFacturaCompra() {
         return facturaCompra;
     }

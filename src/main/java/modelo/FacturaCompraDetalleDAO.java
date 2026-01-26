@@ -21,6 +21,7 @@ public class FacturaCompraDetalleDAO {
 
     private Connection conn;
     private ArticuloDAO articuloDAO;
+    private TipoImpuestoDAO tipoImpuestoDAO;
 
     public FacturaCompraDetalleDAO(Connection conn) {
         this.conn = conn;
@@ -34,6 +35,7 @@ public class FacturaCompraDetalleDAO {
         List<FacturaCompraDetalle> detalles = new ArrayList<>();
         String sql = "SELECT * FROM factura_compra_detalle WHERE id_fact_comp_cab = ?";
         articuloDAO = new ArticuloDAO(conn);
+        tipoImpuestoDAO = new TipoImpuestoDAO(conn);
 
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setLong(1, idFacturaCompra);
@@ -45,8 +47,10 @@ public class FacturaCompraDetalleDAO {
                     Long cantidad = rs.getLong("fact_comp_cantidad");
                     Long precioCompra = rs.getLong("fact_comp_precio_compra");
                     String descripcion = rs.getString("fact_det_descripcion");
+                    Long idImpuesto = rs.getLong("id_impuesto");
+                    TipoImpuesto tipoImpuesto = idImpuesto != 0 ? tipoImpuestoDAO.getTipoImpuesto(idImpuesto) : null;
 
-                    FacturaCompraDetalle detalle = new FacturaCompraDetalle(facturaCompra, articulo, cantidad, precioCompra, descripcion);
+                    FacturaCompraDetalle detalle = new FacturaCompraDetalle(facturaCompra, articulo, cantidad, precioCompra, descripcion, tipoImpuesto);
                     detalles.add(detalle);
                 }
             }
@@ -61,7 +65,7 @@ public class FacturaCompraDetalleDAO {
         }
 
         String sql = "INSERT INTO factura_compra_detalle (id_fact_comp_cab, id_articulo, fact_comp_cantidad, " +
-                    "fact_comp_precio_compra, fact_det_descripcion) VALUES (?, ?, ?, ?, ?)";
+                    "fact_comp_precio_compra, fact_det_descripcion, id_impuesto) VALUES (?, ?, ?, ?, ?, ?)";
 
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setLong(1, detalle.getFacturaCompra().getIdFacturaCompra());
@@ -81,6 +85,11 @@ public class FacturaCompraDetalleDAO {
                 stmt.setNull(4, java.sql.Types.INTEGER);
             }
             stmt.setString(5, detalle.getDescripcion());
+            if (detalle.getTipoImpuesto() != null) {
+                stmt.setLong(6, detalle.getTipoImpuesto().getIdTipoImpuesto());
+            } else {
+                stmt.setNull(6, java.sql.Types.INTEGER);
+            }
 
             int filasAfectadas = stmt.executeUpdate();
             return filasAfectadas > 0;
