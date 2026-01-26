@@ -315,7 +315,7 @@ usuario inicio sesion, se debe agregar esta validacion en cada una de las vistas
 
                                 <div class="row" style="margin-top: 23px">
                                     <div class="col-md-2 d-flex align-items-center">
-                                        <label style="white-space: nowrap;" class="me-2">Orden N:</label>
+                                        <label style="white-space: nowrap;" class="me-2">Orden N°:</label>
                                         <input type="text" value="${ordenCompra.getIdOrdenCompra() == null ? newIdOrdenCompra : ordenCompra.getIdOrdenCompra()}" class="form-control" disabled="">
                                     </div>
                                     <div class="col-md-2 d-flex align-items-center">
@@ -332,22 +332,23 @@ usuario inicio sesion, se debe agregar esta validacion en cada una de las vistas
                                         <input type="text" value="${ordenCompra.getEstado()}" class="form-control" disabled="true">
                                     </div>
                                     <div class="col-md-2 d-flex align-items-center">
-                                        <label style="white-space: nowrap;" class="me-2">Presupuesto N:</label>
+                                        <label style="white-space: nowrap;" class="me-2">Presupuesto N°:</label>
                                         <input type="text" value="${ordenCompra.getPresupuesto().getIdPresupuesto()}" class="form-control" disabled="">
                                     </div>
                                     <div class="col-md-2 d-flex align-items-center">
-                                        <label style="white-space: nowrap;" class="me-2">Pedido N:</label>
+                                        <label style="white-space: nowrap;" class="me-2">Pedido N°:</label>
                                         <input type="text" value="${ordenCompra.getPedidoCompra().getIdPedido()}" class="form-control" disabled="">
                                     </div>
                                 </div>
 
                                 <!-- Proveedor -->
                                 <div class="row" style="margin-top: 23px">
-                                    <div class="col-md-1">
+<!--                                    <div class="col-md-1">
                                         <input type="text" placeholder="Id. Prov" value="${proveedorSeleccionado.getIdProveedor()}"
                                                class="form-control" disabled="true">
-                                    </div>
-                                    <div class="col-md-3">
+                                    </div>-->
+                                    <div class="col-md-4 d-flex align-items-center">
+                                        <label style="white-space: nowrap;" class="me-1">Proveedor:</label>
                                         <input type="text" placeholder="Razon Social" value="${proveedorSeleccionado.getRazonSocial()}"
                                                class="form-control" disabled="true">
                                     </div>
@@ -369,8 +370,8 @@ usuario inicio sesion, se debe agregar esta validacion en cada una de las vistas
                                             </select>
                                         </form>
                                     </div>
-                                    <div class="col-md-2 d-flex align-items-center">
-                                        <label style="white-space: nowrap;" class="me-2">Condición:</label>
+                                    <div class="col-md-3 d-flex align-items-center">
+                                        <label style="white-space:" class="me-2">Condición de la compra:</label>
                                         <form action="OrdenCompraServlet?menu=OrdenCompra&accion=GuardarCondicionCompra" method="POST">
                                             <select name="condicionCompra" class="form-select" onchange="this.form.submit()"
                                                 <c:if test="${newIdOrdenCompra == null && ordenCompra.getIdOrdenCompra() == null}">

@@ -341,21 +341,10 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                         <label style="white-space: nowrap;" class="me-2">Pedido N°:</label>
                                         <input type="text" value="${presupuesto.getPedidoCompra().getIdPedido()}" class="form-control" disabled="">
                                     </div>
-                                    <div class="col-md-2 d-flex align-items-center">
-                                        <label style="white-space: nowrap;" class="me-2">Condición:</label>
-                                        <form action="PresupuestoServlet?menu=Presupuesto&accion=GuardarCondicionCompra" method="POST">
-                                            <select id="selectCondicionCompra" name="condicionCompra" class="form-select" onchange="this.form.submit()"
-                                                    <c:if test="${presupuesto.getIdPresupuesto() != null || (newIdPresupuesto == null && presupuesto.getPedidoCompra().getIdPedido() == null)}">disabled</c:if>>
-                                                <option value="">Seleccionar...</option>
-                                                <option value="Contado" ${presupuesto.getCondicionCompra() eq 'Contado' ? 'selected' : ''}>Contado</option>
-                                                <option value="Credito" ${presupuesto.getCondicionCompra() eq 'Credito' ? 'selected' : ''}>Crédito</option>
-                                            </select>
-                                        </form>
-                                    </div>
                                 </div>
 
                                 <form action="PresupuestoServlet?menu=Presupuesto" method="POST">
-                                    <div class="row" style="margin-top: 23px">
+                                    <div class="row mb" style="margin-top: 23px">
                                         <div class="col-auto">
                                             <div class="form-floating mb-3 mb-md-0">
                                                 <button type="button" href="" data-bs-toggle="modal" data-bs-target="#modalProveedores" class="btn btn-outline-primary"
@@ -374,6 +363,18 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                         <div class="col-md-2">
                                             <input type="text" placeholder="Ruc" value="${proveedorSeleccionado.getRuc()}" class="form-control"
                                                    required="true" disabled="true">
+                                        </div>
+                                        
+                                        <div class="col-md-3 d-flex align-items-center">
+                                            <label style="white-space:" class="me-2">Condición de la compra:</label>
+                                            <form action="PresupuestoServlet?menu=Presupuesto&accion=GuardarCondicionCompra" method="POST">
+                                                <select id="selectCondicionCompra" name="condicionCompra" class="form-select" onchange="this.form.submit()"
+                                                        <c:if test="${presupuesto.getIdPresupuesto() != null || (newIdPresupuesto == null && presupuesto.getPedidoCompra().getIdPedido() == null)}">disabled</c:if>>
+                                                    <option value="">Seleccionar...</option>
+                                                    <option value="Contado" ${presupuesto.getCondicionCompra() eq 'Contado' ? 'selected' : ''}>Contado</option>
+                                                    <option value="Credito" ${presupuesto.getCondicionCompra() eq 'Credito' ? 'selected' : ''}>Crédito</option>
+                                                </select>
+                                            </form>
                                         </div>
                                     </div>
                                 </form>

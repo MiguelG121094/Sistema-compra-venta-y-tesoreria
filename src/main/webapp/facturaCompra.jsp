@@ -360,7 +360,6 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                     <table id="tablaArticulosFactura" class="table table-bordered table-sm custom-table">
                                         <thead>
                                             <tr>
-                                                <th class="text-bg-dark text-center">Id. Artículo</th>
                                                 <th class="text-bg-dark text-center">Descripción</th>
                                                 <th class="text-bg-dark text-center">Cantidad</th>
                                                 <th class="text-bg-dark text-center">Precio de compra</th>
@@ -418,7 +417,6 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                                 </c:choose>
 
                                                 <tr>
-                                                    <td class="text-center">${detalle.articulo.idArticulo}</td>
                                                     <td class="text-center">
                                                         <c:choose>
                                                             <c:when test="${not empty detalle.articulo}">
