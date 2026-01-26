@@ -361,10 +361,142 @@ Todas las entidades siguen el patrón POJO:
 
 ## Historial de Cambios
 
+### 2026-01-26 (Sesión Actual)
+
+#### Patrón Session + Token en FacturaCompraServlet
+El servlet utiliza un patrón de estado en sesión con token único:
+```java
+private static class FacturaCompraState implements Serializable {
+    FacturaCompra facturaCompra = new FacturaCompra();
+    List<FacturaCompraDetalle> listaDetalle = new ArrayList<>();
+    Proveedor proveedorSeleccionado;
+    Sucursal sucursalSeleccionada;
+    OrdenCompra ordenCompraSeleccionada;
+    List<TipoImpuesto> listaTipoImpuesto;
+    // ... más campos
+}
+```
+
+#### Cambios en Modal de Presupuestos (ordenCompra.jsp)
+- Agregado campo `ordenCompraCompleta` en modelo `Presupuesto`
+- Query con `EXISTS` en `PresupuestoDAO.listarPresupuestoConDetalles()` para verificar si presupuesto ya tiene orden de compra
+- Presupuestos con orden asociada se muestran en verde y no son seleccionables
+
+#### Columnas Adicionales en Modales
+- **ordenCompra.jsp**: Agregada columna "Nro Pedido" en modal de órdenes de compra
+- **facturaCompra.jsp**: Agregada columna "Tipo Factura" en modal de facturas
+
+#### Campos Comentados en ordenCompra.jsp
+```jsp
+<%-- Observacion (comentado)
+<form action="OrdenCompraServlet?menu=OrdenCompra" method="POST">
+    ...observación y botón Aplicar...
+</form>
+--%>
+
+<%-- Articulo seleccionado para editar (comentado)
+<form>...campos de edición...</form>
+--%>
+
+<%-- Botón Editar en tabla (comentado) --%>
+```
+
+#### Factura de Compra - Soporte para Gasto/Fondo Fijo
+
+**Cambios en FacturaCompraDetalle.java:**
+```java
+private TipoImpuesto tipoImpuesto;
+// + getter/setter
+// + constructor con tipoImpuesto
+```
+
+**Cambios en FacturaCompraDetalleDAO.java:**
+- Lectura de `id_impuesto` en `listarDetallesPorFactura()`
+- Escritura de `id_impuesto` en `insertarDetalle()`
+
+**Cambios en TipoImpuestoDAO.java:**
+```java
+public List<TipoImpuesto> listarTipoImpuesto() throws SQLException
+```
+
+**Cambios en TipoImpuestoService.java:**
+```java
+public List<TipoImpuesto> listarTipoImpuesto() throws SQLException
+```
+
+**Cambios en FacturaCompraServlet.java:**
+- Agregado `TipoImpuestoService`
+- Carga de `listaTipoImpuesto` en estado
+- Lectura de `idTipoImpuesto` en `accionAgregarArticulo()`
+
+**Cambios en facturaCompra.jsp:**
+- Select de impuesto para facturas de gasto/fondo fijo (líneas 307-314)
+- Cálculo de IVA usa `detalle.tipoImpuesto` cuando no hay artículo (línea 399)
+
+#### Cálculo de IVA en JSP
+```jsp
+<%-- Obtener descripcion del impuesto (del articulo o del detalle) --%>
+<c:set var="descImpuesto" value="${not empty detalle.articulo ?
+    detalle.articulo.tipoImpuesto.descripcion :
+    detalle.tipoImpuesto.descripcion}" />
+
+<c:choose>
+    <c:when test="${fn:contains(descImpuesto, '10')}">
+        <c:set var="iva10" value="${subtotal / 11}" />
+        <c:set var="gravada10" value="${subtotal - iva10}" />
+    </c:when>
+    <c:when test="${fn:contains(descImpuesto, '5')}">
+        <c:set var="iva5" value="${subtotal / 21}" />
+        <c:set var="gravada5" value="${subtotal - iva5}" />
+    </c:when>
+    <c:otherwise>
+        <c:set var="exenta" value="${subtotal}" />
+    </c:otherwise>
+</c:choose>
+```
+
+#### Base de Datos - Cambio en factura_compra_detalle
+```sql
+ALTER TABLE public.factura_compra_detalle
+ADD COLUMN id_impuesto INTEGER;
+
+ALTER TABLE public.factura_compra_detalle
+ADD CONSTRAINT impuesto_factura_compra_detalle_fk
+FOREIGN KEY (id_impuesto)
+REFERENCES public.impuesto (id_impuesto);
+```
+
+#### Estilos de Estado en Modales
+```jsp
+<%-- Verde: Completado/Procesado --%>
+<tr class="${doc.estado eq 'Completado' ? 'table-success' : ''}">
+
+<%-- Rojo: Anulado --%>
+<tr class="${doc.estado eq 'Anulado' ? 'table-danger' : ''}">
+
+<%-- Sin color: Pendiente (seleccionable) --%>
+```
+
 ### 2026-01-14
 - Análisis completo de tablas SQL vs entidades Java
 - Creación de 43 nuevas entidades para completar el mapeo
 - Cobertura de entidades: 100% (85/85)
+
+---
+
+## Archivos Clave Modificados en Sesión 2026-01-26
+
+| Archivo | Cambios |
+|---------|---------|
+| `Presupuesto.java` | Campo `ordenCompraCompleta` |
+| `PresupuestoDAO.java` | Query con EXISTS para verificar orden asociada |
+| `FacturaCompraDetalle.java` | Campo `tipoImpuesto` + constructor |
+| `FacturaCompraDetalleDAO.java` | Lectura/escritura de `id_impuesto` |
+| `TipoImpuestoDAO.java` | Método `listarTipoImpuesto()` |
+| `TipoImpuestoService.java` | Método `listarTipoImpuesto()` |
+| `FacturaCompraServlet.java` | Carga de `listaTipoImpuesto`, lectura de impuesto en agregar artículo |
+| `facturaCompra.jsp` | Select de impuesto, cálculo IVA con tipoImpuesto del detalle |
+| `ordenCompra.jsp` | Columna Nro Pedido, campos comentados, modal presupuestos |
 
 ---
 
@@ -376,3 +508,4 @@ Todas las entidades siguen el patrón POJO:
 4. **Implementar módulo de Tesorería** (cuentas bancarias, cheques)
 5. **Crear vistas JSP** para las nuevas funcionalidades
 6. **Implementar sistema de permisos** por módulo
+7. **Completar Factura de Compra** - Sección de artículos del catálogo (actualmente comentada)
