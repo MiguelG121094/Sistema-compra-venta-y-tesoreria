@@ -509,6 +509,428 @@ Cada formulario debe incluir el token:
 
 ---
 
+## Flujo de Acciones: JSP → JavaScript → Servlet
+
+### Dos Enfoques de Manejo de Acciones
+
+El proyecto utiliza dos enfoques diferentes para enviar acciones al servlet:
+
+| Enfoque | Usado en | Características |
+|---------|----------|-----------------|
+| **Múltiples Formularios** | pedidoCompra, presupuesto, ordenCompra | Cada acción tiene su propio `<form>` |
+| **Formulario Único + JS** | facturaCompra | Un form principal con funciones JavaScript |
+
+---
+
+### Enfoque 1: Múltiples Formularios (pedidoCompra, presupuesto, ordenCompra)
+
+#### Estructura HTML
+
+```jsp
+<!-- Formulario 1: Cambiar sucursal -->
+<form action="PedidoCompraServlet?menu=PedidoCompra&accion=CargarDeposito" method="POST">
+    <select name="idSucursal" onchange="this.form.submit()">
+        <option value="1">Sucursal Central</option>
+        <option value="2">Sucursal Norte</option>
+    </select>
+</form>
+
+<!-- Formulario 2: Botones de acción -->
+<form action="PedidoCompraServlet?menu=PedidoCompra" method="POST">
+    <button name="accion" value="Nuevo" type="submit">Nuevo</button>
+    <button name="accion" value="Guardar" type="submit">Guardar</button>
+</form>
+
+<!-- Formulario 3: Agregar artículo -->
+<form action="PedidoCompraServlet?menu=PedidoCompra&accion=AgregarArticulo" method="POST">
+    <input name="idArticulo" value="123">
+    <input name="cantidad" value="10">
+    <button type="submit">Agregar</button>
+</form>
+```
+
+#### Diagrama de Flujo
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              NAVEGADOR                                       │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  1. Usuario cambia el select de sucursal                                    │
+│     ┌─────────────────────────────────────────┐                             │
+│     │ <select onchange="this.form.submit()">  │                             │
+│     │   <option value="2">Sucursal Norte      │  ← Usuario selecciona       │
+│     │ </select>                               │                             │
+│     └─────────────────────────────────────────┘                             │
+│                          │                                                   │
+│  2. onchange dispara this.form.submit()                                     │
+│                          │                                                   │
+│  3. Se envía solo este formulario:                                          │
+│     POST /PedidoCompraServlet?menu=PedidoCompra&accion=CargarDeposito       │
+│     Body: idSucursal=2                                                      │
+│                          │                                                   │
+│     ⚠️ PROBLEMA: Si había datos en otros forms, NO se envían                │
+└──────────────────────────┼──────────────────────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              SERVLET                                         │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  protected void processRequest(request, response) {                         │
+│                                                                             │
+│      // 4. Obtener parámetros de la URL (query string)                      │
+│      String menu = request.getParameter("menu");      // "PedidoCompra"     │
+│      String accion = request.getParameter("accion");  // "CargarDeposito"   │
+│                                                                             │
+│      // 5. Obtener parámetros del body (form data)                          │
+│      String idSucursal = request.getParameter("idSucursal");  // "2"        │
+│                                                                             │
+│      // 6. Procesar según la acción                                         │
+│      switch (accion) {                                                      │
+│          case "CargarDeposito":                                             │
+│              // Cargar depósitos de la sucursal seleccionada                │
+│              List<Deposito> depositos = depositoService.listarPorSucursal(  │
+│                  Long.parseLong(idSucursal));                               │
+│              request.setAttribute("listaDepositos", depositos);             │
+│              break;                                                         │
+│      }                                                                      │
+│                                                                             │
+│      // 7. Redirigir a la vista                                             │
+│      request.getRequestDispatcher("pedidoCompra.jsp").forward(req, res);    │
+│  }                                                                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+#### Ventajas y Desventajas
+
+| Ventajas | Desventajas |
+|----------|-------------|
+| No requiere JavaScript | Pérdida de datos en otros formularios |
+| Fácil de entender el flujo | Necesita hiddens duplicados (token, ids) |
+| Cada form es independiente | Más código HTML repetido |
+| Funciona sin JS habilitado | Difícil validar todos los campos juntos |
+
+---
+
+### Enfoque 2: Formulario Único con JavaScript (facturaCompra)
+
+#### Estructura HTML
+
+```jsp
+<!-- UN SOLO formulario principal que contiene todo -->
+<form id="formPrincipal" method="post" action="FacturaCompraServlet">
+    <!-- Campos ocultos para control -->
+    <input type="hidden" name="menu" value="FacturaCompra">
+    <input type="hidden" name="token" value="${token}">
+    <input type="hidden" name="accion" id="accionPrincipal" value="Guardar">
+
+    <!-- Sección: Cabecera -->
+    <select id="sucursal" name="idSucursal" onchange="cambiarSucursal();">
+        <option value="1">Sucursal Central</option>
+        <option value="2">Sucursal Norte</option>
+    </select>
+
+    <select id="condicionCompra" name="condicion" onchange="cambiarCondicion();">
+        <option value="Contado">Contado</option>
+        <option value="Credito">Crédito</option>
+    </select>
+
+    <input id="plazoCredito" name="plazo" value="30">
+
+    <!-- Sección: Artículos -->
+    <input name="idArticulo" id="idArticuloAgregar" value="">
+    <input name="cantidad" value="10">
+    <input name="precioCompra" value="50000">
+
+    <!-- Sección: Observaciones -->
+    <textarea name="observacion">Nota de prueba</textarea>
+
+    <!-- Botones -->
+    <button type="button" onclick="guardarFactura()">Guardar</button>
+    <button type="button" onclick="agregarArticulo()">Agregar Artículo</button>
+</form>
+```
+
+#### Funciones JavaScript
+
+```javascript
+// Cada función:
+// 1. Cambia el valor del input hidden "accion"
+// 2. Envía el formulario completo
+
+function guardarFactura() {
+    document.getElementById('accionPrincipal').value = 'Guardar';
+    document.getElementById('formPrincipal').submit();
+}
+
+function cambiarSucursal() {
+    document.getElementById('accionPrincipal').value = 'CambiarSucursal';
+    document.getElementById('formPrincipal').submit();
+}
+
+function cambiarCondicion() {
+    var condicion = document.getElementById('condicionCompra').value;
+    var plazoInput = document.getElementById('plazoCredito');
+
+    // Lógica del lado del cliente (opcional)
+    if (condicion === 'Credito') {
+        plazoInput.disabled = false;
+    } else {
+        plazoInput.disabled = true;
+        plazoInput.value = 0;
+    }
+
+    document.getElementById('accionPrincipal').value = 'CambiarCondicion';
+    document.getElementById('formPrincipal').submit();
+}
+
+function agregarArticulo() {
+    document.getElementById('accionPrincipal').value = 'AgregarArticulo';
+    document.getElementById('formPrincipal').submit();
+}
+
+// Para seleccionar artículo desde modal (no envía form, solo llena campos)
+function seleccionarArticulo(idArticulo, descripcion, precioCompra) {
+    document.getElementById('idArticuloAgregar').value = idArticulo;
+    document.getElementById('descripcionArticulo').value = descripcion;
+    document.getElementById('precioCompraArticulo').value = precioCompra;
+    // El modal se cierra y el usuario hace clic en "Agregar"
+}
+```
+
+#### Diagrama de Flujo Detallado
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              NAVEGADOR                                       │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  1. Estado inicial del formulario:                                          │
+│     ┌─────────────────────────────────────────────────────────────────┐     │
+│     │ <input type="hidden" name="accion" id="accionPrincipal"         │     │
+│     │        value="Guardar">  ← Valor por defecto                    │     │
+│     │                                                                 │     │
+│     │ <select id="condicionCompra" value="Contado">                   │     │
+│     │ <input id="plazoCredito" value="30">                            │     │
+│     │ <input name="idSucursal" value="1">                             │     │
+│     │ <textarea name="observacion">Nota de prueba</textarea>          │     │
+│     └─────────────────────────────────────────────────────────────────┘     │
+│                                                                             │
+│  2. Usuario cambia "Condición" a "Crédito"                                  │
+│     → Dispara: onchange="cambiarCondicion();"                               │
+│                          │                                                   │
+│                          ▼                                                   │
+│  3. Se ejecuta la función JavaScript:                                       │
+│     ┌─────────────────────────────────────────────────────────────────┐     │
+│     │ function cambiarCondicion() {                                   │     │
+│     │     // Cambia el hidden de "Guardar" a "CambiarCondicion"       │     │
+│     │     document.getElementById('accionPrincipal').value =          │     │
+│     │         'CambiarCondicion';                                     │     │
+│     │                                                                 │     │
+│     │     // Envía TODO el formulario                                 │     │
+│     │     document.getElementById('formPrincipal').submit();          │     │
+│     │ }                                                               │     │
+│     └─────────────────────────────────────────────────────────────────┘     │
+│                          │                                                   │
+│  4. Se envía el formulario completo:                                        │
+│     POST /FacturaCompraServlet                                              │
+│     Body (form-urlencoded):                                                 │
+│       menu=FacturaCompra                                                    │
+│       token=abc12345                                                        │
+│       accion=CambiarCondicion    ← Cambiado por JS                          │
+│       idSucursal=1               ← Se envía aunque no cambió                │
+│       condicion=Credito          ← El nuevo valor                           │
+│       plazo=30                   ← Se envía aunque no cambió                │
+│       observacion=Nota de prueba ← Se envía aunque no cambió                │
+│                                                                             │
+│     ✅ VENTAJA: Todos los datos del formulario se envían juntos             │
+└──────────────────────────┼──────────────────────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              SERVLET                                         │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  protected void processRequest(request, response) {                         │
+│                                                                             │
+│      // 5. Obtener parámetros (todos vienen del body del form)              │
+│      String menu = request.getParameter("menu");      // "FacturaCompra"    │
+│      String token = request.getParameter("token");    // "abc12345"         │
+│      String accion = request.getParameter("accion");  // "CambiarCondicion" │
+│                                                                             │
+│      // 6. Recuperar estado de la sesión usando el token                    │
+│      HttpSession session = request.getSession();                            │
+│      FacturaCompraState estado = obtenerEstado(session, token);             │
+│                                                                             │
+│      if (estado == null) {                                                  │
+│          // Token inválido o sesión expirada                                │
+│          mostrarMensaje(request, "Sesión expirada", "alert-warning");       │
+│          response.sendRedirect("...?accion=ListarModal");                   │
+│          return;                                                            │
+│      }                                                                      │
+│                                                                             │
+│      // 7. Procesar según la acción                                         │
+│      switch (accion) {                                                      │
+│          case "CambiarCondicion":                                           │
+│              accionCambiarCondicion(request, response, session, token);     │
+│              break;                                                         │
+│          case "Guardar":                                                    │
+│              accionGuardar(request, response, session, token);              │
+│              break;                                                         │
+│          // ... otras acciones                                              │
+│      }                                                                      │
+│  }                                                                          │
+│                                                                             │
+│  // 8. Método delegado para la acción específica                            │
+│  private void accionCambiarCondicion(request, response, session, token) {   │
+│                                                                             │
+│      FacturaCompraState estado = obtenerEstado(session, token);             │
+│                                                                             │
+│      // 9. Leer TODOS los datos del formulario para no perderlos            │
+│      leerDatosFormulario(request, estado);                                  │
+│      // Esto incluye: condicion, plazo, observacion, idSucursal, etc.       │
+│                                                                             │
+│      // 10. Aplicar lógica específica de esta acción                        │
+│      if ("Contado".equals(estado.facturaCompra.getCondicion())) {           │
+│          estado.facturaCompra.setPlazo(0);                                  │
+│      }                                                                      │
+│                                                                             │
+│      // 11. Guardar estado actualizado en sesión                            │
+│      guardarEstado(session, token, estado);                                 │
+│                                                                             │
+│      // 12. Preparar datos para la vista                                    │
+│      cargarDatosParaVista(request, estado, token);                          │
+│                                                                             │
+│      // 13. Mostrar la vista nuevamente                                     │
+│      forward(request, response, "facturaCompra.jsp");                       │
+│  }                                                                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         JSP (Respuesta)                                      │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  14. El JSP renderiza con los datos actualizados:                           │
+│                                                                             │
+│      - ${token} = "abc12345" (mismo token, misma sesión de trabajo)         │
+│      - ${facturaCompra.condicion} = "Credito"                               │
+│      - ${facturaCompra.plazo} = 30                                          │
+│      - ${facturaCompra.observacion} = "Nota de prueba"                      │
+│                                                                             │
+│  15. El usuario ve el formulario actualizado sin perder ningún dato         │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+#### Método leerDatosFormulario (Clave para no perder datos)
+
+```java
+/**
+ * Lee todos los datos del formulario y los guarda en el estado.
+ * IMPORTANTE: Se debe llamar en CADA acción para preservar los datos
+ * que el usuario ya ingresó pero que no son relevantes para esta acción.
+ */
+private void leerDatosFormulario(HttpServletRequest request, FacturaCompraState estado) {
+
+    // Número de comprobante
+    String numeroComprobanteStr = request.getParameter("numeroComprobante");
+    if (numeroComprobanteStr != null && !numeroComprobanteStr.isEmpty()) {
+        estado.facturaCompra.setNumero(numeroComprobanteStr);
+    }
+
+    // Timbrado
+    String timbradoStr = request.getParameter("timbrado");
+    if (timbradoStr != null && !timbradoStr.isEmpty()) {
+        estado.facturaCompra.setTimbrado(Integer.parseInt(timbradoStr));
+    }
+
+    // Fechas
+    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+    String fechaEmisionStr = request.getParameter("fechaEmision");
+    if (fechaEmisionStr != null && !fechaEmisionStr.isEmpty()) {
+        estado.facturaCompra.setFechaEmision(sdf.parse(fechaEmisionStr));
+    }
+
+    // Condición de compra
+    String condicion = request.getParameter("condicion");
+    if (condicion != null && !condicion.isEmpty()) {
+        estado.facturaCompra.setCondicion(condicion);
+    }
+
+    // Plazo
+    String plazoStr = request.getParameter("plazo");
+    if (plazoStr != null && !plazoStr.isEmpty()) {
+        estado.facturaCompra.setPlazo(Integer.parseInt(plazoStr));
+    }
+
+    // Tipo de factura
+    String tipoFactura = request.getParameter("tipoFactura");
+    if (tipoFactura != null && !tipoFactura.isEmpty()) {
+        estado.facturaCompra.setTipoFactura(tipoFactura);
+    }
+
+    // Observación
+    String observacion = request.getParameter("observacion");
+    if (observacion != null) {
+        estado.facturaCompra.setObservacion(observacion);
+    }
+}
+```
+
+#### Ventajas y Desventajas
+
+| Ventajas | Desventajas |
+|----------|-------------|
+| Todos los datos se envían siempre | Requiere JavaScript habilitado |
+| No se pierden datos al cambiar selects | Envía datos innecesarios al servidor |
+| Fácil agregar validación JS antes de enviar | Debugging más complejo |
+| Menos código HTML (un solo form) | Necesita IDs únicos para cada elemento |
+| Mejor integración con Session+Token | Si falla el JS, no funciona |
+
+---
+
+### Comparación Visual
+
+```
+MÚLTIPLES FORMULARIOS:                    FORMULARIO ÚNICO + JS:
+
+┌─────────────────────┐                   ┌─────────────────────────────────┐
+│ Form 1: Sucursal    │                   │ Form Principal                  │
+│ ┌─────────────────┐ │                   │ ┌─────────────────────────────┐ │
+│ │ idSucursal=2    │─┼──► Servlet        │ │ hidden: accion="Guardar"    │ │
+│ └─────────────────┘ │    (solo esto)    │ │ idSucursal=2                │ │
+└─────────────────────┘                   │ │ condicion=Credito           │ │
+                                          │ │ plazo=30                    │ │
+┌─────────────────────┐                   │ │ observacion=...             │ │
+│ Form 2: Condición   │                   │ └─────────────────────────────┘ │
+│ ┌─────────────────┐ │                   │              │                  │
+│ │ condicion=Cred. │─┼──► Servlet        │              ▼                  │
+│ └─────────────────┘ │    (solo esto)    │      cambiarCondicion()         │
+└─────────────────────┘                   │              │                  │
+                                          │              ▼                  │
+┌─────────────────────┐                   │      accion = "CambiarCond"     │
+│ Form 3: Guardar     │                   │              │                  │
+│ ┌─────────────────┐ │                   │              ▼                  │
+│ │ (vacío)         │─┼──► Servlet        │      form.submit() ─────────────┼──► Servlet
+│ └─────────────────┘ │                   │      (TODO se envía)            │    (todo junto)
+└─────────────────────┘                   └─────────────────────────────────┘
+```
+
+---
+
+### Recomendación
+
+Para el patrón **Session + Token** implementado en facturaCompra:
+
+- **Usar Formulario Único + JS** es más apropiado porque:
+  1. El token siempre se envía con cada petición
+  2. Los datos del formulario no se pierden entre acciones
+  3. El método `leerDatosFormulario()` captura todo el estado actual
+  4. Facilita la validación antes de enviar
+
+Para módulos más simples sin estado complejo (como ABM básicos):
+
+- **Múltiples Formularios** puede ser suficiente y más simple de mantener
+
+---
+
 ## Estilo de Vista: form-floating
 
 El nuevo estándar para las vistas será usando `form-floating` de Bootstrap:
