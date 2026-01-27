@@ -68,25 +68,22 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                 </div>
                             </div>
                             <div class="col-xl-3 col-md-6">
-                                <div class="card bg-warning text-white mb-4">
+                                <div class="card bg-warning text-white mb-4" style="position: relative;">
                                     <div class="card-body"><h1 style="margin-left: 10px;margin-top: 5px">
                                     <strong>Tesorería <span style="float: right;font-size: 64px;opacity: 0.8" >
                                             <i class="fa-solid fa-hand-holding-dollar"></i></span></strong></h1></div>
-                                    <div class="collapse card-footer d-flex align-items-center justify-content-between"  aria-labelledby="headingTwo" data-bs-parent="#sidenavAccordion" >
-                                        <nav class="sb-sidenav-menu-nested nav accordion" id="TesorerianavAccordionPages">
-                                        <a class="nav-link collapsed small text-white stretched-link" data-bs-toggle="collapse" data-bs-target="#TesoreriaPagesCollapse"
-                                           aria-expanded="false" aria-controls="TesoreriaPagesCollapse" href="#">View Details</a>
+                                    <div class="card-footer d-flex align-items-center justify-content-between"
+                                         data-bs-toggle="collapse" data-bs-target="#TesoreriaPagesCollapse"
+                                         style="cursor: pointer;">
+                                        <a class="small text-white stretched-link" href="#">View Details</a>
                                         <div class="small text-white"><i class="fas fa-angle-right"></i></div>
-                                        <div class="collapse" id="TesoreriaPagesCollapse" aria-labelledby="headingOne" data-bs-parent="#TesorerianavAccordionPages">
-                                        <nav class="sb-sidenav-menu-nested nav">
-                                            <a class="nav-link text-white" href="login.html">Login</a>
-                                            <a class="nav-link text-white" href="register.html">Register</a>
-                                            <a class="nav-link text-white" href="password.html">Forgot Password</a>
-                                            <a class="nav-link text-white" href="login.html">Login</a>
-                                            <a class="nav-link text-white" href="register.html">Register</a>
-                                            <a class="nav-link text-white" href="password.html">Forgot Password</a>
-                                        </nav>
                                     </div>
+                                    <div class="collapse" id="TesoreriaPagesCollapse"
+                                         style="position: absolute; top: 100%; left: 0; right: 0; z-index: 1000; background-color: #ffc107; border-radius: 0 0 0.375rem 0.375rem;">
+                                        <nav class="sb-sidenav-menu-nested nav flex-column p-2">
+                                            <a class="nav-link text-white py-1" href="login.html">Login</a>
+                                            <a class="nav-link text-white py-1" href="register.html">Register</a>
+                                            <a class="nav-link text-white py-1" href="password.html">Forgot Password</a>
                                         </nav>
                                     </div>
                                 </div>
