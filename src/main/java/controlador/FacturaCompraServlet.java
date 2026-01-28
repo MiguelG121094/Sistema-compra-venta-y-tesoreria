@@ -67,6 +67,7 @@ public class FacturaCompraServlet extends HttpServlet {
         Sucursal sucursalSeleccionada;
         OrdenCompra ordenCompraSeleccionada;
         FacturaCompraDetalle detalleSeleccionado;
+        Integer indexSeleccionado;
         boolean esNuevo = false;
 
         // Datos para modales (se cargan una vez)
@@ -109,6 +110,7 @@ public class FacturaCompraServlet extends HttpServlet {
         request.setAttribute("sucursalSeleccionada", estado.sucursalSeleccionada);
         request.setAttribute("ordenCompraSeleccionada", estado.ordenCompraSeleccionada);
         request.setAttribute("detalleSeleccionado", estado.detalleSeleccionado);
+        request.setAttribute("indexSeleccionado", estado.indexSeleccionado);
         request.setAttribute("esNuevo", estado.esNuevo);
 
         // Listas para modales
@@ -268,6 +270,9 @@ public class FacturaCompraServlet extends HttpServlet {
                     break;
                 case "EditarArticulo":
                     accionEditarArticulo(request, response, session, token);
+                    break;
+                case "CancelarEdicion":
+                    accionCancelarEdicion(request, response, session, token);
                     break;
                 case "ActualizarArticulo":
                     accionActualizarArticulo(request, response, session, token);
@@ -582,6 +587,7 @@ public class FacturaCompraServlet extends HttpServlet {
 
         // Limpiar detalle seleccionado
         estado.detalleSeleccionado = null;
+        estado.indexSeleccionado = null;
 
         guardarEstado(session, token, estado);
         cargarDatosParaVista(request, estado, token);
@@ -597,14 +603,31 @@ public class FacturaCompraServlet extends HttpServlet {
         FacturaCompraState estado = obtenerEstadoORedireccionar(request, response, session, token);
         if (estado == null) return;
 
-        String idArticuloStr = request.getParameter("idArticulo");
         int index = Integer.parseInt(request.getParameter("index"));
 
         if (index >= 0 && index < estado.listaDetalle.size()) {
             estado.detalleSeleccionado = estado.listaDetalle.get(index);
-            request.setAttribute("indexSeleccionado", index);
+            estado.indexSeleccionado = index;
         }
 
+        guardarEstado(session, token, estado);
+        cargarDatosParaVista(request, estado, token);
+        forward(request, response, JSP_FACTURA);
+    }
+
+    /**
+     * Cancelar edición de artículo
+     */
+    private void accionCancelarEdicion(HttpServletRequest request, HttpServletResponse response,
+            HttpSession session, String token) throws ServletException, IOException {
+
+        FacturaCompraState estado = obtenerEstadoORedireccionar(request, response, session, token);
+        if (estado == null) return;
+
+        estado.detalleSeleccionado = null;
+        estado.indexSeleccionado = null;
+
+        guardarEstado(session, token, estado);
         cargarDatosParaVista(request, estado, token);
         forward(request, response, JSP_FACTURA);
     }
@@ -613,7 +636,7 @@ public class FacturaCompraServlet extends HttpServlet {
      * Actualizar artículo en el detalle
      */
     private void accionActualizarArticulo(HttpServletRequest request, HttpServletResponse response,
-            HttpSession session, String token) throws ServletException, IOException {
+            HttpSession session, String token) throws ServletException, IOException, SQLException {
 
         FacturaCompraState estado = obtenerEstadoORedireccionar(request, response, session, token);
         if (estado == null) return;
@@ -621,6 +644,8 @@ public class FacturaCompraServlet extends HttpServlet {
         int index = Integer.parseInt(request.getParameter("index"));
         String cantidadStr = request.getParameter("cantidad");
         String precioStr = request.getParameter("precioCompra");
+        String descripcion = request.getParameter("descripcion");
+        String idTipoImpuestoStr = request.getParameter("idTipoImpuesto");
 
         if (index >= 0 && index < estado.listaDetalle.size()) {
             FacturaCompraDetalle detalle = estado.listaDetalle.get(index);
@@ -630,11 +655,20 @@ public class FacturaCompraServlet extends HttpServlet {
             if (precioStr != null && !precioStr.isEmpty()) {
                 detalle.setPrecioCompra(Long.parseLong(precioStr));
             }
+            if (descripcion != null && !descripcion.isEmpty()) {
+                detalle.setDescripcion(descripcion);
+            }
+            if (idTipoImpuestoStr != null && !idTipoImpuestoStr.isEmpty()) {
+                TipoImpuesto tipoImpuesto = tipoImpuestoService.getTipoImpuesto(Long.parseLong(idTipoImpuestoStr));
+                detalle.setTipoImpuesto(tipoImpuesto);
+            }
             mostrarMensaje(request, "Artículo actualizado", "alert-success");
         }
 
         estado.detalleSeleccionado = null;
+        estado.indexSeleccionado = null;
 
+        guardarEstado(session, token, estado);
         cargarDatosParaVista(request, estado, token);
         forward(request, response, JSP_FACTURA);
     }
@@ -656,7 +690,9 @@ public class FacturaCompraServlet extends HttpServlet {
         }
 
         estado.detalleSeleccionado = null;
+        estado.indexSeleccionado = null;
 
+        guardarEstado(session, token, estado);
         cargarDatosParaVista(request, estado, token);
         forward(request, response, JSP_FACTURA);
     }

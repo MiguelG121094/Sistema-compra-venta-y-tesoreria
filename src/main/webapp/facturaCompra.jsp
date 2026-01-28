@@ -291,29 +291,57 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                         <form id="formAgregarGasto" method="post" action="FacturaCompraServlet">
                             <input type="hidden" name="menu" value="FacturaCompra">
                             <input type="hidden" name="token" value="${token}">
-                            <input type="hidden" name="accion" value="AgregarArticulo">
+                            <c:choose>
+                                <c:when test="${not empty detalleSeleccionado}">
+                                    <input type="hidden" name="accion" value="ActualizarArticulo">
+                                    <input type="hidden" name="index" value="${indexSeleccionado}">
+                                </c:when>
+                                <c:otherwise>
+                                    <input type="hidden" name="accion" value="AgregarArticulo">
+                                </c:otherwise>
+                            </c:choose>
                             <div class="row mb-4">
                                 <div class="col custom-card">
+                                    <c:if test="${not empty detalleSeleccionado}">
+                                        <div class="alert alert-info mb-2">
+                                            Editando artículo - Modifique los datos y presione Actualizar
+                                        </div>
+                                    </c:if>
                                     <div class="row" style="margin-top: 10px">
                                         <div class="col-md-3">
-                                            <input type="text" name="descripcion" placeholder="Descripción" class="form-control" required>
+                                            <input type="text" name="descripcion" placeholder="Descripción" class="form-control" required
+                                                   value="${detalleSeleccionado.descripcion}">
                                         </div>
                                         <div class="col-md-1">
-                                            <input type="number" name="cantidad" placeholder="Cantidad" class="form-control" value="1" required min="1">
+                                            <input type="number" name="cantidad" placeholder="Cantidad" class="form-control" required min="1"
+                                                   value="${not empty detalleSeleccionado ? detalleSeleccionado.cantidad : 1}">
                                         </div>
                                         <div class="col-md-2">
-                                            <input type="number" name="precioCompra" placeholder="Precio de compra" class="form-control" required min="1">
+                                            <input type="number" name="precioCompra" placeholder="Precio de compra" class="form-control" required min="1"
+                                                   value="${detalleSeleccionado.precioCompra}">
                                         </div>
                                         <div class="col-md-2">
                                             <select name="idTipoImpuesto" class="form-control" required>
                                                 <option value="">Seleccionar Impuesto</option>
                                                 <c:forEach var="imp" items="${listaTipoImpuesto}">
-                                                    <option value="${imp.idTipoImpuesto}">${imp.descripcion}</option>
+                                                    <option value="${imp.idTipoImpuesto}"
+                                                        ${detalleSeleccionado.tipoImpuesto.idTipoImpuesto == imp.idTipoImpuesto ? 'selected' : ''}>
+                                                        ${imp.descripcion}
+                                                    </option>
                                                 </c:forEach>
                                             </select>
                                         </div>
                                         <div class="col-md-2">
-                                            <button type="submit" class="btn btn-success">Agregar Artículo</button>
+                                            <c:choose>
+                                                <c:when test="${not empty detalleSeleccionado}">
+                                                    <button type="submit" class="btn btn-warning">Actualizar</button>
+                                                    <a href="FacturaCompraServlet?menu=FacturaCompra&accion=CancelarEdicion&token=${token}"
+                                                       class="btn btn-secondary">Cancelar</a>
+                                                </c:when>
+                                                <c:otherwise>
+                                                    <button type="submit" class="btn btn-success">Agregar Artículo</button>
+                                                </c:otherwise>
+                                            </c:choose>
                                         </div>
                                     </div>
                                 </div>
