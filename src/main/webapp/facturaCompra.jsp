@@ -369,7 +369,9 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                                 <th class="text-bg-dark text-center">Gravada 5%</th>
                                                 <th class="text-bg-dark text-center">IVA 5%</th>
                                                 <th class="text-bg-dark text-center">Exenta</th>
-                                                <th class="text-bg-dark text-center no-search">Acciones</th>
+                                                <c:if test="${fn:contains(facturaCompra.tipoFactura, 'gasto') or fn:contains(facturaCompra.tipoFactura, 'fondoFijo')}">
+                                                    <th class="text-bg-dark text-center no-search">Acciones</th>
+                                                </c:if>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -451,36 +453,38 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                                     <td class="text-center">
                                                         <fmt:formatNumber value="${exenta}" pattern="#,###"/>
                                                     </td>
-                                                    <td class="text-center">
-                                                        <a href="FacturaCompraServlet?menu=FacturaCompra&accion=EditarArticulo&token=${token}&index=${status.index}"
-                                                           class="btn btn-warning btn-sm">Editar</a>
-                                                        <button type="button" class="btn btn-danger btn-sm"
-                                                                data-bs-toggle="modal" data-bs-target="#modalEliminar${status.index}">Eliminar</button>
-                                                        <!-- Modal de confirmación para eliminar artículo -->
-                                                        <div class="modal fade" id="modalEliminar${status.index}" tabindex="-1" aria-hidden="true">
-                                                            <div class="modal-dialog modal-dialog-centered">
-                                                                <div class="modal-content">
-                                                                    <div class="modal-header bg-warning">
-                                                                        <h5 class="modal-title">Confirmación</h5>
-                                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                                                    </div>
-                                                                    <div class="modal-body">
-                                                                        ¿Está seguro de eliminar este artículo del detalle?
-                                                                    </div>
-                                                                    <div class="modal-footer">
-                                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">No</button>
-                                                                        <form action="FacturaCompraServlet" method="POST">
-                                                                            <input type="hidden" name="menu" value="FacturaCompra">
-                                                                            <input type="hidden" name="accion" value="EliminarArticulo">
-                                                                            <input type="hidden" name="token" value="${token}">
-                                                                            <input type="hidden" name="index" value="${status.index}">
-                                                                            <button type="submit" class="btn btn-danger">Sí, Eliminar</button>
-                                                                        </form>
+                                                    <c:if test="${fn:contains(facturaCompra.tipoFactura, 'gasto') or fn:contains(facturaCompra.tipoFactura, 'fondoFijo')}">
+                                                        <td class="text-center">
+                                                            <a href="FacturaCompraServlet?menu=FacturaCompra&accion=EditarArticulo&token=${token}&index=${status.index}"
+                                                               class="btn btn-warning btn-sm">Editar</a>
+                                                            <button type="button" class="btn btn-danger btn-sm"
+                                                                    data-bs-toggle="modal" data-bs-target="#modalEliminar${status.index}">Eliminar</button>
+                                                            <!-- Modal de confirmación para eliminar artículo -->
+                                                            <div class="modal fade" id="modalEliminar${status.index}" tabindex="-1" aria-hidden="true">
+                                                                <div class="modal-dialog modal-dialog-centered">
+                                                                    <div class="modal-content">
+                                                                        <div class="modal-header bg-warning">
+                                                                            <h5 class="modal-title">Confirmación</h5>
+                                                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                                        </div>
+                                                                        <div class="modal-body">
+                                                                            ¿Está seguro de eliminar este artículo del detalle?
+                                                                        </div>
+                                                                        <div class="modal-footer">
+                                                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">No</button>
+                                                                            <form action="FacturaCompraServlet" method="POST">
+                                                                                <input type="hidden" name="menu" value="FacturaCompra">
+                                                                                <input type="hidden" name="accion" value="EliminarArticulo">
+                                                                                <input type="hidden" name="token" value="${token}">
+                                                                                <input type="hidden" name="index" value="${status.index}">
+                                                                                <button type="submit" class="btn btn-danger">Sí, Eliminar</button>
+                                                                            </form>
+                                                                        </div>
                                                                     </div>
                                                                 </div>
                                                             </div>
-                                                        </div>
-                                                    </td>
+                                                        </td>
+                                                    </c:if>
                                                 </tr>
                                             </c:forEach>
                                         </tbody>
