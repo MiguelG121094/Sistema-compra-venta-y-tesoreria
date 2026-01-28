@@ -245,8 +245,8 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                         <div class="row mb-3">
                                             <div class="col-md-2">
                                                 <div class="form-floating mb-3 mb-md-0">
-                                                    <input class="form-control" id="timbrado" name="timbrado" type="text" placeholder="Timbrado"
-                                                           value="${facturaCompra.timbrado}" />
+                                                    <input class="form-control" id="timbrado" name="timbrado" type="number" placeholder="Timbrado"
+                                                           value="${facturaCompra.timbrado}" min="0" />
                                                     <label for="timbrado">Timbrado</label>
                                                 </div>
                                             </div>
@@ -272,7 +272,7 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                                     <input type="number" id="plazoCredito" name="plazo" class="form-control"
                                                            value="${facturaCompra.plazo != null ? facturaCompra.plazo : 0}"
                                                            <c:if test="${!esCredito}">disabled</c:if>
-                                                           placeholder="Plazo en días" title="Plazo en días">
+                                                           placeholder="Plazo en días" title="Plazo en días" min="0">
                                                     <label for="plazoCredito">Plazo de condición (días)</label>
                                                 </div>
                                             </div>

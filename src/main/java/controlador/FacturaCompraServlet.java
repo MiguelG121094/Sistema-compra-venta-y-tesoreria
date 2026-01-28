@@ -788,6 +788,22 @@ public class FacturaCompraServlet extends HttpServlet {
             return;
         }
 
+        // Validar timbrado no negativo
+        if (estado.facturaCompra.getTimbrado() != null && estado.facturaCompra.getTimbrado() < 0) {
+            mostrarMensaje(request, "El timbrado no puede ser negativo", "alert-warning");
+            cargarDatosParaVista(request, estado, token);
+            forward(request, response, JSP_FACTURA);
+            return;
+        }
+
+        // Validar plazo no negativo
+        if (estado.facturaCompra.getPlazo() != null && estado.facturaCompra.getPlazo() < 0) {
+            mostrarMensaje(request, "El plazo no puede ser negativo", "alert-warning");
+            cargarDatosParaVista(request, estado, token);
+            forward(request, response, JSP_FACTURA);
+            return;
+        }
+
         // Validar fecha de vencimiento del timbrado sea mayor o igual a la fecha actual
         if (estado.facturaCompra.getFechaVenciTimbrado() != null) {
             Date fechaActual = new Date();
