@@ -5,13 +5,16 @@
 package modelo;
 
 import conexion.Conexion;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
-import org.mindrot.jbcrypt.BCrypt;
 
 /**
  *
@@ -25,13 +28,16 @@ public class UsuarioDAO {
     private PersonaDAO personaDAO;
     private GrupoDAO grupoDAO;
 
+    private static final String HASH_ALGORITHM = "SHA-256";
+    private static final int SALT_LENGTH = 16;
+    private static final String HASH_SEPARATOR = ":";
+
     public UsuarioDAO(Connection conn) {
         this.conn = conn;
     }
 
     public Usuario validarUsuario(String user, String pass) throws SQLException {
         Usuario usuario = null;
-        // Buscar solo por username, la verificación de contraseña se hace con BCrypt
         String sql = "SELECT * FROM usuario WHERE usu_user = ?";
         personaDAO = new PersonaDAO(conn);
         grupoDAO = new GrupoDAO(conn);
@@ -42,10 +48,10 @@ public class UsuarioDAO {
                 String hashGuardado = rs.getString("usu_pass");
                 boolean passwordValido = false;
 
-                // Verificar si es hash BCrypt (empieza con $2a$) o texto plano (usuarios antiguos)
-                if (hashGuardado != null && hashGuardado.startsWith("$2a$")) {
-                    // Contraseña hasheada con BCrypt
-                    passwordValido = BCrypt.checkpw(pass, hashGuardado);
+                // Verificar si es hash SHA-256 (contiene separador) o texto plano (usuarios antiguos)
+                if (hashGuardado != null && hashGuardado.contains(HASH_SEPARATOR)) {
+                    // Contraseña hasheada con SHA-256 + Salt
+                    passwordValido = verificarPassword(pass, hashGuardado);
                 } else {
                     // Contraseña en texto plano (usuarios antiguos sin migrar)
                     passwordValido = hashGuardado != null && hashGuardado.equals(pass);
@@ -117,8 +123,8 @@ public class UsuarioDAO {
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setLong(1, usuario.getPersona().getIdPersona());
             stmt.setString(2, usuario.getUsername());
-            // Hashear la contraseña con BCrypt antes de guardar
-            String hashedPassword = BCrypt.hashpw(usuario.getPassword(), BCrypt.gensalt());
+            // Hashear la contraseña con SHA-256 + Salt antes de guardar
+            String hashedPassword = hashearPassword(usuario.getPassword());
             stmt.setString(3, hashedPassword);
             stmt.setString(4, usuario.getEstado());
             stmt.setLong(5, usuario.getGrupo().getIdGrupo());
@@ -130,5 +136,54 @@ public class UsuarioDAO {
             }
         }
     }
-    
+
+    // ==================== Métodos para hash de contraseñas ====================
+
+    /**
+     * Genera un hash de la contraseña con salt aleatorio.
+     * Formato: salt:hash
+     */
+    private String hashearPassword(String password) {
+        try {
+            SecureRandom random = new SecureRandom();
+            byte[] saltBytes = new byte[SALT_LENGTH];
+            random.nextBytes(saltBytes);
+            String salt = Base64.getEncoder().encodeToString(saltBytes);
+
+            String hash = hashConSalt(password, salt);
+            return salt + HASH_SEPARATOR + hash;
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("Error al hashear contraseña", e);
+        }
+    }
+
+    /**
+     * Verifica si una contraseña coincide con el hash guardado.
+     */
+    private boolean verificarPassword(String password, String hashGuardado) {
+        try {
+            String[] parts = hashGuardado.split(HASH_SEPARATOR);
+            if (parts.length != 2) {
+                return false;
+            }
+            String salt = parts[0];
+            String hash = parts[1];
+            String hashCalculado = hashConSalt(password, salt);
+            return hash.equals(hashCalculado);
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("Error al verificar contraseña", e);
+        }
+    }
+
+    /**
+     * Hashea password + salt con SHA-256.
+     */
+    private String hashConSalt(String password, String salt) throws NoSuchAlgorithmException {
+        MessageDigest md = MessageDigest.getInstance(HASH_ALGORITHM);
+        String saltedPassword = password + salt;
+        byte[] hashBytes = md.digest(saltedPassword.getBytes());
+        return Base64.getEncoder().encodeToString(hashBytes);
+    }
+
 }
+
