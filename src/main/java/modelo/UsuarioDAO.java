@@ -11,6 +11,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import org.mindrot.jbcrypt.BCrypt;
 
 /**
  *
@@ -30,16 +31,31 @@ public class UsuarioDAO {
 
     public Usuario validarUsuario(String user, String pass) throws SQLException {
         Usuario usuario = null;
-        String sql = "SELECT * FROM usuario WHERE usu_user = ? AND usu_pass = ?";
+        // Buscar solo por username, la verificación de contraseña se hace con BCrypt
+        String sql = "SELECT * FROM usuario WHERE usu_user = ?";
         personaDAO = new PersonaDAO(conn);
         grupoDAO = new GrupoDAO(conn);
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, user);
-            stmt.setString(2, pass);
             ResultSet rs = stmt.executeQuery();
             if (rs.next()) {
-                usuario = new Usuario(rs.getLong("id_usuario"), new Persona(rs.getLong("id_persona")), rs.getString("usu_user"), rs.getString("usu_pass"),
-                        rs.getString("usu_estado"), new Grupo(rs.getLong("id_grupo")));
+                String hashGuardado = rs.getString("usu_pass");
+                boolean passwordValido = false;
+
+                // Verificar si es hash BCrypt (empieza con $2a$) o texto plano (usuarios antiguos)
+                if (hashGuardado != null && hashGuardado.startsWith("$2a$")) {
+                    // Contraseña hasheada con BCrypt
+                    passwordValido = BCrypt.checkpw(pass, hashGuardado);
+                } else {
+                    // Contraseña en texto plano (usuarios antiguos sin migrar)
+                    passwordValido = hashGuardado != null && hashGuardado.equals(pass);
+                }
+
+                if (passwordValido) {
+                    usuario = new Usuario(rs.getLong("id_usuario"), new Persona(rs.getLong("id_persona")),
+                            rs.getString("usu_user"), hashGuardado,
+                            rs.getString("usu_estado"), new Grupo(rs.getLong("id_grupo")));
+                }
             }
         }
         return usuario;
@@ -95,13 +111,15 @@ public class UsuarioDAO {
             System.out.println("Error parametro usuario es nulo");
             return;
         }
-        
+
         String sql = "INSERT INTO usuario (id_persona, usu_user, usu_pass, usu_estado, id_grupo) VALUES (?, ?, ?, ?, ?)";
 
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setLong(1, usuario.getPersona().getIdPersona());
             stmt.setString(2, usuario.getUsername());
-            stmt.setString(3, usuario.getPassword());
+            // Hashear la contraseña con BCrypt antes de guardar
+            String hashedPassword = BCrypt.hashpw(usuario.getPassword(), BCrypt.gensalt());
+            stmt.setString(3, hashedPassword);
             stmt.setString(4, usuario.getEstado());
             stmt.setLong(5, usuario.getGrupo().getIdGrupo());
 
