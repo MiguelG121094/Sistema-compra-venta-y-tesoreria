@@ -20,7 +20,7 @@
     //obtenemos las cookies del request y almacenamos en la variable cookies
     Cookie[] cookies = request.getCookies();
     String savedUser = "";
-    String savedPass = "";
+    //String savedPass = "";
     boolean rememberChecked = false;
 
     if (cookies != null) {
@@ -28,20 +28,21 @@
         for (Cookie cookie : cookies) {
             if (cookie.getName().equals("user")) {
                 savedUser = cookie.getValue();
-            } else if (cookie.getName().equals("pass")) {
-                savedPass = cookie.getValue();
             }
+            //else if (cookie.getName().equals("pass")) {
+            //    savedPass = cookie.getValue();
+            //}
         }
     }
-    
-    //si hay usuario y contraseña guardados marcar el checkbox de remeberMe
-    if (!savedUser.isEmpty() && !savedPass.isEmpty()) {
+
+    //si hay usuario guardado marcar el checkbox de remeberMe
+    if (!savedUser.isEmpty()) {
         rememberChecked = true;
     }
 
     //enviamos los datos obtenidos de la cookies e nuestros elemntos por el name de cada elemento
     request.setAttribute("savedUser", savedUser);
-    request.setAttribute("savedPass", savedPass);
+    //request.setAttribute("savedPass", savedPass);
     request.setAttribute("rememberChecked", rememberChecked);
 %>
 <html>
@@ -66,14 +67,13 @@
                                 <label for="inputUser">Usuario</label>
                             </div>
                             <div class="form-floating mb-3">
-                                <input class="form-control" id="inputPassword" type="password" placeholder="Contraseña" name="pass" required 
-                                       value="<%= request.getAttribute("savedPass") != null ? request.getAttribute("savedPass") : "" %>"/>
+                                <input class="form-control" id="inputPassword" type="password" placeholder="Contraseña" name="pass" required />
                                 <label for="inputPassword">Contraseña</label>
                             </div>
                             <div class="form-check mb-3">
                                 <input class="form-check-input" name="rememberMe" type="checkbox"
                                        <%= rememberChecked ? "checked" : "" %>/>
-                                <label class="form-check-label" for="rememberMe">Recordar Usuario y Contraseña</label>
+                                <label class="form-check-label" for="rememberMe">Recordar Usuario</label>
                             </div>
                             <div class="d-flex align-items-center justify-content-between mt-4 mb-0">
                                 <!--<input class="btn btn-outline-dark" value="¿Olvidó su contraseña?" type="submit" value="Login">-->

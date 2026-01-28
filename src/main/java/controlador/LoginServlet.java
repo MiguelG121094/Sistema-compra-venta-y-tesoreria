@@ -43,29 +43,35 @@ public class LoginServlet extends HttpServlet {
 
         if (usuario != null) {
             if (usuario.getEstado().equalsIgnoreCase("activo")){
-                HttpSession session = request.getSession();
+
+                // Prevención de Session Fixation: invalidar sesión antigua y crear nueva
+                HttpSession oldSession = request.getSession(false);
+                if (oldSession != null) {
+                    oldSession.invalidate();
+                }
+                HttpSession session = request.getSession(true);
                 session.setAttribute("usuario", usuario);
-                
+
             // manejo de cookies
             if (recordar != null) { // si el usuario marcó "Recordar"
                 Cookie userCookie = new Cookie("user", username);
-                Cookie passCookie = new Cookie("pass", password);
+                //Cookie passCookie = new Cookie("pass", password);
                 Cookie remeberCookie = new Cookie("rememberMe", "on");
                 userCookie.setMaxAge(60 * 60 * 24 * 7);  // 7 días
-                passCookie.setMaxAge(60 * 60 * 24 * 7);  // 7 días
+                //passCookie.setMaxAge(60 * 60 * 24 * 7);  // 7 días
                 remeberCookie.setMaxAge(60 * 60 * 24 * 7);  // 7 días
                 response.addCookie(userCookie);
-                response.addCookie(passCookie);
+                //response.addCookie(passCookie);
                 response.addCookie(remeberCookie);
             } else { // si no marcó "Recordar", eliminar cookies
                 Cookie userCookie = new Cookie("user", "");
-                Cookie passCookie = new Cookie("pass", "");
+                //Cookie passCookie = new Cookie("pass", "");
                 Cookie remeberCookie = new Cookie("rememberMe", "");
                 userCookie.setMaxAge(0);
-                passCookie.setMaxAge(0);
+                //passCookie.setMaxAge(0);
                 remeberCookie.setMaxAge(0);
                 response.addCookie(userCookie);
-                response.addCookie(passCookie);
+                //response.addCookie(passCookie);
                 response.addCookie(remeberCookie);
             }
                 
