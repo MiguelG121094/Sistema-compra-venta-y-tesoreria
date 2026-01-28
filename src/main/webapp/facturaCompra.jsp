@@ -302,11 +302,6 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                             </c:choose>
                             <div class="row mb-4">
                                 <div class="col custom-card">
-                                    <c:if test="${not empty detalleSeleccionado}">
-                                        <div class="alert alert-info mb-2">
-                                            Editando artículo - Modifique los datos y presione Actualizar
-                                        </div>
-                                    </c:if>
                                     <div class="row" style="margin-top: 10px">
                                         <div class="col-md-3">
                                             <input type="text" name="descripcion" placeholder="Descripción" class="form-control" required
@@ -335,8 +330,8 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                             <c:choose>
                                                 <c:when test="${not empty detalleSeleccionado}">
                                                     <button type="submit" class="btn btn-warning">Actualizar</button>
-                                                    <a href="FacturaCompraServlet?menu=FacturaCompra&accion=CancelarEdicion&token=${token}"
-                                                       class="btn btn-secondary">Cancelar</a>
+                                                    <%--<a href="FacturaCompraServlet?menu=FacturaCompra&accion=CancelarEdicion&token=${token}"
+                                                       class="btn btn-secondary">Cancelar</a>--%>
                                                 </c:when>
                                                 <c:otherwise>
                                                     <button type="submit" class="btn btn-success">Agregar Artículo</button>
