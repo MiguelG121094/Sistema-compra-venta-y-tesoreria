@@ -524,24 +524,36 @@ public class FacturaCompraServlet extends HttpServlet {
 
         // Validaciones
         if (idArticuloStr == null || idArticuloStr.isEmpty()) {
-            // Si no hay id de articulo, puede ser factura de gasto (solo descripcion)
-            if (descripcion != null && !descripcion.isEmpty() && cantidadStr != null && precioStr != null) {
-                FacturaCompraDetalle detalle = new FacturaCompraDetalle();
-                detalle.setDescripcion(descripcion);
-                detalle.setCantidad(Long.parseLong(cantidadStr));
-                detalle.setPrecioCompra(Long.parseLong(precioStr));
-
-                // Asignar tipo de impuesto si se seleccionó
-                if (idTipoImpuestoStr != null && !idTipoImpuestoStr.isEmpty()) {
-                    TipoImpuesto tipoImpuesto = tipoImpuestoService.getTipoImpuesto(Long.parseLong(idTipoImpuestoStr));
-                    detalle.setTipoImpuesto(tipoImpuesto);
-                }
-
-                estado.listaDetalle.add(detalle);
-                mostrarMensaje(request, "Artículo agregado", "alert-success");
-            } else {
-                mostrarMensaje(request, "Debe completar los datos del artículo", "alert-warning");
+            // Si no hay id de articulo, es factura de gasto/fondo fijo (solo descripcion)
+            if (descripcion == null || descripcion.isEmpty()) {
+                mostrarMensaje(request, "Debe ingresar una descripción", "alert-warning");
+                cargarDatosParaVista(request, estado, token);
+                forward(request, response, JSP_FACTURA);
+                return;
             }
+            if (cantidadStr == null || cantidadStr.isEmpty() || precioStr == null || precioStr.isEmpty()) {
+                mostrarMensaje(request, "Debe ingresar cantidad y precio", "alert-warning");
+                cargarDatosParaVista(request, estado, token);
+                forward(request, response, JSP_FACTURA);
+                return;
+            }
+            if (idTipoImpuestoStr == null || idTipoImpuestoStr.isEmpty()) {
+                mostrarMensaje(request, "Debe seleccionar un tipo de impuesto", "alert-warning");
+                cargarDatosParaVista(request, estado, token);
+                forward(request, response, JSP_FACTURA);
+                return;
+            }
+
+            FacturaCompraDetalle detalle = new FacturaCompraDetalle();
+            detalle.setDescripcion(descripcion);
+            detalle.setCantidad(Long.parseLong(cantidadStr));
+            detalle.setPrecioCompra(Long.parseLong(precioStr));
+
+            TipoImpuesto tipoImpuesto = tipoImpuestoService.getTipoImpuesto(Long.parseLong(idTipoImpuestoStr));
+            detalle.setTipoImpuesto(tipoImpuesto);
+
+            estado.listaDetalle.add(detalle);
+            mostrarMensaje(request, "Artículo agregado", "alert-success");
         } else {
             Long idArticulo = Long.parseLong(idArticuloStr);
 

@@ -296,16 +296,16 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                 <div class="col custom-card">
                                     <div class="row" style="margin-top: 10px">
                                         <div class="col-md-3">
-                                            <input type="text" name="descripcion" placeholder="Descripción" class="form-control">
+                                            <input type="text" name="descripcion" placeholder="Descripción" class="form-control" required>
                                         </div>
                                         <div class="col-md-1">
-                                            <input type="number" name="cantidad" placeholder="Cantidad" class="form-control" value="1">
+                                            <input type="number" name="cantidad" placeholder="Cantidad" class="form-control" value="1" required min="1">
                                         </div>
                                         <div class="col-md-2">
-                                            <input type="number" name="precioCompra" placeholder="Precio de compra" class="form-control">
+                                            <input type="number" name="precioCompra" placeholder="Precio de compra" class="form-control" required min="1">
                                         </div>
                                         <div class="col-md-2">
-                                            <select name="idTipoImpuesto" class="form-control">
+                                            <select name="idTipoImpuesto" class="form-control" required>
                                                 <option value="">Seleccionar Impuesto</option>
                                                 <c:forEach var="imp" items="${listaTipoImpuesto}">
                                                     <option value="${imp.idTipoImpuesto}">${imp.descripcion}</option>
