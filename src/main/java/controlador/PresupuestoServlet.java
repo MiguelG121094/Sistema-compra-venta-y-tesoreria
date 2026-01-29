@@ -103,6 +103,9 @@ public class PresupuestoServlet extends HttpServlet {
         HttpSession session = request.getSession(false); //obtener datos de la sesion (se puede obtener el usuario logueado)
         
         if (menu.equals("Presupuesto")) {
+            if (accion == null) {
+                accion = "ListarModal";
+            }
             try {
                 switch (accion) {
                     case "ListarModal":
