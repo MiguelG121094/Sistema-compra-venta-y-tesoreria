@@ -308,11 +308,11 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                                    value="${detalleSeleccionado.descripcion}">
                                         </div>
                                         <div class="col-md-1">
-                                            <input type="number" name="cantidad" placeholder="Cantidad" class="form-control" required min="1"
+                                            <input type="text" inputmode="numeric" name="cantidad" placeholder="Cantidad" class="form-control mask-miles" required
                                                    value="${not empty detalleSeleccionado ? detalleSeleccionado.cantidad : 1}">
                                         </div>
                                         <div class="col-md-2">
-                                            <input type="number" name="precioCompra" placeholder="Precio de compra" class="form-control" required min="1"
+                                            <input type="text" inputmode="numeric" name="precioCompra" placeholder="Precio de compra" class="form-control mask-miles" required
                                                    value="${detalleSeleccionado.precioCompra}">
                                         </div>
                                         <div class="col-md-2">
@@ -364,7 +364,7 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                             <input type="number" name="cantidad" placeholder="Cantidad" class="form-control" value="1">
                                         </div>
                                         <div class="col-md-2">
-                                            <input type="number" name="precioCompra" id="precioCompraArticulo" placeholder="Precio de compra" class="form-control">
+                                            <input type="text" inputmode="numeric" name="precioCompra" id="precioCompraArticulo" placeholder="Precio de compra" class="form-control mask-miles">
                                         </div>
                                         <div class="col-md-2">
                                             <button type="submit" class="btn btn-success">Agregar Artículo</button>
@@ -822,11 +822,28 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
             function seleccionarArticulo(idArticulo, descripcion, precioCompra) {
                 document.getElementById('idArticuloAgregar').value = idArticulo;
                 document.getElementById('descripcionArticulo').value = descripcion;
-                document.getElementById('precioCompraArticulo').value = precioCompra;
+                var $precio = $('#precioCompraArticulo');
+                $precio.val(precioCompra);
+                $precio.trigger('input');
+            }
+
+            // Limpiar puntos de miles antes de enviar formularios
+            function limpiarMascaras(form) {
+                $(form).find('.mask-miles').each(function() {
+                    $(this).val($(this).cleanVal());
+                });
             }
 
             // Inicialización de DataTables para todas las tablas
             $(document).ready(function () {
+                // Máscara de puntos de miles para campos numéricos
+                $('.mask-miles').mask('#.##0', {reverse: true});
+
+                // Limpiar máscara antes de submit en formulario de gasto/fondo fijo
+                $('#formAgregarGasto').on('submit', function() {
+                    limpiarMascaras(this);
+                });
+
                 // Tabla principal de artículos en factura
                 $('#tablaArticulosFactura').DataTable({
                     initComplete: function () {
