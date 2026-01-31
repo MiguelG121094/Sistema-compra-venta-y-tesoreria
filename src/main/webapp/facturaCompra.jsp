@@ -398,49 +398,7 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            <c:set var="totalGeneral" value="0" />
-                                            <c:set var="totalIva10" value="0" />
-                                            <c:set var="totalIva5" value="0" />
-                                            <c:set var="totalExenta" value="0" />
                                             <c:forEach var="detalle" items="${listaFacturaCompraDetalle}" varStatus="status">
-                                                <c:set var="subtotal" value="${detalle.cantidad * detalle.precioCompra}" />
-                                                <c:set var="totalGeneral" value="${totalGeneral + subtotal}" />
-
-                                                <%--
-                                                    Calcular IVA según el tipo de impuesto del artículo.
-                                                    Se usa fn:contains para verificar si la descripcion contiene "10" o "5".
-                                                    Ejemplo: Si descripcion es "IVA 10%", fn:contains(descripcion, '10') = true
-                                                    - IVA 10%: El impuesto es 1/11 del subtotal (subtotal incluye IVA)
-                                                    - IVA 5%: El impuesto es 1/21 del subtotal
-                                                    - Exenta: No tiene IVA
-                                                --%>
-                                                <c:set var="gravada10" value="0" />
-                                                <c:set var="iva10" value="0" />
-                                                <c:set var="gravada5" value="0" />
-                                                <c:set var="iva5" value="0" />
-                                                <c:set var="exenta" value="0" />
-
-                                                <%-- Obtener descripcion del impuesto (del articulo o del detalle) --%>
-                                                <c:set var="descImpuesto" value="${not empty detalle.articulo ? detalle.articulo.tipoImpuesto.descripcion : detalle.tipoImpuesto.descripcion}" />
-
-                                                <c:choose>
-                                                    <%-- fn:contains verifica si el primer string contiene el segundo --%>
-                                                    <c:when test="${fn:contains(descImpuesto, '10')}">
-                                                        <c:set var="iva10" value="${subtotal / 11}" />
-                                                        <c:set var="gravada10" value="${subtotal - iva10}" />
-                                                        <c:set var="totalIva10" value="${totalIva10 + iva10}" />
-                                                    </c:when>
-                                                    <c:when test="${fn:contains(descImpuesto, '5')}">
-                                                        <c:set var="iva5" value="${subtotal / 21}" />
-                                                        <c:set var="gravada5" value="${subtotal - iva5}" />
-                                                        <c:set var="totalIva5" value="${totalIva5 + iva5}" />
-                                                    </c:when>
-                                                    <c:otherwise>
-                                                        <c:set var="exenta" value="${subtotal}" />
-                                                        <c:set var="totalExenta" value="${totalExenta + exenta}" />
-                                                    </c:otherwise>
-                                                </c:choose>
-
                                                 <tr>
                                                     <td class="text-center">
                                                         <c:choose>
@@ -459,22 +417,22 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                                         <fmt:formatNumber value="${detalle.precioCompra}" pattern="#,###"/>
                                                     </td>
                                                     <td class="text-center">
-                                                        <fmt:formatNumber value="${subtotal}" pattern="#,###"/>
+                                                        <fmt:formatNumber value="${detalle.subtotal}" pattern="#,###"/>
                                                     </td>
                                                     <td class="text-center">
-                                                        <fmt:formatNumber value="${gravada10}" pattern="#,###"/>
+                                                        <fmt:formatNumber value="${detalle.gravada10}" pattern="#,###"/>
                                                     </td>
                                                     <td class="text-center">
-                                                        <fmt:formatNumber value="${iva10}" pattern="#,###"/>
+                                                        <fmt:formatNumber value="${detalle.iva10}" pattern="#,###"/>
                                                     </td>
                                                     <td class="text-center">
-                                                        <fmt:formatNumber value="${gravada5}" pattern="#,###"/>
+                                                        <fmt:formatNumber value="${detalle.gravada5}" pattern="#,###"/>
                                                     </td>
                                                     <td class="text-center">
-                                                        <fmt:formatNumber value="${iva5}" pattern="#,###"/>
+                                                        <fmt:formatNumber value="${detalle.iva5}" pattern="#,###"/>
                                                     </td>
                                                     <td class="text-center">
-                                                        <fmt:formatNumber value="${exenta}" pattern="#,###"/>
+                                                        <fmt:formatNumber value="${detalle.exenta}" pattern="#,###"/>
                                                     </td>
                                                     <c:if test="${fn:contains(facturaCompra.tipoFactura, 'gasto') or fn:contains(facturaCompra.tipoFactura, 'fondoFijo')}">
                                                         <td class="text-center">

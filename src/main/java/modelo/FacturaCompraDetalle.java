@@ -17,6 +17,14 @@ public class FacturaCompraDetalle {
     private String descripcion;
     private TipoImpuesto tipoImpuesto;
 
+    // Campos calculados (no persistidos en BD)
+    private Long subtotal;
+    private Long gravada10;
+    private Long iva10;
+    private Long gravada5;
+    private Long iva5;
+    private Long exenta;
+
     public FacturaCompraDetalle() {
     }
 
@@ -85,5 +93,53 @@ public class FacturaCompraDetalle {
 
     public void setTipoImpuesto(TipoImpuesto tipoImpuesto) {
         this.tipoImpuesto = tipoImpuesto;
+    }
+
+    public Long getSubtotal() {
+        return subtotal;
+    }
+
+    public void setSubtotal(Long subtotal) {
+        this.subtotal = subtotal;
+    }
+
+    public Long getGravada10() {
+        return gravada10;
+    }
+
+    public void setGravada10(Long gravada10) {
+        this.gravada10 = gravada10;
+    }
+
+    public Long getIva10() {
+        return iva10;
+    }
+
+    public void setIva10(Long iva10) {
+        this.iva10 = iva10;
+    }
+
+    public Long getGravada5() {
+        return gravada5;
+    }
+
+    public void setGravada5(Long gravada5) {
+        this.gravada5 = gravada5;
+    }
+
+    public Long getIva5() {
+        return iva5;
+    }
+
+    public void setIva5(Long iva5) {
+        this.iva5 = iva5;
+    }
+
+    public Long getExenta() {
+        return exenta;
+    }
+
+    public void setExenta(Long exenta) {
+        this.exenta = exenta;
     }
 }

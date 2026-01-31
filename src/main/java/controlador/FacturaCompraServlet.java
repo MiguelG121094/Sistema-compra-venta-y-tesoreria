@@ -113,6 +113,9 @@ public class FacturaCompraServlet extends HttpServlet {
         request.setAttribute("indexSeleccionado", estado.indexSeleccionado);
         request.setAttribute("esNuevo", estado.esNuevo);
 
+        // Calcular impuestos y totales para la vista
+        calcularImpuestos(request, estado.listaDetalle);
+
         // Listas para modales
         request.setAttribute("listaOrdenesCompra", estado.listaOrdenesCompra);
         request.setAttribute("listaFacturasCompra", estado.listaFacturasCompra);
@@ -120,6 +123,55 @@ public class FacturaCompraServlet extends HttpServlet {
         request.setAttribute("listaSucursales", estado.listaSucursales);
         request.setAttribute("listaArticulos", estado.listaArticulos);
         request.setAttribute("listaTipoImpuesto", estado.listaTipoImpuesto);
+    }
+
+    /**
+     * Calcula subtotal, gravadas, IVA y exenta para cada detalle,
+     * y setea los totales como atributos del request.
+     */
+    private void calcularImpuestos(HttpServletRequest request, List<FacturaCompraDetalle> listaDetalle) {
+        long totalGeneral = 0, totalIva10 = 0, totalIva5 = 0, totalExenta = 0;
+
+        for (FacturaCompraDetalle detalle : listaDetalle) {
+            long subtotal = detalle.getCantidad() * detalle.getPrecioCompra();
+            detalle.setSubtotal(subtotal);
+            totalGeneral += subtotal;
+
+            // Reiniciar campos calculados
+            detalle.setGravada10(0L);
+            detalle.setIva10(0L);
+            detalle.setGravada5(0L);
+            detalle.setIva5(0L);
+            detalle.setExenta(0L);
+
+            // Obtener descripción del impuesto (del artículo o del detalle directo)
+            String descImpuesto = "";
+            if (detalle.getArticulo() != null && detalle.getArticulo().getTipoImpuesto() != null) {
+                descImpuesto = detalle.getArticulo().getTipoImpuesto().getDescripcion();
+            } else if (detalle.getTipoImpuesto() != null) {
+                descImpuesto = detalle.getTipoImpuesto().getDescripcion();
+            }
+
+            if (descImpuesto.contains("10")) {
+                long iva = subtotal / 11;
+                detalle.setIva10(iva);
+                detalle.setGravada10(subtotal - iva);
+                totalIva10 += iva;
+            } else if (descImpuesto.contains("5")) {
+                long iva = subtotal / 21;
+                detalle.setIva5(iva);
+                detalle.setGravada5(subtotal - iva);
+                totalIva5 += iva;
+            } else {
+                detalle.setExenta(subtotal);
+                totalExenta += subtotal;
+            }
+        }
+
+        request.setAttribute("totalGeneral", totalGeneral);
+        request.setAttribute("totalIva10", totalIva10);
+        request.setAttribute("totalIva5", totalIva5);
+        request.setAttribute("totalExenta", totalExenta);
     }
 
     /**
