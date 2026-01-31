@@ -516,6 +516,9 @@ public class FacturaCompraServlet extends HttpServlet {
         FacturaCompraState estado = obtenerEstadoORedireccionar(request, response, session, token);
         if (estado == null) return;
 
+        // Leer todos los datos del formulario para mantenerlos
+        leerDatosFormulario(request, estado);
+
         String idSucursalStr = request.getParameter("idSucursal");
         if (idSucursalStr != null && !idSucursalStr.isEmpty()) {
             Long idSucursal = Long.parseLong(idSucursalStr);
@@ -526,6 +529,7 @@ public class FacturaCompraServlet extends HttpServlet {
             }
         }
 
+        guardarEstado(session, token, estado);
         cargarDatosParaVista(request, estado, token);
         forward(request, response, JSP_FACTURA);
     }
