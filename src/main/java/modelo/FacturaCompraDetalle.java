@@ -95,6 +95,16 @@ public class FacturaCompraDetalle {
         this.tipoImpuesto = tipoImpuesto;
     }
 
+    /**
+     * Devuelve la descripción del artículo si existe, o la descripción directa del detalle.
+     */
+    public String getDescripcionDisplay() {
+        if (articulo != null && articulo.getDescripcion() != null) {
+            return articulo.getDescripcion();
+        }
+        return descripcion;
+    }
+
     public Long getSubtotal() {
         return subtotal;
     }

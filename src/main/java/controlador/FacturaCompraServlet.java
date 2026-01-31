@@ -113,6 +113,14 @@ public class FacturaCompraServlet extends HttpServlet {
         request.setAttribute("indexSeleccionado", estado.indexSeleccionado);
         request.setAttribute("esNuevo", estado.esNuevo);
 
+        // Flags calculados para la vista
+        boolean esCredito = "Credito".equals(estado.facturaCompra.getCondicion());
+        request.setAttribute("esCredito", esCredito);
+
+        String tipoFactura = estado.facturaCompra.getTipoFactura();
+        boolean mostrarAcciones = "gasto".equals(tipoFactura) || "fondoFijo".equals(tipoFactura);
+        request.setAttribute("mostrarAcciones", mostrarAcciones);
+
         // Calcular impuestos y totales para la vista
         calcularImpuestos(request, estado.listaDetalle);
 

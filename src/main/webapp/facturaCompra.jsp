@@ -20,17 +20,6 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
 <!DOCTYPE html>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt"%>
-<%--
-    Taglib fn (JSTL Functions): Proporciona funciones para manipular strings.
-    Funciones disponibles: fn:contains, fn:containsIgnoreCase, fn:startsWith,
-    fn:endsWith, fn:indexOf, fn:length, fn:substring, fn:trim, fn:toUpperCase, etc.
-
-    En este JSP se usa fn:contains para verificar si la descripcion del tipo de
-    impuesto contiene "10" o "5" y asi calcular el IVA correspondiente.
-    Ejemplo: ${fn:contains(texto, 'buscar')} retorna true/false
---%>
-<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
-
 <%@ page contentType="text/html;charset=UTF-8" language="java"  pageEncoding="UTF-8" %>
 <html>
     <jsp:include page="header.jsp" />
@@ -224,7 +213,6 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                                     <label for="fechaEmision">Fecha de emision</label>
                                                 </div>
                                             </div>
-                                            <c:set var="esGasto" value="${facturaCompra.tipoFactura == 'gasto'}" />
                                             <div class="col-md-2">
                                                 <div class="form-floating mb-3 mb-md-0">
                                                     <select class="form-control" id="tipoFactura" name="tipoFactura" onchange="cambiarTipoFactura();">
@@ -257,7 +245,6 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                                     <label for="fechaVencTimb">Fecha Venc. Timbrado</label>
                                                 </div>
                                             </div>
-                                            <c:set var="esCredito" value="${facturaCompra.condicion == 'Credito'}" />
                                             <div class="col-md-2">
                                                 <div class="form-floating mb-3 mb-md-0">
                                                     <select class="form-control" id="condicionCompra" name="condicion" onchange="cambiarCondicion();">
@@ -392,7 +379,7 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                                 <th class="text-bg-dark text-center">Gravada 5%</th>
                                                 <th class="text-bg-dark text-center">IVA 5%</th>
                                                 <th class="text-bg-dark text-center">Exenta</th>
-                                                <c:if test="${fn:contains(facturaCompra.tipoFactura, 'gasto') or fn:contains(facturaCompra.tipoFactura, 'fondoFijo')}">
+                                                <c:if test="${mostrarAcciones}">
                                                     <th class="text-bg-dark text-center no-search">Acciones</th>
                                                 </c:if>
                                             </tr>
@@ -401,14 +388,7 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                             <c:forEach var="detalle" items="${listaFacturaCompraDetalle}" varStatus="status">
                                                 <tr>
                                                     <td class="text-center">
-                                                        <c:choose>
-                                                            <c:when test="${not empty detalle.articulo}">
-                                                                ${detalle.articulo.descripcion}
-                                                            </c:when>
-                                                            <c:otherwise>
-                                                                ${detalle.descripcion}
-                                                            </c:otherwise>
-                                                        </c:choose>
+                                                        ${detalle.descripcionDisplay}
                                                     </td>
                                                     <td class="text-center">
                                                         <fmt:formatNumber value="${detalle.cantidad}" pattern="#,###"/>
@@ -434,7 +414,7 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                                     <td class="text-center">
                                                         <fmt:formatNumber value="${detalle.exenta}" pattern="#,###"/>
                                                     </td>
-                                                    <c:if test="${fn:contains(facturaCompra.tipoFactura, 'gasto') or fn:contains(facturaCompra.tipoFactura, 'fondoFijo')}">
+                                                    <c:if test="${mostrarAcciones}">
                                                         <td class="text-center">
                                                             <a href="FacturaCompraServlet?menu=FacturaCompra&accion=EditarArticulo&token=${token}&index=${status.index}"
                                                                class="btn btn-warning btn-sm">Editar</a>
