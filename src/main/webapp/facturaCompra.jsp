@@ -269,11 +269,11 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                             </div>
                         </div>
 
-                        <!-- Línea separadora -->
+                        <!-- Lonea separadora -->
                         <div class="border-section"></div>
                         </form>
 
-                        <!-- Búsqueda de Artículos - para factura de gasto o fondo fijo -->
+                        <!-- Busqueda de Articulos - para factura de gasto o fondo fijo -->
                         <c:if test="${facturaCompra.tipoFactura == 'fondoFijo' or facturaCompra.tipoFactura == 'gasto'}">
                         <form id="formAgregarGasto" method="post" action="FacturaCompraServlet">
                             <input type="hidden" name="menu" value="FacturaCompra">
@@ -331,8 +331,9 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                         </form>
                         </c:if>
 
-                        <%-- Búsqueda de Artículos - para factura de compra de articulos
-                        <c:if test="${facturaCompra.tipoFactura == 'compraArt' or empty facturaCompra.tipoFactura}">
+                        <!--Búsqueda de Artículos - para factura de compra de articulos-->
+                        <!--No se usa por ahora-->
+                        <%-- <c:if test="${facturaCompra.tipoFactura == 'compraArt' or empty facturaCompra.tipoFactura}">
                         <form id="formAgregarArticulo" method="post" action="FacturaCompraServlet">
                             <input type="hidden" name="menu" value="FacturaCompra">
                             <input type="hidden" name="token" value="${token}">
@@ -363,7 +364,7 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                         </c:if>
                         --%>
 
-                        <!-- Tabla de Artículos -->
+                        <!-- Tabla de Articulos (Detalle de la factura) -->
                         <div class="row mb-4">
                             <div class="col custom-card">
                                 <div class="table-responsive">
@@ -379,7 +380,7 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                                 <th class="text-bg-dark text-center">Gravada 5%</th>
                                                 <th class="text-bg-dark text-center">IVA 5%</th>
                                                 <th class="text-bg-dark text-center">Exenta</th>
-                                                <c:if test="${mostrarAcciones}">
+                                                <c:if test="${mostrarAcciones}"> <!-- Mostrar accion solamemnte si el tipo de fatura es fondo fijo o gasto -->
                                                     <th class="text-bg-dark text-center no-search">Acciones</th>
                                                 </c:if>
                                             </tr>
@@ -393,6 +394,11 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                                     <td class="text-center">
                                                         <fmt:formatNumber value="${detalle.cantidad}" pattern="#,###"/>
                                                     </td>
+<!--                                                    Preguntar a IA si de esta manera se puede hacer tambien, si no va a afectar el flujo
+                                                        en el servlet dejar todos asi
+                                                        <td class="text-center mask-miles">
+                                                        ${detalle.cantidad}"/>
+                                                    </td>-->
                                                     <td class="text-center">
                                                         <fmt:formatNumber value="${detalle.precioCompra}" pattern="#,###"/>
                                                     </td>
@@ -458,7 +464,7 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                         <c:if test="${not empty token}">
                                             <button type="button" class="btn btn-success" onclick="guardarFactura();">Guardar</button>
                                             <a href="FacturaCompraServlet?menu=FacturaCompra&accion=Cancelar&token=${token}"
-                                               class="btn btn-secondary">Cancelar</a>
+                                               class="btn btn-danger">Cancelar</a>
                                         </c:if>
                                     </div>
                                     <div class="col-md-6 text-end">
@@ -637,7 +643,8 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                         </div>
 
                         <!-- Modal Articulos -->
-                        <div class="modal fade" id="modalArticulos" tabindex="-1" aria-labelledby="modalArticulosLabel" aria-hidden="true">
+                        <!--Por ahora no se usa-->
+<!--                        <div class="modal fade" id="modalArticulos" tabindex="-1" aria-labelledby="modalArticulosLabel" aria-hidden="true">
                             <div class="modal-dialog modal-lg">
                                 <div class="modal-content">
                                     <div class="modal-header">
@@ -681,7 +688,7 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                     </div>
                                 </div>
                             </div>
-                        </div>
+                        </div>-->
 
                         <!-- Modal de confirmación para Anular Factura -->
                         <div class="modal fade" id="modalConfirmarAnular" tabindex="-1" aria-labelledby="modalConfirmarAnularLabel" aria-hidden="true">
@@ -827,6 +834,7 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
         </script>
 
         <!-- Código para mostrar mensajes -->
+        <!--preguntar a IA si se puede usar el toastr y que se pueda enviar el mensaje que quiera que diga tambien-->
         <% String Message = (String) request.getAttribute("Message");%>
         <% String tipoAlert = (String) request.getAttribute("tipoAlert");%>
         <c:if test="${not empty Message}">

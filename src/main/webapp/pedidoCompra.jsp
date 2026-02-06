@@ -111,7 +111,7 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                                                     ${PedCompra.getUsuario().getPersona().getApellido()}</td>
                                                                 <td align="center" valign="middle" class="text-center">${PedCompra.getSucursal().getDescripcion()}</td>
                                                                 <td align="center" valign="middle" class="text-center">
-                                                                    <fmt:formatDate value="${PedCompra.getFecha()}" pattern="dd-MM-yyyy" /></td>
+                                                                    <fmt:formatDate value="${PedCompra.getFecha()}" pattern="dd/MM/yyyy" /></td>
                                                                 <td align="center" valign="middle" class="text-center">${PedCompra.getEstado()}</td>
                                                                 <td align="center" valign="middle" class="text-center">${PedCompra.getListaArticulos()}</td>
                                                                 <td align="center" valign="middle" class="text-center">
