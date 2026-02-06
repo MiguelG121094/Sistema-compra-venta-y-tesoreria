@@ -140,4 +140,20 @@ public class FacturaCompraService {
             return false;
         }
     }
+
+    /**
+     * Verifica si existe al menos una factura de compra asociada a una orden de compra.
+     *
+     * @param idOrdenCompra ID de la orden de compra
+     * @return true si existe al menos una factura de compra, false en caso contrario
+     */
+    public boolean existeFacturaCompraPorOrden(Long idOrdenCompra) throws SQLException {
+        try (Connection conn = Conexion.getConnection()) {
+            FacturaCompraDAO facturaCompraDAO = new FacturaCompraDAO(conn);
+            return facturaCompraDAO.existeFacturaCompraPorOrden(idOrdenCompra);
+        } catch (SQLException e) {
+            System.out.println("Error en FacturaCompraService: " + e);
+            return false;
+        }
+    }
 }

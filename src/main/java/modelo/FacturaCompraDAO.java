@@ -369,4 +369,30 @@ public class FacturaCompraDAO {
         }
         return false;
     }
+
+    /**
+     * Verifica si existe al menos una factura de compra asociada a una orden de compra.
+     * No cuenta facturas anuladas o canceladas.
+     *
+     * @param idOrdenCompra ID de la orden de compra
+     * @return true si existe al menos una factura de compra, false en caso contrario
+     */
+    public boolean existeFacturaCompraPorOrden(Long idOrdenCompra) throws SQLException {
+        if (idOrdenCompra == null) {
+            return false;
+        }
+
+        String sql = "SELECT COUNT(*) FROM factura_compra_cabecera " +
+                    "WHERE id_orden_compra_cab = ? AND fact_comp_estado NOT IN ('Anulado', 'Cancelado')";
+
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, idOrdenCompra);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
+            }
+        }
+        return false;
+    }
 }

@@ -277,11 +277,11 @@ usuario inicio sesion, se debe agregar esta validacion en cada una de las vistas
                                             <c:if test="${newIdOrdenCompra == null}">disabled</c:if>>Buscar Presupuesto</button>
                                     <a href="" data-bs-toggle="modal" data-bs-target="#modalOrdenesCompra" class="btn btn-info text-white">Buscar Orden</a>
 <!--                                    <button name="accion" value="Aprobar" type="submit" class="btn btn-primary"
-                                       <c:if test="${ordenCompra.getIdOrdenCompra() == null || ordenCompra.getEstado() eq 'Aprobado' || ordenCompra.getEstado() eq 'Anulado'}">
+                                       <c:if test="${ordenCompra.getIdOrdenCompra() == null || ordenCompra.getEstado() eq 'Aprobado' || ordenCompra.getEstado() eq 'Anulado' || esReadOnly}">
                                            <c:out value="disabled='disabled'"/></c:if>>Aprobar</button>-->
                                     <button name="accion" value="Anular" type="button" data-bs-toggle="modal"
                                         data-bs-target="#modalAnular${ordenCompra.getIdOrdenCompra()}" class="btn btn-danger"
-                                        <c:if test="${ordenCompra.getIdOrdenCompra() == null || ordenCompra.getEstado() eq 'Anulado' || not puedeBorrar}">disabled</c:if>>Anular</button>
+                                        <c:if test="${ordenCompra.getIdOrdenCompra() == null || ordenCompra.getEstado() eq 'Anulado' || not puedeBorrar || esReadOnly}">disabled</c:if>>Anular</button>
                                 </form>
                                 <!-- Modal de confirmacion para anular -->
                                 <div class="modal fade" id="modalAnular${ordenCompra.getIdOrdenCompra()}" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
@@ -428,7 +428,7 @@ usuario inicio sesion, se debe agregar esta validacion en cada una de las vistas
                                         <div class="col-md-2">
                                             <input type="hidden" name="idArt" value="${ordenCompraDetSeleccionado.getArticulo().getIdArticulo()}">
                                             <button type="submit" name="accion" value="ModificarArticuloDetalle"
-                                                class="btn btn-warning" <c:if test="${ordenCompraDetSeleccionado.getArticulo().getIdArticulo() == null or not puedeEditar}">disabled</c:if>>Modificar
+                                                class="btn btn-warning" <c:if test="${ordenCompraDetSeleccionado.getArticulo().getIdArticulo() == null or not puedeEditar or not empty esReadOnly}">disabled</c:if>>Modificar
                                             </button>
                                         </div>
                                     </div>
@@ -468,12 +468,12 @@ usuario inicio sesion, se debe agregar esta validacion en cada una de las vistas
                                                         <%--<a href="OrdenCompraServlet?menu=OrdenCompra&accion=EditarArticuloList&idArt=${listaOrdenDet.getArticulo().getIdArticulo()}"
                                                            class="btn btn-warning btn-sm">Editar</a>--%>
                                                         <c:choose>
-                                                            <c:when test="${puedeBorrar}">
+                                                            <c:when test="${puedeBorrar and empty esReadOnly}">
                                                                 <a href="OrdenCompraServlet?menu=OrdenCompra&accion=EliminarArticuloList&idArt=${listaOrdenDet.getArticulo().getIdArticulo()}"
                                                                    class="btn btn-danger btn-sm">Eliminar</a>
                                                             </c:when>
                                                             <c:otherwise>
-                                                                <button class="btn btn-danger btn-sm" disabled title="No tiene permisos">Eliminar</button>
+                                                                <button class="btn btn-danger btn-sm" disabled title="${not empty esReadOnly ? 'Documento con relaciones' : 'No tiene permisos'}">Eliminar</button>
                                                             </c:otherwise>
                                                         </c:choose>
                                                     </td>
@@ -495,7 +495,7 @@ usuario inicio sesion, se debe agregar esta validacion en cada una de las vistas
                                 <div class="card-footer d-flex justify-content-between align-items-center">
                                     <div>
                                         <button type="button" href="#" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalGenerarOrden"
-                                           <c:if test="${newIdOrdenCompra == null || proveedorSeleccionado == null || sucursalSeleccionada == null || empty listaOrdenCompraDetalle || not puedeInsertar}">disabled</c:if>>Guardar</button>
+                                           <c:if test="${newIdOrdenCompra == null || proveedorSeleccionado == null || sucursalSeleccionada == null || empty listaOrdenCompraDetalle || not puedeInsertar || not empty esReadOnly}">disabled</c:if>>Guardar</button>
                                         <!-- Modal de confirmacion para guardar -->
                                         <div class="modal fade" id="modalGenerarOrden" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
                                           <div class="modal-dialog modal-dialog-centered">

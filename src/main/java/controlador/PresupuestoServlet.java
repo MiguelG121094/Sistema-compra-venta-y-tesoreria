@@ -529,6 +529,7 @@ public class PresupuestoServlet extends HttpServlet {
                                     if (tieneFactura) msg += "Factura, ";
                                     msg = msg.substring(0, msg.length() - 2) + ". No puede ser modificado.";
                                     mostrarMensaje(request, msg, "alert-warning");
+                                    request.setAttribute("esReadOnly", true);
                                 }
 
                                 request.setAttribute("presupuesto", presupuesto);

@@ -221,7 +221,7 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                     <a href="" data-bs-toggle="modal" data-bs-target="#modalPedidos" class="btn btn-info text-white">Buscar Pedido</a>
                                     <button name="accion" value="Anular" type="button" data-bs-toggle="modal"
                                         data-bs-target="#modalAnular${pedidoCompra.getIdPedido()}" class="btn btn-danger"
-                                        <c:if test="${pedidoCompra.getIdPedido() == null or not puedeBorrar}">disabled</c:if>>Anular</button>
+                                        <c:if test="${pedidoCompra.getIdPedido() == null or not puedeBorrar or esReadOnly}">disabled</c:if>>Anular</button>
                                 </form>
                                 <!-- Modal de confirmacion sin javascript  -->
                                 <div class="modal fade" id="modalAnular${pedidoCompra.getIdPedido()}" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
@@ -358,7 +358,7 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                         </div>
                                         <div class="col-md-2">
                                             <button type="submit" name="accion" value="AgregarArticuloADetalle"
-                                                class="btn btn-success" <c:if test="${artACargar.getIdArticulo() == null or not puedeInsertar}">disabled</c:if>>Agregar Artículo
+                                                class="btn btn-success" <c:if test="${artACargar.getIdArticulo() == null or not puedeInsertar or not empty esReadOnly}">disabled</c:if>>Agregar Artículo
                                             </button>
                                         </div>
                                     </div>
@@ -392,12 +392,12 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                                     <td class="text-center">${listaPedCompDetalle.getCantidad()}</td>
                                                     <td class="text-center">
                                                         <c:choose>
-                                                            <c:when test="${puedeBorrar}">
+                                                            <c:when test="${puedeBorrar and empty esReadOnly}">
                                                                 <a href="PedidoCompraServlet?menu=PedidoCompra&accion=EliminarArticuloList&idArt=${listaPedCompDetalle.getArticulo().getIdArticulo()}"
                                                                    class="btn btn-danger">Eliminar</a>
                                                             </c:when>
                                                             <c:otherwise>
-                                                                <button class="btn btn-danger" disabled title="No tiene permisos">Eliminar</button>
+                                                                <button class="btn btn-danger" disabled title="${not empty esReadOnly ? 'Documento con relaciones' : 'No tiene permisos'}">Eliminar</button>
                                                             </c:otherwise>
                                                         </c:choose>
                                                     </td>
@@ -420,7 +420,7 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                     <div>
                                         <!--<button id="btnGenrerarVenta" class="btn btn-success" type="submit" name="accion" value="GenerarVenta" class=""/>Generar Pedido</button>-->
                                         <button href="#" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalGenerarPedido${listaPedCompDetalle}"
-                                                <c:if test="${newIdPedido == null || empty listPedCompDetalle || not puedeInsertar}">disabled</c:if>>Guardar</button>
+                                                <c:if test="${newIdPedido == null || empty listPedCompDetalle || not puedeInsertar || not empty esReadOnly}">disabled</c:if>>Guardar</button>
                                         <!-- Modal de confirmacion sin javascript  -->
                                         <div class="modal fade" id="modalGenerarPedido${listaPedCompDetalle}" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
                                           <div class="modal-dialog modal-dialog-centered">

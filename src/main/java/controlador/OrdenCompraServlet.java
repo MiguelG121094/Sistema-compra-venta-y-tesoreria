@@ -26,6 +26,7 @@ import modelo.PresupuestoDetalle;
 import modelo.Proveedor;
 import modelo.Sucursal;
 import modelo.Usuario;
+import service.FacturaCompraService;
 import service.OrdenCompraDetalleService;
 import service.OrdenCompraService;
 import service.PresupuestoDetalleService;
@@ -62,6 +63,7 @@ public class OrdenCompraServlet extends HttpServlet {
     private List<OrdenCompra> ordenesCompra = new ArrayList<OrdenCompra>();
     private List<OrdenCompraDetalle> listaOrdenCompraDetalle;
     private OrdenCompraDetalle ordenCompraDetalle;
+    private FacturaCompraService facturaCompraService = new FacturaCompraService();
     private static final Logger LOGGER = Logger.getLogger(OrdenCompraServlet.class.getName());
 
     /**
@@ -484,6 +486,13 @@ public class OrdenCompraServlet extends HttpServlet {
                                 sucursal = ordenCompra.getSucursal();
                                 presupuesto = ordenCompra.getPresupuesto();
                                 listaOrdenCompraDetalle = ordenCompraDetalleService.listarDetallesPorOrdenCompra(idOrdenCompra);
+
+                                // Verificar si tiene factura asociada
+                                boolean tieneFactura = facturaCompraService.existeFacturaCompraPorOrden(idOrdenCompra);
+                                if (tieneFactura) {
+                                    mostrarMensaje(request, "Esta orden tiene Factura asociada. No puede ser modificada.", "alert-warning");
+                                    request.setAttribute("esReadOnly", true);
+                                }
 
                                 request.setAttribute("ordenCompra", ordenCompra);
                                 request.setAttribute("proveedorSeleccionado", proveedor);

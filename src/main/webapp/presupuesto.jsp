@@ -288,7 +288,7 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                        <c:if test="${presupuesto.getIdPresupuesto() == null}">disabled</c:if>>Aprobar</button>
                                     <button name="accion" value="Anular" type="button" data-bs-toggle="modal"
                                         data-bs-target="#modalAnular${presupuesto.getIdPresupuesto()}" class="btn btn-danger"
-                                        <c:if test="${presupuesto.getIdPresupuesto() == null or not puedeBorrar}">disabled</c:if>>Anular</button>
+                                        <c:if test="${presupuesto.getIdPresupuesto() == null or not puedeBorrar or esReadOnly}">disabled</c:if>>Anular</button>
                                 </form>
                                 <!-- Modal de confirmacion sin javascript  -->
                                 <div class="modal fade" id="modalAnular${presupuesto.getIdPresupuesto()}" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
@@ -403,7 +403,7 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                         <div class="col-md-2">
                                             <input type="hidden" name="idArt" value="${presupuestoDetSeleccionado.getArticulo().getIdArticulo()}">
                                             <button type="submit" name="accion" value="AgregarArticuloADetalle"
-                                                class="btn btn-warning" <c:if test="${presupuestoDetSeleccionado.getArticulo().getIdArticulo() == null or not puedeInsertar}">disabled</c:if>>Modificar
+                                                class="btn btn-warning" <c:if test="${presupuestoDetSeleccionado.getArticulo().getIdArticulo() == null or not puedeInsertar or not empty esReadOnly}">disabled</c:if>>Modificar
                                             </button>
                                         </div>
                                     </div>
@@ -437,21 +437,21 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                                     <td class="text-center">${listaPresuDetalle.getPrecioCompra()}</td>
                                                     <td class="text-center">
                                                         <c:choose>
-                                                            <c:when test="${puedeEditar}">
+                                                            <c:when test="${puedeEditar and empty esReadOnly}">
                                                                 <a href="PresupuestoServlet?menu=Presupuesto&accion=EditarPrecioArticuloList&idArt=${listaPresuDetalle.getArticulo().getIdArticulo()}"
                                                                    class="btn btn-warning">Editar</a>
                                                             </c:when>
                                                             <c:otherwise>
-                                                                <button class="btn btn-warning" disabled title="No tiene permisos">Editar</button>
+                                                                <button class="btn btn-warning" disabled title="${not empty esReadOnly ? 'Documento con relaciones' : 'No tiene permisos'}">Editar</button>
                                                             </c:otherwise>
                                                         </c:choose>
                                                         <c:choose>
-                                                            <c:when test="${puedeBorrar}">
+                                                            <c:when test="${puedeBorrar and empty esReadOnly}">
                                                                 <a href="PresupuestoServlet?menu=Presupuesto&accion=EliminarArticuloList&idArt=${listaPresuDetalle.getArticulo().getIdArticulo()}"
                                                                    class="btn btn-danger">Eliminar</a>
                                                             </c:when>
                                                             <c:otherwise>
-                                                                <button class="btn btn-danger" disabled title="No tiene permisos">Eliminar</button>
+                                                                <button class="btn btn-danger" disabled title="${not empty esReadOnly ? 'Documento con relaciones' : 'No tiene permisos'}">Eliminar</button>
                                                             </c:otherwise>
                                                         </c:choose>
                                                     </td>
@@ -473,7 +473,7 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                 <div class="card-footer d-flex justify-content-between align-items-center">
                                     <div>
                                         <button type="button" href="#" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalGenerarPresupuesto${listaPresuDetalle}"
-                                           <c:if test="${newIdPresupuesto == null || proveedorSeleccionado == null || empty listaPresupuestoDetalle || not puedeInsertar}">disabled</c:if>>Guardar</button>
+                                           <c:if test="${newIdPresupuesto == null || proveedorSeleccionado == null || empty listaPresupuestoDetalle || not puedeInsertar || not empty esReadOnly}">disabled</c:if>>Guardar</button>
                                         <!-- Modal de confirmacion sin javascript  -->
                                         <div class="modal fade" id="modalGenerarPresupuesto${listaPresuDetalle}" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
                                           <div class="modal-dialog modal-dialog-centered">

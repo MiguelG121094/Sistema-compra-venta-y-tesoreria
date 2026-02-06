@@ -310,11 +310,7 @@ public class PedidoCompraServlet extends HttpServlet {
                                 mensaje = mensaje.substring(0, mensaje.length() - 2) + " asociado(s)";
 
                                 mostrarMensaje(request, mensaje, "alert-warning");
-                                request.setAttribute("listPedCompraConDetalle", listaPedidoCompraConDetalle);
-                                request.setAttribute("listaSucursales", listaSucursales);
-                                request.setAttribute("listaAticulos", articulos);
-                                request.getRequestDispatcher("pedidoCompra.jsp").forward(request, response);
-                                break;
+                                request.setAttribute("esReadOnly", true);
                             }
 
                             pedidoCompra = pedidoCompraService.getPedidoCompra(idPedidoCargar);
