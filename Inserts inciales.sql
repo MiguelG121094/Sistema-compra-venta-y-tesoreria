@@ -153,13 +153,13 @@ INSERT INTO public.grupo
 VALUES('Administradores');
 INSERT INTO public.grupo
 (gru_descripcion)
-VALUES('Tesoreria');
+VALUES('Compras');
 INSERT INTO public.grupo
 (gru_descripcion)
 VALUES('Ventas');
 INSERT INTO public.grupo
 (gru_descripcion)
-VALUES('Compras');
+VALUES('Tesoreria');
 
 
 -- INSERT MODULO
@@ -175,6 +175,7 @@ VALUES('tesoreria');
 
 
 -- INSERT PERMISO
+-- Grupo 1 (Administradores): acceso total a todos los modulos
 INSERT INTO public.permiso
 (id_grupo, id_modulo, permi_leer, permi_insertar, permi_borrar, permi_editar)
 VALUES(1, 1, true, true, true, true);
@@ -184,6 +185,7 @@ VALUES(1, 2, true, true, true, true);
 INSERT INTO public.permiso
 (id_grupo, id_modulo, permi_leer, permi_insertar, permi_borrar, permi_editar)
 VALUES(1, 3, true, true, true, true);
+-- Grupo 2 (Compras): acceso total a compra, solo lectura en venta y tesoreria
 INSERT INTO public.permiso
 (id_grupo, id_modulo, permi_leer, permi_insertar, permi_borrar, permi_editar)
 VALUES(2, 1, true, true, true, true);
@@ -193,6 +195,26 @@ VALUES(2, 2, true, false, false, false);
 INSERT INTO public.permiso
 (id_grupo, id_modulo, permi_leer, permi_insertar, permi_borrar, permi_editar)
 VALUES(2, 3, true, false, false, false);
+-- Grupo 3 (Ventas): acceso total a venta, solo lectura en compra y tesoreria
+INSERT INTO public.permiso
+(id_grupo, id_modulo, permi_leer, permi_insertar, permi_borrar, permi_editar)
+VALUES(3, 1, true, false, false, false);
+INSERT INTO public.permiso
+(id_grupo, id_modulo, permi_leer, permi_insertar, permi_borrar, permi_editar)
+VALUES(3, 2, true, true, true, true);
+INSERT INTO public.permiso
+(id_grupo, id_modulo, permi_leer, permi_insertar, permi_borrar, permi_editar)
+VALUES(3, 3, true, false, false, false);
+-- Grupo 4 (Tesoreria): acceso total a tesoreria, solo lectura en compra y venta
+INSERT INTO public.permiso
+(id_grupo, id_modulo, permi_leer, permi_insertar, permi_borrar, permi_editar)
+VALUES(4, 1, true, false, false, false);
+INSERT INTO public.permiso
+(id_grupo, id_modulo, permi_leer, permi_insertar, permi_borrar, permi_editar)
+VALUES(4, 2, true, false, false, false);
+INSERT INTO public.permiso
+(id_grupo, id_modulo, permi_leer, permi_insertar, permi_borrar, permi_editar)
+VALUES(4, 3, true, true, true, true);
 
 
 --INSERT PERSONA
