@@ -4,10 +4,14 @@
  */
 package controlador;
 
+import modelo.Permiso;
 import modelo.Usuario;
 import modelo.UsuarioDAO;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.servlet.RequestDispatcher;
@@ -18,6 +22,7 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
+import service.PermisoService;
 import service.UsuarioService;
 
 /**
@@ -51,6 +56,15 @@ public class LoginServlet extends HttpServlet {
                 }
                 HttpSession session = request.getSession(true);
                 session.setAttribute("usuario", usuario);
+
+                // Cargar permisos del grupo del usuario en session
+                PermisoService permisoService = new PermisoService();
+                List<Permiso> permisos = permisoService.listarPermisosByGrupo(usuario.getGrupo().getIdGrupo());
+                Map<String, Permiso> mapaPermisos = new HashMap<>();
+                for (Permiso p : permisos) {
+                    mapaPermisos.put(p.getModulo().getDescripcion(), p);
+                }
+                session.setAttribute("permisos", mapaPermisos);
 
             // manejo de cookies
             if (recordar != null) { // si el usuario marcó "Recordar"

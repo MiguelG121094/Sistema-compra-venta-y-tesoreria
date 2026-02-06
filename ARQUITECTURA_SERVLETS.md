@@ -1592,6 +1592,180 @@ TipoImpuesto tipoImpuesto = idImpuesto != 0 ? tipoImpuestoDAO.getTipoImpuesto(id
 
 ---
 
+## Sistema de Permisos y Autorización
+
+### Modelo de Datos
+
+El sistema utiliza 3 tablas pre-existentes en la BD:
+
+```
+┌──────────┐     ┌──────────┐     ┌──────────┐
+│  grupo   │     │ permiso  │     │  modulo  │
+├──────────┤     ├──────────┤     ├──────────┤
+│ id_grupo │◄────┤ id_grupo │     │ id_modulo│
+│ descripcion│   │ id_modulo├────►│ descripcion│
+│          │     │ permi_leer│    └──────────┘
+│          │     │ permi_insertar│
+│          │     │ permi_borrar│
+│          │     │ permi_editar│
+└──────────┘     └──────────┘
+```
+
+- Cada **usuario** pertenece a un **grupo** (ej: Administradores, Tesorería)
+- Cada **grupo** tiene **permisos** CRUD por cada **módulo** (ej: compra, venta, tesorería)
+- Los módulos ABM (TipoArticulo, Usuario) no tienen restricción
+
+### Arquitectura: AuthorizationFilter
+
+El sistema implementa un patrón de **Filter + Request Attributes** para controlar permisos:
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│                          REQUEST                                  │
+│  GET /FacturaCompraServlet?menu=FacturaCompra&accion=Nuevo       │
+└──────────────────────────────────────────────────────────────────┘
+                               │
+                               ▼
+┌──────────────────────────────────────────────────────────────────┐
+│                    AuthFilter (autenticación)                      │
+│  @WebFilter("/*")                                                 │
+│  - Verifica que exista usuario en session                         │
+│  - Si no hay sesión → redirect a login                            │
+└──────────────────────────────────────────────────────────────────┘
+                               │
+                               ▼
+┌──────────────────────────────────────────────────────────────────┐
+│                AuthorizationFilter (autorización)                  │
+│  @WebFilter({"/FacturaCompraServlet", "/PedidoCompraServlet",    │
+│              "/PresupuestoServlet", "/OrdenCompraServlet"})       │
+│                                                                   │
+│  1. Extrae nombre del servlet de la URI                           │
+│  2. Busca el módulo en URL_MODULO map (ej: "compra")              │
+│  3. Lee Map<String, Permiso> de la session                        │
+│  4. Si leer=false → redirect a MenuPrincipal con error            │
+│  5. Si leer=true → setea request attributes:                      │
+│     - puedeInsertar = permiso.getInsertar()                       │
+│     - puedeEditar = permiso.getEditar()                           │
+│     - puedeBorrar = permiso.getBorrar()                           │
+│  6. chain.doFilter()                                              │
+└──────────────────────────────────────────────────────────────────┘
+                               │
+                               ▼
+┌──────────────────────────────────────────────────────────────────┐
+│                         SERVLET                                    │
+│  Validación server-side antes del switch:                         │
+│                                                                   │
+│  Boolean puedeInsertar = (Boolean) request.getAttribute(...)      │
+│  switch (accion) {                                                │
+│      case "Nuevo": case "Guardar":                                │
+│          if (!puedeInsertar) → rechazar con mensaje de error      │
+│      case "EditarArticulo":                                       │
+│          if (!puedeEditar) → rechazar con mensaje de error        │
+│      case "Anular": case "EliminarArticulo":                      │
+│          if (!puedeBorrar) → rechazar con mensaje de error        │
+│  }                                                                │
+│  // Si pasa validación → ejecutar acción normalmente              │
+└──────────────────────────────────────────────────────────────────┘
+                               │
+                               ▼
+┌──────────────────────────────────────────────────────────────────┐
+│                           JSP                                      │
+│  Condicionar botones con JSTL:                                    │
+│                                                                   │
+│  <c:choose>                                                       │
+│    <c:when test="${puedeInsertar}">                                │
+│      <button class="btn btn-primary">Nuevo</button>               │
+│    </c:when>                                                      │
+│    <c:otherwise>                                                  │
+│      <button class="btn btn-primary" disabled                     │
+│              title="No tiene permisos">Nuevo</button>             │
+│    </c:otherwise>                                                 │
+│  </c:choose>                                                      │
+│                                                                   │
+│  Botones de búsqueda/lectura → siempre visibles                  │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+### Carga de Permisos en Login
+
+En `LoginServlet.java`, después de autenticar al usuario:
+
+```java
+// Cargar permisos del grupo del usuario en session
+PermisoService permisoService = new PermisoService();
+List<Permiso> permisos = permisoService.listarPermisosByGrupo(usuario.getGrupo().getIdGrupo());
+Map<String, Permiso> mapaPermisos = new HashMap<>();
+for (Permiso p : permisos) {
+    mapaPermisos.put(p.getModulo().getDescripcion(), p);
+}
+session.setAttribute("permisos", mapaPermisos);
+// Resultado: {"compra": Permiso(...), "venta": Permiso(...), "tesoreria": Permiso(...)}
+```
+
+### Mapeo URL → Módulo en AuthorizationFilter
+
+```java
+private static final Map<String, String> URL_MODULO = new HashMap<>();
+static {
+    URL_MODULO.put("FacturaCompraServlet", "compra");
+    URL_MODULO.put("PedidoCompraServlet", "compra");
+    URL_MODULO.put("PresupuestoServlet", "compra");
+    URL_MODULO.put("OrdenCompraServlet", "compra");
+    // Futuros: FacturaVentaServlet → "venta", CajaServlet → "tesoreria", etc.
+}
+```
+
+### Clasificación de Acciones por Permiso
+
+| Permiso | Acciones |
+|---------|----------|
+| `puedeInsertar` | Nuevo, AgregarArticulo, Guardar, PersistirPedido, PersistirPresupuesto, PersistirOrdenCompra |
+| `puedeEditar` | EditarArticulo, ActualizarArticulo, EditarPrecioArticuloList, ModificarArticuloDetalle, Aprobar |
+| `puedeBorrar` | EliminarArticulo, EliminarArticuloList, Anular |
+
+### Patrón de Condicionamiento en JSP
+
+**Botones con `<c:choose>` (reemplaza completamente):**
+```jsp
+<c:choose>
+    <c:when test="${puedeInsertar}">
+        <a href="...?accion=Nuevo" class="btn btn-primary">Nuevo</a>
+    </c:when>
+    <c:otherwise>
+        <button class="btn btn-primary" disabled title="No tiene permisos para insertar">Nuevo</button>
+    </c:otherwise>
+</c:choose>
+```
+
+**Botones con atributo disabled inline (mantiene estructura):**
+```jsp
+<button type="submit" class="btn btn-success"
+    <c:if test="${not puedeInsertar}">disabled title="No tiene permisos"</c:if>>
+    Guardar
+</button>
+```
+
+**Condición compuesta (botón habilitado solo si tiene permiso Y el estado lo permite):**
+```jsp
+<button type="submit" class="btn btn-danger"
+    ${facturaCompra.estado ne 'Procesado' or not puedeBorrar ? 'disabled' : ''}>
+    Anular
+</button>
+```
+
+### Extensibilidad
+
+Para agregar un nuevo módulo al sistema de permisos:
+
+1. **BD**: Insertar registro en tabla `permiso` con el `id_grupo` e `id_modulo` correspondiente
+2. **AuthorizationFilter**: Agregar entrada en `URL_MODULO` (ej: `URL_MODULO.put("CajaServlet", "tesoreria")`)
+3. **Servlet**: Agregar validación de permisos antes del switch de acciones
+4. **JSP**: Condicionar botones de escritura con los flags `puedeInsertar`, `puedeEditar`, `puedeBorrar`
+
+No requiere cambios en LoginServlet ni en PermisoService (ya cargan todos los módulos).
+
+---
+
 ## Notas Adicionales
 
 ### Limpieza de Sesión
@@ -1619,7 +1793,7 @@ Configurar en `web.xml`:
 ---
 
 *Documento creado: Enero 2026*
-*Última actualización: Enero 2026*
+*Última actualización: Febrero 2026*
 
 ---
 
@@ -1631,3 +1805,4 @@ Configurar en `web.xml`:
 | Enero 2026 | Actualizado FacturaCompraState con campos adicionales (listaTipoImpuesto, listaArticulos, etc.) |
 | Enero 2026 | Documentada funcionalidad de facturas de gasto/fondo fijo con selección de impuesto |
 | Enero 2026 | Actualizado patrón a "Switch-Case con Métodos Delegados" |
+| Febrero 2026 | Documentado Sistema de Permisos y Autorización (AuthorizationFilter, flujo completo, patrones JSP) |

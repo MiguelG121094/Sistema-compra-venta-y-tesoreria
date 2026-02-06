@@ -86,8 +86,34 @@ public class PedidoCompraServlet extends HttpServlet {
         HttpSession session = request.getSession(false); //obtener datos de la sesion (se puede obtener el usuario logueado)
 //        Usuario usuario = (Usuario) session.getAttribute("usuario");
         
+        // Leer permisos del filter
+        Boolean puedeInsertar = (Boolean) request.getAttribute("puedeInsertar");
+        Boolean puedeEditar = (Boolean) request.getAttribute("puedeEditar");
+        Boolean puedeBorrar = (Boolean) request.getAttribute("puedeBorrar");
+
         if (menu.equals("PedidoCompra")) {
             try {
+                // Validar permisos para acciones de escritura
+                switch (accion) {
+                    case "Nuevo":
+                    case "AgregarArticuloADetalle":
+                    case "PersistirPedido":
+                        if (puedeInsertar == null || !puedeInsertar) {
+                            mostrarMensaje(request, "No tiene permisos para realizar esta acción", "alert-danger");
+                            request.getRequestDispatcher("PedidoCompraServlet?menu=PedidoCompra&accion=ListarModal").forward(request, response);
+                            return;
+                        }
+                        break;
+                    case "EliminarArticuloList":
+                    case "Anular":
+                        if (puedeBorrar == null || !puedeBorrar) {
+                            mostrarMensaje(request, "No tiene permisos para realizar esta acción", "alert-danger");
+                            request.getRequestDispatcher("PedidoCompraServlet?menu=PedidoCompra&accion=ListarModal").forward(request, response);
+                            return;
+                        }
+                        break;
+                }
+
                 switch (accion) {
                     case "ListarModal":
                         listaPedidoCompraConDetalle = pedidoCompraService.listarPedidosConDetalles();

@@ -82,16 +82,23 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
 
                             <!-- Botones principales -->
                             <div class="col-auto">
-                                <a href="FacturaCompraServlet?menu=FacturaCompra&accion=Nuevo" class="btn btn-success">Nuevo</a>
+                                <c:choose>
+                                    <c:when test="${puedeInsertar}">
+                                        <a href="FacturaCompraServlet?menu=FacturaCompra&accion=Nuevo" class="btn btn-success">Nuevo</a>
+                                    </c:when>
+                                    <c:otherwise>
+                                        <button class="btn btn-success" disabled title="No tiene permisos">Nuevo</button>
+                                    </c:otherwise>
+                                </c:choose>
                                 <button type="button" data-bs-toggle="modal" data-bs-target="#modalPedidos"
                                         class="btn btn-info text-white"
                                         <c:if test="${empty token}">disabled</c:if>>Buscar Orden de Compra</button>
                                 <button type="button" data-bs-toggle="modal" data-bs-target="#modalFacturas"
                                         class="btn btn-info text-white">Buscar Factura Compra</button>
-                                <c:if test="${not empty token and not esNuevo}">
+                                <c:if test="${not empty token and not esNuevo and puedeBorrar}">
                                     <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#modalConfirmarAnular">Anular</button>
                                 </c:if>
-                                <c:if test="${empty token or esNuevo}">
+                                <c:if test="${empty token or esNuevo or not puedeBorrar}">
                                     <button class="btn btn-danger" disabled>Anular</button>
                                 </c:if>
                             </div>
@@ -322,12 +329,10 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                         <div class="col-md-2">
                                             <c:choose>
                                                 <c:when test="${not empty detalleSeleccionado}">
-                                                    <button type="submit" class="btn btn-warning">Actualizar</button>
-                                                    <%--<a href="FacturaCompraServlet?menu=FacturaCompra&accion=CancelarEdicion&token=${token}"
-                                                       class="btn btn-secondary">Cancelar</a>--%>
+                                                    <button type="submit" class="btn btn-warning" <c:if test="${not puedeEditar}">disabled title="No tiene permisos"</c:if>>Actualizar</button>
                                                 </c:when>
                                                 <c:otherwise>
-                                                    <button type="submit" class="btn btn-success">Agregar Artículo</button>
+                                                    <button type="submit" class="btn btn-success" <c:if test="${not puedeInsertar}">disabled title="No tiene permisos"</c:if>>Agregar Artículo</button>
                                                 </c:otherwise>
                                             </c:choose>
                                         </div>
@@ -423,10 +428,24 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                                     </td>
                                                     <c:if test="${mostrarAcciones}">
                                                         <td class="text-center">
-                                                            <a href="FacturaCompraServlet?menu=FacturaCompra&accion=EditarArticulo&token=${token}&index=${status.index}"
-                                                               class="btn btn-warning btn-sm">Editar</a>
-                                                            <button type="button" class="btn btn-danger btn-sm"
-                                                                    data-bs-toggle="modal" data-bs-target="#modalEliminar${status.index}">Eliminar</button>
+                                                            <c:choose>
+                                                                <c:when test="${puedeEditar}">
+                                                                    <a href="FacturaCompraServlet?menu=FacturaCompra&accion=EditarArticulo&token=${token}&index=${status.index}"
+                                                                       class="btn btn-warning btn-sm">Editar</a>
+                                                                </c:when>
+                                                                <c:otherwise>
+                                                                    <button class="btn btn-warning btn-sm" disabled title="No tiene permisos">Editar</button>
+                                                                </c:otherwise>
+                                                            </c:choose>
+                                                            <c:choose>
+                                                                <c:when test="${puedeBorrar}">
+                                                                    <button type="button" class="btn btn-danger btn-sm"
+                                                                            data-bs-toggle="modal" data-bs-target="#modalEliminar${status.index}">Eliminar</button>
+                                                                </c:when>
+                                                                <c:otherwise>
+                                                                    <button class="btn btn-danger btn-sm" disabled title="No tiene permisos">Eliminar</button>
+                                                                </c:otherwise>
+                                                            </c:choose>
                                                             <!-- Modal de confirmación para eliminar artículo -->
                                                             <div class="modal fade" id="modalEliminar${status.index}" tabindex="-1" aria-hidden="true">
                                                                 <div class="modal-dialog modal-dialog-centered">
@@ -463,7 +482,14 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                 <div class="row mt-3">
                                     <div class="col-md-6">
                                         <c:if test="${not empty token}">
-                                            <button type="button" class="btn btn-success" onclick="guardarFactura();">Guardar</button>
+                                            <c:choose>
+                                                <c:when test="${puedeInsertar}">
+                                                    <button type="button" class="btn btn-success" onclick="guardarFactura();">Guardar</button>
+                                                </c:when>
+                                                <c:otherwise>
+                                                    <button class="btn btn-success" disabled title="No tiene permisos">Guardar</button>
+                                                </c:otherwise>
+                                            </c:choose>
                                             <a href="FacturaCompraServlet?menu=FacturaCompra&accion=Cancelar&token=${token}"
                                                class="btn btn-danger">Cancelar</a>
                                         </c:if>

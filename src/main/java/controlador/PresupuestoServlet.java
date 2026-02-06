@@ -102,11 +102,44 @@ public class PresupuestoServlet extends HttpServlet {
         SimpleDateFormat formatoFecha = new SimpleDateFormat("dd/MM/yyyy");
         HttpSession session = request.getSession(false); //obtener datos de la sesion (se puede obtener el usuario logueado)
         
+        // Leer permisos del filter
+        Boolean puedeInsertar = (Boolean) request.getAttribute("puedeInsertar");
+        Boolean puedeEditar = (Boolean) request.getAttribute("puedeEditar");
+        Boolean puedeBorrar = (Boolean) request.getAttribute("puedeBorrar");
+
         if (menu.equals("Presupuesto")) {
             if (accion == null) {
                 accion = "ListarModal";
             }
             try {
+                // Validar permisos para acciones de escritura
+                switch (accion) {
+                    case "Nuevo":
+                    case "AgregarArticuloADetalle":
+                    case "PersistirPresupuesto":
+                        if (puedeInsertar == null || !puedeInsertar) {
+                            mostrarMensaje(request, "No tiene permisos para realizar esta acción", "alert-danger");
+                            request.getRequestDispatcher("PresupuestoServlet?menu=Presupuesto&accion=ListarModal").forward(request, response);
+                            return;
+                        }
+                        break;
+                    case "EditarPrecioArticuloList":
+                        if (puedeEditar == null || !puedeEditar) {
+                            mostrarMensaje(request, "No tiene permisos para realizar esta acción", "alert-danger");
+                            request.getRequestDispatcher("PresupuestoServlet?menu=Presupuesto&accion=ListarModal").forward(request, response);
+                            return;
+                        }
+                        break;
+                    case "EliminarArticuloList":
+                    case "Anular":
+                        if (puedeBorrar == null || !puedeBorrar) {
+                            mostrarMensaje(request, "No tiene permisos para realizar esta acción", "alert-danger");
+                            request.getRequestDispatcher("PresupuestoServlet?menu=Presupuesto&accion=ListarModal").forward(request, response);
+                            return;
+                        }
+                        break;
+                }
+
                 switch (accion) {
                     case "ListarModal":
                         // Usar método que muestra solo artículos pendientes de presupuestar

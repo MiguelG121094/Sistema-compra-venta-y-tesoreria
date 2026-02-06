@@ -81,8 +81,42 @@ public class OrdenCompraServlet extends HttpServlet {
         SimpleDateFormat formatoFecha = new SimpleDateFormat("dd/MM/yyyy");
         HttpSession session = request.getSession(false);
 
+        // Leer permisos del filter
+        Boolean puedeInsertar = (Boolean) request.getAttribute("puedeInsertar");
+        Boolean puedeEditar = (Boolean) request.getAttribute("puedeEditar");
+        Boolean puedeBorrar = (Boolean) request.getAttribute("puedeBorrar");
+
         if (menu.equals("OrdenCompra")) {
             try {
+                // Validar permisos para acciones de escritura
+                switch (accion) {
+                    case "Nuevo":
+                    case "PersistirOrdenCompra":
+                        if (puedeInsertar == null || !puedeInsertar) {
+                            mostrarMensaje(request, "No tiene permisos para realizar esta acción", "alert-danger");
+                            request.getRequestDispatcher("OrdenCompraServlet?menu=OrdenCompra&accion=ListarModal").forward(request, response);
+                            return;
+                        }
+                        break;
+                    case "EditarArticuloList":
+                    case "ModificarArticuloDetalle":
+                    case "Aprobar":
+                        if (puedeEditar == null || !puedeEditar) {
+                            mostrarMensaje(request, "No tiene permisos para realizar esta acción", "alert-danger");
+                            request.getRequestDispatcher("OrdenCompraServlet?menu=OrdenCompra&accion=ListarModal").forward(request, response);
+                            return;
+                        }
+                        break;
+                    case "EliminarArticuloList":
+                    case "Anular":
+                        if (puedeBorrar == null || !puedeBorrar) {
+                            mostrarMensaje(request, "No tiene permisos para realizar esta acción", "alert-danger");
+                            request.getRequestDispatcher("OrdenCompraServlet?menu=OrdenCompra&accion=ListarModal").forward(request, response);
+                            return;
+                        }
+                        break;
+                }
+
                 switch (accion) {
                     case "ListarModal":
                         // Listar presupuestos aprobados para seleccionar

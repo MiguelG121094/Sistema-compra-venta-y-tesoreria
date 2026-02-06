@@ -203,7 +203,7 @@ Faltan crear los DAOs para las nuevas entidades:
 [ ] AjusteStockCabeceraDAO
 [ ] AjusteStockDetalleDAO
 [ ] ModuloDAO
-[ ] PermisoDAO
+[x] PermisoDAO ✅ (creado 2026-02-06)
 [ ] FormaPagoCabeceraDAO
 [ ] FormaPagoDetalleDAO
 [ ] FormaCobroDAO
@@ -243,7 +243,7 @@ Faltan crear los servicios REST para las nuevas entidades:
 [ ] ChequeService
 [ ] StockService
 [ ] AjusteStockService
-[ ] PermisoService
+[x] PermisoService ✅ (creado 2026-02-06)
 [ ] ConciliacionBancariaService
 [ ] FondoFijoService
 [ ] ArqueoCajaService
@@ -304,9 +304,9 @@ Faltan crear las vistas para las nuevas funcionalidades:
 - [ ] Reportes fiscales
 
 #### Seguridad
-- [ ] Gestión de Módulos
-- [ ] Asignación de Permisos por Grupo
-- [ ] Control de acceso por módulo (CRUD)
+- [ ] Gestión de Módulos (UI para ABM de módulos)
+- [ ] Asignación de Permisos por Grupo (UI para editar permisos)
+- [x] Control de acceso por módulo (CRUD) ✅ (implementado 2026-02-06 con AuthorizationFilter)
 
 ---
 
@@ -361,7 +361,57 @@ Todas las entidades siguen el patrón POJO:
 
 ## Historial de Cambios
 
-### 2026-01-26 (Sesión Actual)
+### 2026-02-06
+
+#### Sistema de Permisos ReadOnly por Módulo
+Implementación completa del sistema de control de acceso basado en las tablas `permiso`, `grupo` y `modulo` existentes en BD.
+
+**Archivos nuevos:**
+| Archivo | Descripción |
+|---------|-------------|
+| `modelo/PermisoDAO.java` | DAO con `getPermiso(idGrupo, idModulo)` y `listarPermisosByGrupo(idGrupo)` |
+| `service/PermisoService.java` | Service wrapper del DAO |
+| `controlador/AuthorizationFilter.java` | Filter `@WebFilter` que intercepta servlets de negocio |
+
+**Archivos modificados:**
+| Archivo | Cambios |
+|---------|---------|
+| `controlador/LoginServlet.java` | Carga `Map<String, Permiso>` en session al hacer login |
+| `controlador/FacturaCompraServlet.java` | Validación server-side de permisos antes del switch de acciones |
+| `controlador/PedidoCompraServlet.java` | Validación server-side de permisos antes del switch de acciones |
+| `controlador/PresupuestoServlet.java` | Validación server-side de permisos antes del switch de acciones |
+| `controlador/OrdenCompraServlet.java` | Validación server-side de permisos antes del switch de acciones |
+| `facturaCompra.jsp` | Botones Nuevo, Guardar, Anular, Agregar, Editar, Eliminar condicionados con `<c:if>`/`<c:choose>` |
+| `pedidoCompra.jsp` | Botones condicionados con flags de permisos |
+| `presupuesto.jsp` | Botones condicionados con flags de permisos |
+| `ordenCompra.jsp` | Botones condicionados con flags de permisos |
+
+**Flujo del sistema:**
+```
+Login → PermisoService.listarPermisosByGrupo() → Map<String, Permiso> en session
+  → AuthorizationFilter intercepta request
+    → Si leer=false → redirect a MenuPrincipal con mensaje de error
+    → Si leer=true → setea puedeInsertar/puedeEditar/puedeBorrar como request attributes
+      → Servlet valida permisos server-side antes de procesar acción de escritura
+      → JSP condiciona botones según flags de permisos
+```
+
+**Mapeo URL → Módulo:**
+| Servlet | Módulo BD |
+|---------|-----------|
+| FacturaCompraServlet | compra |
+| PedidoCompraServlet | compra |
+| PresupuestoServlet | compra |
+| OrdenCompraServlet | compra |
+
+**Clasificación de acciones por permiso:**
+- `puedeInsertar`: Nuevo, AgregarArticulo, Guardar/PersistirPedido/PersistirPresupuesto/PersistirOrdenCompra
+- `puedeEditar`: EditarArticulo, ActualizarArticulo, EditarPrecioArticuloList, ModificarArticuloDetalle, Aprobar
+- `puedeBorrar`: EliminarArticulo/EliminarArticuloList, Anular
+
+---
+
+### 2026-01-26
 
 #### Patrón Session + Token en FacturaCompraServlet
 El servlet utiliza un patrón de estado en sesión con token único:
@@ -519,5 +569,5 @@ Gestión financiera completa: cuentas bancarias, cheques, cobros, pagos, caja, f
 1. **Crear DAOs** para las entidades restantes (~40 pendientes)
 2. **Crear Services REST** para exponer las operaciones
 3. **Crear vistas JSP** para las nuevas funcionalidades
-4. **Implementar sistema de permisos** por módulo
+4. ~~**Implementar sistema de permisos** por módulo~~ ✅ (implementado 2026-02-06)
 5. **Completar Factura de Compra** - Sección de artículos del catálogo (actualmente comentada)

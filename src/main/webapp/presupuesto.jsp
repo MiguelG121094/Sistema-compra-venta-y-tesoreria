@@ -278,16 +278,17 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                             <div class="col-auto">
                                 <form action="PresupuestoServlet?menu=Presupuesto" method="POST">
                                         <input type="hidden" name="idUsuario" value="<%= usuario.getIdUsuario() %>">
-                                    <button name="accion" value="Nuevo" type="submit" class="btn btn-success">Nuevo</button>
-                                    <button name="accion" value="BuscarPedido" type="button" data-bs-toggle="modal" 
+                                    <button name="accion" value="Nuevo" type="submit" class="btn btn-success"
+                                        <c:if test="${not puedeInsertar}">disabled title="No tiene permisos"</c:if>>Nuevo</button>
+                                    <button name="accion" value="BuscarPedido" type="button" data-bs-toggle="modal"
                                             data-bs-target="#modalPedidos" class="btn btn-info text-white"
-                                            <c:if test="${newIdPresupuesto == null}"><c:out value="disabled='disabled'"/></c:if>>Buscar Pedido</button>
+                                            <c:if test="${newIdPresupuesto == null}">disabled</c:if>>Buscar Pedido</button>
                                     <a href="" data-bs-toggle="modal" data-bs-target="#modalPresupuestos" class="btn btn-info text-white">Buscar Presupuesto</a>
                                     <button href="" class="btn btn-primary"
-                                       <c:if test="${presupuesto.getIdPresupuesto() == null}"><c:out value="disabled='disabled'"/></c:if>>Aprobar</button>
-                                    <button name="accion" value="Anular" type="button" data-bs-toggle="modal" 
-                                        data-bs-target="#modalAnular${presupuesto.getIdPresupuesto()}" class="btn btn-danger" 
-                                        <c:if test="${presupuesto.getIdPresupuesto() == null}"><c:out value="disabled='disabled'"/></c:if>>Anular</button>
+                                       <c:if test="${presupuesto.getIdPresupuesto() == null}">disabled</c:if>>Aprobar</button>
+                                    <button name="accion" value="Anular" type="button" data-bs-toggle="modal"
+                                        data-bs-target="#modalAnular${presupuesto.getIdPresupuesto()}" class="btn btn-danger"
+                                        <c:if test="${presupuesto.getIdPresupuesto() == null or not puedeBorrar}">disabled</c:if>>Anular</button>
                                 </form>
                                 <!-- Modal de confirmacion sin javascript  -->
                                 <div class="modal fade" id="modalAnular${presupuesto.getIdPresupuesto()}" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
@@ -402,9 +403,8 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                         <div class="col-md-2">
                                             <input type="hidden" name="idArt" value="${presupuestoDetSeleccionado.getArticulo().getIdArticulo()}">
                                             <button type="submit" name="accion" value="AgregarArticuloADetalle"
-                                                class="btn btn-warning" <c:if test="${presupuestoDetSeleccionado.getArticulo().getIdArticulo() == null}"><c:out 
-                                                value="disabled='disabled'"/></c:if>>Modificar
-                                            </button>  
+                                                class="btn btn-warning" <c:if test="${presupuestoDetSeleccionado.getArticulo().getIdArticulo() == null or not puedeInsertar}">disabled</c:if>>Modificar
+                                            </button>
                                         </div>
                                     </div>
                                 </form>
@@ -436,10 +436,24 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                                     <td class="text-center">${listaPresuDetalle.getCantidad()}</td>
                                                     <td class="text-center">${listaPresuDetalle.getPrecioCompra()}</td>
                                                     <td class="text-center">
-                                                        <a href="PresupuestoServlet?menu=Presupuesto&accion=EditarPrecioArticuloList&idArt=${listaPresuDetalle.getArticulo().getIdArticulo()}" 
-                                                           class="btn btn-warning">Editar</a>
-                                                        <a href="PresupuestoServlet?menu=Presupuesto&accion=EliminarArticuloList&idArt=${listaPresuDetalle.getArticulo().getIdArticulo()}" 
-                                                           class="btn btn-danger">Eliminar</a>
+                                                        <c:choose>
+                                                            <c:when test="${puedeEditar}">
+                                                                <a href="PresupuestoServlet?menu=Presupuesto&accion=EditarPrecioArticuloList&idArt=${listaPresuDetalle.getArticulo().getIdArticulo()}"
+                                                                   class="btn btn-warning">Editar</a>
+                                                            </c:when>
+                                                            <c:otherwise>
+                                                                <button class="btn btn-warning" disabled title="No tiene permisos">Editar</button>
+                                                            </c:otherwise>
+                                                        </c:choose>
+                                                        <c:choose>
+                                                            <c:when test="${puedeBorrar}">
+                                                                <a href="PresupuestoServlet?menu=Presupuesto&accion=EliminarArticuloList&idArt=${listaPresuDetalle.getArticulo().getIdArticulo()}"
+                                                                   class="btn btn-danger">Eliminar</a>
+                                                            </c:when>
+                                                            <c:otherwise>
+                                                                <button class="btn btn-danger" disabled title="No tiene permisos">Eliminar</button>
+                                                            </c:otherwise>
+                                                        </c:choose>
                                                     </td>
                                                 </tr>
                                             </c:forEach>
@@ -459,7 +473,7 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                 <div class="card-footer d-flex justify-content-between align-items-center">
                                     <div>
                                         <button type="button" href="#" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalGenerarPresupuesto${listaPresuDetalle}"
-                                           <c:if test="${newIdPresupuesto == null || proveedorSeleccionado == null || empty listaPresupuestoDetalle}"><c:out value="disabled='disabled'"/></c:if>>Guardar</button>
+                                           <c:if test="${newIdPresupuesto == null || proveedorSeleccionado == null || empty listaPresupuestoDetalle || not puedeInsertar}">disabled</c:if>>Guardar</button>
                                         <!-- Modal de confirmacion sin javascript  -->
                                         <div class="modal fade" id="modalGenerarPresupuesto${listaPresuDetalle}" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
                                           <div class="modal-dialog modal-dialog-centered">

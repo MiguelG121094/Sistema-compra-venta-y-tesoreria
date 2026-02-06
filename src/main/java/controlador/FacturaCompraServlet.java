@@ -299,7 +299,41 @@ public class FacturaCompraServlet extends HttpServlet {
             accion = "ListarModal";
         }
 
+        // Leer permisos del filter
+        Boolean puedeInsertar = (Boolean) request.getAttribute("puedeInsertar");
+        Boolean puedeEditar = (Boolean) request.getAttribute("puedeEditar");
+        Boolean puedeBorrar = (Boolean) request.getAttribute("puedeBorrar");
+
         try {
+            // Validar permisos para acciones de escritura
+            switch (accion) {
+                case "Nuevo":
+                case "AgregarArticulo":
+                case "Guardar":
+                    if (puedeInsertar == null || !puedeInsertar) {
+                        mostrarMensaje(request, "No tiene permisos para realizar esta acción", "alert-danger");
+                        accionListarModal(request, response);
+                        return;
+                    }
+                    break;
+                case "EditarArticulo":
+                case "ActualizarArticulo":
+                    if (puedeEditar == null || !puedeEditar) {
+                        mostrarMensaje(request, "No tiene permisos para realizar esta acción", "alert-danger");
+                        accionListarModal(request, response);
+                        return;
+                    }
+                    break;
+                case "EliminarArticulo":
+                case "Anular":
+                    if (puedeBorrar == null || !puedeBorrar) {
+                        mostrarMensaje(request, "No tiene permisos para realizar esta acción", "alert-danger");
+                        accionListarModal(request, response);
+                        return;
+                    }
+                    break;
+            }
+
             switch (accion) {
                 case "Nuevo":
                     accionNuevo(request, response, session, usuario);
