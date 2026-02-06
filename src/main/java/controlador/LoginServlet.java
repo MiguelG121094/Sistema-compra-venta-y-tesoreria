@@ -58,13 +58,17 @@ public class LoginServlet extends HttpServlet {
                 session.setAttribute("usuario", usuario);
 
                 // Cargar permisos del grupo del usuario en session
-                PermisoService permisoService = new PermisoService();
-                List<Permiso> permisos = permisoService.listarPermisosByGrupo(usuario.getGrupo().getIdGrupo());
-                Map<String, Permiso> mapaPermisos = new HashMap<>();
-                for (Permiso p : permisos) {
-                    mapaPermisos.put(p.getModulo().getDescripcion(), p);
+                try {
+                    PermisoService permisoService = new PermisoService();
+                    List<Permiso> permisos = permisoService.listarPermisosByGrupo(usuario.getGrupo().getIdGrupo());
+                    Map<String, Permiso> mapaPermisos = new HashMap<>();
+                    for (Permiso p : permisos) {
+                        mapaPermisos.put(p.getModulo().getDescripcion(), p);
+                    }
+                    session.setAttribute("permisos", mapaPermisos);
+                } catch (SQLException e) {
+                    e.printStackTrace();
                 }
-                session.setAttribute("permisos", mapaPermisos);
 
             // manejo de cookies
             if (recordar != null) { // si el usuario marcó "Recordar"
