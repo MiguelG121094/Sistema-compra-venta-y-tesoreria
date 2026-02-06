@@ -278,28 +278,22 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
 //                });
         </script>
 
-        <!--codigo para mostrar mensaje-->
-        <% String Message = (String) request.getAttribute("Message");%>
-        <% String tipoAlert = (String) request.getAttribute("tipoAlert");%>
+        <!-- Código para mostrar mensajes con Toastr -->
         <c:if test="${not empty Message}">
-            <div id="mensaje" class="alert <%= tipoAlert != null ? tipoAlert : "alert-info"%>"
-                 style="position:absolute; top: 80px; right: 10px; opacity: 90%; transition: opacity 1s ease; min-width: 200px;" role="alert">
-                <%= Message%>
-                <button type="button" style="border: none; width: 25px; height: 25px; float:right; display:inline-block; padding:0px 5px;" 
-                        class="btn <%= tipoAlert != null ? tipoAlert + " btn-close" : "alert-info"%>" data-bs-dismiss="alert" aria-label="Close">
-                    <!--<a href="#" class="close" data-dismiss="alert" aria-label="close"></a>-->
-                </button>
-            </div>
-        </c:if>
-        <script>
-            //    setTimeout("document.getElementById('mensaje').style.visibility='hidden'", 7000);
-            setTimeout(function () {
-                var mensaje = document.getElementById('mensaje');
-                mensaje.style.opacity = '0'; //cambia la opacidad a 0
-                setTimeout(function () {
-                    mensaje.style.display = 'none'; //se oculta el div después de la transición
-                }, 1000);
-            }, 7000); // Espera 7 segundos antes de comenzar a desvanecer
-        </script>   
+            <script>
+                toastr.options = {
+                    positionClass: "toast-top-right",
+                    closeButton: true,
+                    timeOut: 5000,
+                    progressBar: true
+                };
+                <c:choose>
+                    <c:when test="${tipoAlert == 'alert-success'}">toastr.success('${Message}');</c:when>
+                    <c:when test="${tipoAlert == 'alert-danger'}">toastr.error('${Message}');</c:when>
+                    <c:when test="${tipoAlert == 'alert-warning'}">toastr.warning('${Message}');</c:when>
+                    <c:otherwise>toastr.info('${Message}');</c:otherwise>
+                </c:choose>
+            </script>
+        </c:if>   
     </body>
 </html>

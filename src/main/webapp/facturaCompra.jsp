@@ -394,11 +394,6 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                                     <td class="text-center">
                                                         <fmt:formatNumber value="${detalle.cantidad}" pattern="#,###"/>
                                                     </td>
-<!--                                                    Preguntar a IA si de esta manera se puede hacer tambien, si no va a afectar el flujo
-                                                        en el servlet dejar todos asi
-                                                        <td class="text-center mask-miles">
-                                                        ${detalle.cantidad}"/>
-                                                    </td>-->
                                                     <td class="text-center">
                                                         <fmt:formatNumber value="${detalle.precioCompra}" pattern="#,###"/>
                                                     </td>
@@ -833,29 +828,22 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
             });
         </script>
 
-        <!-- Código para mostrar mensajes -->
-        <!--preguntar a IA si se puede usar el toastr y que se pueda enviar el mensaje que quiera que diga tambien-->
-        <% String Message = (String) request.getAttribute("Message");%>
-        <% String tipoAlert = (String) request.getAttribute("tipoAlert");%>
+        <!-- Código para mostrar mensajes con Toastr -->
         <c:if test="${not empty Message}">
-            <div id="mensaje" class="alert <%= tipoAlert != null ? tipoAlert : "alert-info"%>"
-                 style="position:absolute; top: 80px; right: 10px; opacity: 80%; transition: opacity 1s ease; min-width: 200px;" role="alert">
-                <%= Message%>
-                <button type="button" style="border: none; width: 25px; height: 25px; float:right; display:inline-block; padding:0px 5px;"
-                        class="btn <%= tipoAlert != null ? tipoAlert + " btn-close" : "alert-info"%>" data-bs-dismiss="alert" aria-label="Close">
-                </button>
-            </div>
+            <script>
+                toastr.options = {
+                    positionClass: "toast-top-right",
+                    closeButton: true,
+                    timeOut: 5000,
+                    progressBar: true
+                };
+                <c:choose>
+                    <c:when test="${tipoAlert == 'alert-success'}">toastr.success('${Message}');</c:when>
+                    <c:when test="${tipoAlert == 'alert-danger'}">toastr.error('${Message}');</c:when>
+                    <c:when test="${tipoAlert == 'alert-warning'}">toastr.warning('${Message}');</c:when>
+                    <c:otherwise>toastr.info('${Message}');</c:otherwise>
+                </c:choose>
+            </script>
         </c:if>
-        <script>
-            setTimeout(function () {
-                var mensaje = document.getElementById('mensaje');
-                if(mensaje) {
-                    mensaje.style.opacity = '0';
-                    setTimeout(function () {
-                        mensaje.style.display = 'none';
-                    }, 1000);
-                }
-            }, 7000);
-        </script>
     </body>
 </html>
