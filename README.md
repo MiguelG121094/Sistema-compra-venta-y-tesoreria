@@ -321,10 +321,11 @@ Sistema-compra-venta-y-tesoreria/
 | Pedido de Compra | ✅ | ✅ | ✅ | ✅ | ✅ | **Completo** |
 | Presupuesto | ✅ | ✅ | ✅ | ✅ | ✅ | **Completo** |
 | Orden de Compra | ✅ | ✅ | ✅ | ✅ | ✅ | **Completo** |
-| Factura de Compra | ✅ | ✅ | ✅ | ❌ | ⚠️ | Pendiente |
+| Factura de Compra | ✅ | ✅ | ✅ | ✅ | ✅ | **Completo** |
 | Nota Crédito Compra | ✅ | ✅ | ✅ | ❌ | ❌ | Pendiente |
 | Nota Débito Compra | ✅ | ✅ | ✅ | ❌ | ❌ | Pendiente |
-| Cuenta a Pagar | ✅ | ⚠️ | ❌ | ❌ | ❌ | Pendiente |
+| Nota Remisión Compra | ✅ | ❌ | ❌ | ❌ | ❌ | Pendiente |
+| Cuenta a Pagar | ✅ | ⚠️ | ⚠️ | ❌ | ❌ | Pendiente |
 
 ### Módulo de Ventas
 

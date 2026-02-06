@@ -500,12 +500,24 @@ REFERENCES public.impuesto (id_impuesto);
 
 ---
 
-## Próximos Pasos Recomendados
+## Próximos Módulos a Implementar
 
-1. **Crear DAOs** para las nuevas entidades
+### 1. Módulo de Stock (siguiente)
+Gestión de inventario: control de existencias por depósito, ajustes de stock (entrada/salida), stock mínimo/máximo con alertas.
+- Entidades: Articulo, Stock, Deposito, MotivoAjuste, AjusteStockCabecera, AjusteStockDetalle
+- Requiere: DAOs, Services, Servlet, JSP
+
+### 2. Módulo de Tesorería (después de Stock)
+Gestión financiera completa: cuentas bancarias, cheques, cobros, pagos, caja, fondo fijo, conciliación bancaria.
+- Submódulos: Bancos, Cheques, Cobros/Pagos, Caja, Fondo Fijo, Conciliación
+- Requiere: DAOs, Services, Servlets, JSPs para cada submódulo
+
+---
+
+## Otros Pendientes
+
+1. **Crear DAOs** para las entidades restantes (~40 pendientes)
 2. **Crear Services REST** para exponer las operaciones
-3. **Implementar módulo de Stock** (alta prioridad para inventario)
-4. **Implementar módulo de Tesorería** (cuentas bancarias, cheques)
-5. **Crear vistas JSP** para las nuevas funcionalidades
-6. **Implementar sistema de permisos** por módulo
-7. **Completar Factura de Compra** - Sección de artículos del catálogo (actualmente comentada)
+3. **Crear vistas JSP** para las nuevas funcionalidades
+4. **Implementar sistema de permisos** por módulo
+5. **Completar Factura de Compra** - Sección de artículos del catálogo (actualmente comentada)
