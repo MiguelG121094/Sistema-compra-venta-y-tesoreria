@@ -202,20 +202,23 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                             <div class="col-md-2">
                                                 <div class="form-floating mb-3 mb-md-0">
                                                     <input class="form-control" id="comprobanteN" name="numeroComprobante" type="text"
-                                                           placeholder="000-000-0000000" value="${facturaCompra.numero}" />
+                                                           placeholder="000-000-0000000" value="${facturaCompra.numero}"
+                                                           <c:if test="${empty token}">disabled</c:if> />
                                                     <label for="comprobanteN">Comprobante N°</label>
                                                 </div>
                                             </div>
                                             <div class="col-md-2">
                                                 <div class="form-floating mb-3 mb-md-0">
                                                     <input class="form-control" id="fechaEmision" name="fechaEmision" type="date" placeholder="Fecha de emision"
-                                                           value="<fmt:formatDate value='${facturaCompra.fechaEmision}' pattern='yyyy-MM-dd'/>" />
+                                                           value="<fmt:formatDate value='${facturaCompra.fechaEmision}' pattern='yyyy-MM-dd'/>"
+                                                           <c:if test="${empty token}">disabled</c:if> />
                                                     <label for="fechaEmision">Fecha de emision</label>
                                                 </div>
                                             </div>
                                             <div class="col-md-2">
                                                 <div class="form-floating mb-3 mb-md-0">
-                                                    <select class="form-control" id="tipoFactura" name="tipoFactura" onchange="cambiarTipoFactura();">
+                                                    <select class="form-control" id="tipoFactura" name="tipoFactura" onchange="cambiarTipoFactura();"
+                                                            <c:if test="${empty token}">disabled</c:if>>
                                                         <option value="">Seleccionar tipo de factura</option>
                                                         <option value="compraArt" <c:if test="${facturaCompra.tipoFactura == 'compraArt'}">selected</c:if>>Factura Compra de Artículos</option>
                                                         <option value="fondoFijo" <c:if test="${facturaCompra.tipoFactura == 'fondoFijo'}">selected</c:if>>Factura Fondo Fijo</option>
@@ -234,20 +237,23 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                             <div class="col-md-2">
                                                 <div class="form-floating mb-3 mb-md-0">
                                                     <input class="form-control" id="timbrado" name="timbrado" type="number" placeholder="Timbrado"
-                                                           value="${facturaCompra.timbrado}" min="0" />
+                                                           value="${facturaCompra.timbrado}" min="0"
+                                                           <c:if test="${empty token}">disabled</c:if> />
                                                     <label for="timbrado">Timbrado</label>
                                                 </div>
                                             </div>
                                             <div class="col-md-2">
                                                 <div class="form-floating mb-3 mb-md-0">
                                                     <input class="form-control" id="fechaVencTimb" name="fechaVencTimbrado" type="date" placeholder="Fecha Venc. Timbrado"
-                                                           value="<fmt:formatDate value='${facturaCompra.fechaVenciTimbrado}' pattern='yyyy-MM-dd'/>" />
+                                                           value="<fmt:formatDate value='${facturaCompra.fechaVenciTimbrado}' pattern='yyyy-MM-dd'/>"
+                                                           <c:if test="${empty token}">disabled</c:if> />
                                                     <label for="fechaVencTimb">Fecha Venc. Timbrado</label>
                                                 </div>
                                             </div>
                                             <div class="col-md-2">
                                                 <div class="form-floating mb-3 mb-md-0">
-                                                    <select class="form-control" id="condicionCompra" name="condicion" onchange="cambiarCondicion();">
+                                                    <select class="form-control" id="condicionCompra" name="condicion" onchange="cambiarCondicion();"
+                                                            <c:if test="${empty token}">disabled</c:if>>
                                                         <option value="Contado" <c:if test="${!esCredito}">selected</c:if>>Contado</option>
                                                         <option value="Credito" <c:if test="${esCredito}">selected</c:if>>Crédito</option>
                                                     </select>
