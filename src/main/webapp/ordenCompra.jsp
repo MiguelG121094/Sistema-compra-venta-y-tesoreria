@@ -530,9 +530,8 @@ usuario inicio sesion, se debe agregar esta validacion en cada una de las vistas
                                     </div>
                                     <div class="d-flex align-items-center">
                                         <label class="mb-0 me-2"><strong>Total:</strong></label>
-                                        <!--preguntar a IA porque no funiona el mask-miles-->
                                         <input type="text" style="font-weight: bold; width: 150px;" readonly="true"
-                                               value="Gs. ${totalOrden}" class="form-control mask-miles">
+                                               value="<fmt:formatNumber value="${totalOrden}" pattern="#,###"/>" class="form-control">
                                     </div>
                                 </div>
                             </div>

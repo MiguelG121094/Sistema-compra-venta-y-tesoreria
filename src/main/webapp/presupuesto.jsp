@@ -382,27 +382,26 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                     </div>
                                 </form>
                                     
-                                <form action="PresupuestoServlet?menu=Presupuesto" method="POST">
+                                <form id="formModificarArticulo" action="PresupuestoServlet?menu=Presupuesto" method="POST" onsubmit="limpiarMascaras(this)">
                                     <div class="row" style="margin-top: 23px">
                                         <div class="col-md-1">
-                                            <input type="text" name="txtIdArticulo" placeholder="Id. Artículo" value="${presupuestoDetSeleccionado.getArticulo().getIdArticulo()}" 
+                                            <input type="text" name="txtIdArticulo" placeholder="Id. Artículo" value="${presupuestoDetSeleccionado.getArticulo().getIdArticulo()}"
                                                    class="form-control" disabled="true">
                                         </div>
                                         <div class="col-md-4">
-                                            <input type="text" placeholder="Descripción" value="${presupuestoDetSeleccionado.getArticulo().getDescripcion()}" 
+                                            <input type="text" placeholder="Descripción" value="${presupuestoDetSeleccionado.getArticulo().getDescripcion()}"
                                                    class="form-control"  disabled="true">
                                         </div>
                                         <div class="col-md-1">
-                                            <input type="number" name="txtCantidad" min="1" max="${presupuestoDetSeleccionado.getCantidad()}" 
+                                            <input type="text" inputmode="numeric" name="txtCantidad"
                                                    value="${presupuestoDetSeleccionado.getCantidad()}"
                                                    <c:if test="${presupuestoDetSeleccionado.getArticulo().getIdArticulo() == null}">
-                                                       <c:out value="disabled='disabled'"/></c:if>  placeholder="Cantidad" class="form-control" required="true">
+                                                       <c:out value="disabled='disabled'"/></c:if>  placeholder="Cantidad" class="form-control mask-miles" required="true">
                                         </div>
                                         <div class="col-md-2">
-                                            <!--pedir a la IA para que agregue la mascara de miles en input de precio y cantidad--> 
-                                            <input type="number" name="txtPrecioCompra" min="1"  value="${presupuestoDetSeleccionado.getPrecioCompra()}"
+                                            <input type="text" inputmode="numeric" name="txtPrecioCompra" value="${presupuestoDetSeleccionado.getPrecioCompra()}"
                                                    <c:if test="${presupuestoDetSeleccionado.getArticulo().getIdArticulo() == null}">
-                                                       <c:out value="disabled='disabled'"/></c:if>  placeholder="Precio de Compra" class="form-control" required="true">
+                                                       <c:out value="disabled='disabled'"/></c:if>  placeholder="Precio de Compra" class="form-control mask-miles" required="true">
                                         </div>
                                         <div class="col-md-2">
                                             <input type="hidden" name="idArt" value="${presupuestoDetSeleccionado.getArticulo().getIdArticulo()}">
@@ -748,6 +747,20 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
             //                });
         </script>
 
+        <script>
+            // Limpiar puntos de miles antes de enviar formularios
+            function limpiarMascaras(form) {
+                $(form).find('.mask-miles').each(function() {
+                    $(this).val($(this).cleanVal());
+                });
+            }
+
+            // Máscara de puntos de miles para campos numéricos
+            $(document).ready(function () {
+                $('.mask-miles').mask('#.##0', {reverse: true});
+            });
+        </script>
+
         <!-- Código para mostrar mensajes con Toastr -->
         <c:if test="${not empty Message}">
             <script>
@@ -764,6 +777,6 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                     <c:otherwise>toastr.info('${Message}');</c:otherwise>
                 </c:choose>
             </script>
-        </c:if>   
+        </c:if>
     </body>
 </html>
