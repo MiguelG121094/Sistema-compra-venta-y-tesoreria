@@ -92,7 +92,7 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                 </c:choose>
                                 <button type="button" data-bs-toggle="modal" data-bs-target="#modalPedidos"
                                         class="btn btn-info text-white"
-                                        <c:if test="${empty token}">disabled</c:if>>Buscar Orden de Compra</button>
+                                        <c:if test="${empty token || not puedeInsertar}">disabled</c:if>>Buscar Orden de Compra</button>
                                 <button type="button" data-bs-toggle="modal" data-bs-target="#modalFacturas"
                                         class="btn btn-info text-white">Buscar Factura Compra</button>
                                 <c:if test="${not empty token and not esNuevo and puedeBorrar}">

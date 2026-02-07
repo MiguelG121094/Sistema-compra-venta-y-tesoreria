@@ -33,6 +33,7 @@ usuario inicio sesion, se debe agregar esta validacion en cada una de las vistas
 
 <!DOCTYPE html>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt"%>
 <%@ page contentType="text/html;charset=UTF-8" language="java" pageEncoding="UTF-8" %>
 <html>
     <!--incluir los scripts y estilos en el header-->
@@ -360,7 +361,8 @@ usuario inicio sesion, se debe agregar esta validacion en cada una de las vistas
                                         <label class="me-2">Sucursal:</label>
                                         <form action="OrdenCompraServlet?menu=OrdenCompra&accion=CargarSucursal" method="POST">
                                             <select name="idSucursal" class="form-select" onchange="this.form.submit()"
-                                                <c:if test="${newIdOrdenCompra == null && ordenCompra.getIdOrdenCompra() == null}">
+                                                <c:if test="${newIdOrdenCompra == null && ordenCompra.getIdOrdenCompra() == null 
+                                                              || not puedeInsertar || not empty esReadOnly}">
                                                     disabled</c:if>>
                                                 <option value="">Seleccionar sucursal</option>
                                                 <c:forEach var="suc" items="${listaSucursales}">
@@ -374,7 +376,8 @@ usuario inicio sesion, se debe agregar esta validacion en cada una de las vistas
                                         <label style="white-space:" class="me-2">Condición de la compra:</label>
                                         <form action="OrdenCompraServlet?menu=OrdenCompra&accion=GuardarCondicionCompra" method="POST">
                                             <select name="condicionCompra" class="form-select" onchange="this.form.submit()"
-                                                <c:if test="${newIdOrdenCompra == null && ordenCompra.getIdOrdenCompra() == null}">
+                                                <c:if test="${newIdOrdenCompra == null && ordenCompra.getIdOrdenCompra() == null 
+                                                              || not puedeInsertar || not empty esReadOnly}">
                                                     disabled</c:if>>
                                                 <option value="">Seleccionar...</option>
                                                 <option value="Contado" ${ordenCompra.getCondicionCompra() eq 'Contado' ? 'selected' : ''}>Contado</option>
@@ -461,9 +464,13 @@ usuario inicio sesion, se debe agregar esta validacion en cada una de las vistas
                                                 <tr>
                                                     <td class="text-center">${listaOrdenDet.getArticulo().getIdArticulo()}</td>
                                                     <td class="text-center">${listaOrdenDet.getArticulo().getDescripcion()}</td>
-                                                    <td class="text-center">${listaOrdenDet.getCantidad()}</td>
-                                                    <td class="text-center">${listaOrdenDet.getPrecioCompra()}</td>
-                                                    <td class="text-center">${subtotal}</td>
+                                                    <td class="text-center">
+                                                        <fmt:formatNumber value="${listaOrdenDet.getCantidad()}" pattern="#,###"/></td>
+                                                    <td class="text-center">
+                                                        <fmt:formatNumber value="${listaOrdenDet.getPrecioCompra()}" pattern="#,###"/></td>
+                                                    <td class="text-center">
+                                                        <fmt:formatNumber value="${subtotal}" pattern="#,###"/>
+                                                    </td>
                                                     <td class="text-center">
                                                         <%--<a href="OrdenCompraServlet?menu=OrdenCompra&accion=EditarArticuloList&idArt=${listaOrdenDet.getArticulo().getIdArticulo()}"
                                                            class="btn btn-warning btn-sm">Editar</a>--%>
@@ -495,7 +502,8 @@ usuario inicio sesion, se debe agregar esta validacion en cada una de las vistas
                                 <div class="card-footer d-flex justify-content-between align-items-center">
                                     <div>
                                         <button type="button" href="#" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalGenerarOrden"
-                                           <c:if test="${newIdOrdenCompra == null || proveedorSeleccionado == null || sucursalSeleccionada == null || empty listaOrdenCompraDetalle || not puedeInsertar || not empty esReadOnly}">disabled</c:if>>Guardar</button>
+                                           <c:if test="${newIdOrdenCompra == null || proveedorSeleccionado == null || sucursalSeleccionada == null
+                                                         || empty listaOrdenCompraDetalle || not puedeInsertar || not empty esReadOnly}">disabled</c:if>>Guardar</button>
                                         <!-- Modal de confirmacion para guardar -->
                                         <div class="modal fade" id="modalGenerarOrden" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
                                           <div class="modal-dialog modal-dialog-centered">
@@ -522,8 +530,9 @@ usuario inicio sesion, se debe agregar esta validacion en cada una de las vistas
                                     </div>
                                     <div class="d-flex align-items-center">
                                         <label class="mb-0 me-2"><strong>Total:</strong></label>
+                                        <!--preguntar a IA porque no funiona el mask-miles-->
                                         <input type="text" style="font-weight: bold; width: 150px;" readonly="true"
-                                               value="Gs. ${totalOrden}" class="form-control">
+                                               value="Gs. ${totalOrden}" class="form-control mask-miles">
                                     </div>
                                 </div>
                             </div>

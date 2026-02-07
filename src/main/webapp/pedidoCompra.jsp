@@ -389,7 +389,8 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                                     <td class="text-center">${listaPedCompDetalle.getArticulo().getIdArticulo()}</td>
                                                     <td class="text-center">${listaPedCompDetalle.getArticulo().getDescripcion()}</td>
                                                     <td class="text-center">${listaPedCompDetalle.getDeposito().getDescripcion()}</td>
-                                                    <td class="text-center">${listaPedCompDetalle.getCantidad()}</td>
+                                                    <td class="text-center">
+                                                        <fmt:formatNumber value="${listaPedCompDetalle.getCantidad()}" pattern="#,###"/></td>
                                                     <td class="text-center">
                                                         <c:choose>
                                                             <c:when test="${puedeBorrar and empty esReadOnly}">

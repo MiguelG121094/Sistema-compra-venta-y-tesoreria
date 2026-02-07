@@ -33,6 +33,7 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
 
 <!DOCTYPE html>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt"%>
 <%@ page contentType="text/html;charset=UTF-8" language="java"  pageEncoding="UTF-8" %>
 <html>
     <!--incluir los scripts y estilos en el header-->
@@ -350,7 +351,9 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                         <div class="col-auto">
                                             <div class="form-floating mb-3 mb-md-0">
                                                 <button type="button" href="" data-bs-toggle="modal" data-bs-target="#modalProveedores" class="btn btn-outline-primary"
-                                                        <c:if test="${presupuesto.getIdPresupuesto() == null && newIdPresupuesto == null && presupuesto.getPedidoCompra().getIdPedido() == null}">
+                                                        <c:if test="${presupuesto.getIdPresupuesto() == null && newIdPresupuesto == null 
+                                                                      && presupuesto.getPedidoCompra().getIdPedido() == null
+                                                                      || not puedeInsertar || not empty esReadOnly  }">
                                                             <c:out value="disabled='disabled'"/></c:if>>Buscar Proveedor</button>
                                             </div>
                                         </div>
@@ -370,7 +373,7 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                         <div class="col-md-3 d-flex align-items-center">
                                             <label style="white-space:" class="me-2">Condición de la compra:</label>
                                                 <select id="selectCondicionCompra" name="condicionCompra" class="form-select" onchange="this.form.submit()"
-                                                        <c:if test="${presupuesto.getIdPresupuesto() != null || (newIdPresupuesto == null && presupuesto.getPedidoCompra().getIdPedido() == null)}">disabled</c:if>>
+                                                        <c:if test="${presupuesto.getIdPresupuesto() == null && newIdPresupuesto == null && presupuesto.getPedidoCompra().getIdPedido() == null}">disabled</c:if>>
                                                     <option value="">Seleccionar...</option>
                                                     <option value="Contado" ${presupuesto.getCondicionCompra() eq 'Contado' ? 'selected' : ''}>Contado</option>
                                                     <option value="Credito" ${presupuesto.getCondicionCompra() eq 'Credito' ? 'selected' : ''}>Crédito</option>
@@ -396,6 +399,7 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                                        <c:out value="disabled='disabled'"/></c:if>  placeholder="Cantidad" class="form-control" required="true">
                                         </div>
                                         <div class="col-md-2">
+                                            <!--pedir a la IA para que agregue la mascara de miles en input de precio y cantidad--> 
                                             <input type="number" name="txtPrecioCompra" min="1"  value="${presupuestoDetSeleccionado.getPrecioCompra()}"
                                                    <c:if test="${presupuestoDetSeleccionado.getArticulo().getIdArticulo() == null}">
                                                        <c:out value="disabled='disabled'"/></c:if>  placeholder="Precio de Compra" class="form-control" required="true">
@@ -433,8 +437,10 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                                 <tr>
                                                     <td class="text-center">${listaPresuDetalle.getArticulo().getIdArticulo()}</td>
                                                     <td class="text-center">${listaPresuDetalle.getArticulo().getDescripcion()}</td>
-                                                    <td class="text-center">${listaPresuDetalle.getCantidad()}</td>
-                                                    <td class="text-center">${listaPresuDetalle.getPrecioCompra()}</td>
+                                                    <td class="text-center">
+                                                        <fmt:formatNumber value="${listaPresuDetalle.getCantidad()}" pattern="#,###"/></td>
+                                                    <td class="text-center">
+                                                        <fmt:formatNumber value="${listaPresuDetalle.getPrecioCompra()}" pattern="#,###"/></td>
                                                     <td class="text-center">
                                                         <c:choose>
                                                             <c:when test="${puedeEditar and empty esReadOnly}">
@@ -483,7 +489,7 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                               </div>
                                               <div class="modal-body">
-                                                ¿Desea generar un nuevo presupuesto de compra?
+                                                ¿Desea guardar el presupuesto de compra?
                                               </div>
                                               <div class="modal-footer">
                                                 <button type="button" class="btn btn-danger" data-bs-dismiss="modal">No</button>
