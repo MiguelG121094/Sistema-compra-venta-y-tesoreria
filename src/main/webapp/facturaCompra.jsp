@@ -495,7 +495,7 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                         </c:if>
                                     </div>
                                     <div class="col-md-6 text-end">
-                                        <h5>Total: Gs. <fmt:formatNumber value="${totalGeneral}" pattern="#,###"/></h5>
+                                        <h5>Total: <fmt:formatNumber value="${totalGeneral}" pattern="#,###"/></h5>
                                         <small>IVA 10%: <fmt:formatNumber value="${totalIva10}" pattern="#,###"/> |
                                                IVA 5%: <fmt:formatNumber value="${totalIva5}" pattern="#,###"/> |
                                                Exenta: <fmt:formatNumber value="${totalExenta}" pattern="#,###"/></small>
