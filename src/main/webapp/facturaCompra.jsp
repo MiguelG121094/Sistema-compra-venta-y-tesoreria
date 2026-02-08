@@ -134,7 +134,7 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                             <div class="col-md-2">
                                                 <div class="form-floating mb-3 mb-md-0">
                                                     <input class="form-control" id="estado" type="text" placeholder="Estado"
-                                                           value="${not empty facturaCompra.estado ? facturaCompra.estado : 'Pendiente'}" readonly />
+                                                           value="${not empty facturaCompra.estado ? facturaCompra.estado : (not empty token ? 'Pendiente' : '')}" readonly />
                                                     <label for="estado">Estado</label>
                                                 </div>
                                             </div>
