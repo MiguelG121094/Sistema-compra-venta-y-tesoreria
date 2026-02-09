@@ -886,9 +886,17 @@ public class FacturaCompraServlet extends HttpServlet {
             return;
         }
 
-        // Validar timbrado no negativo
-        if (estado.facturaCompra.getTimbrado() != null && estado.facturaCompra.getTimbrado() < 0) {
-            mostrarMensaje(request, "El timbrado no puede ser negativo", "alert-warning");
+        // Validar que el timbrado esté cargado
+        if (estado.facturaCompra.getTimbrado() == null || estado.facturaCompra.getTimbrado() <= 0) {
+            mostrarMensaje(request, "Debe ingresar el timbrado", "alert-warning");
+            cargarDatosParaVista(request, estado, token);
+            forward(request, response, JSP_FACTURA);
+            return;
+        }
+
+        // Validar timbrado máximo 8 dígitos
+        if (estado.facturaCompra.getTimbrado() > 99999999) {
+            mostrarMensaje(request, "El timbrado debe tener un máximo de 8 dígitos", "alert-warning");
             cargarDatosParaVista(request, estado, token);
             forward(request, response, JSP_FACTURA);
             return;

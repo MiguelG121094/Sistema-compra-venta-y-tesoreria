@@ -244,7 +244,7 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                             <div class="col-md-2">
                                                 <div class="form-floating mb-3 mb-md-0">
                                                     <input class="form-control" id="timbrado" name="timbrado" type="number" placeholder="Timbrado"
-                                                           value="${facturaCompra.timbrado}" min="0"
+                                                           value="${facturaCompra.timbrado}" min="0" max="99999999"
                                                            <c:if test="${empty token}">disabled</c:if> />
                                                     <label for="timbrado">Timbrado</label>
                                                 </div>
@@ -284,39 +284,27 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
 
                         <!-- Lonea separadora -->
                         <div class="border-section"></div>
-                        </form>
 
                         <!-- Busqueda de Articulos - para factura de gasto o fondo fijo -->
                         <c:if test="${facturaCompra.tipoFactura == 'fondoFijo' or facturaCompra.tipoFactura == 'gasto'}">
-                        <form id="formAgregarGasto" method="post" action="FacturaCompraServlet">
-                            <input type="hidden" name="menu" value="FacturaCompra">
-                            <input type="hidden" name="token" value="${token}">
-                            <c:choose>
-                                <c:when test="${not empty detalleSeleccionado}">
-                                    <input type="hidden" name="accion" value="ActualizarArticulo">
-                                    <input type="hidden" name="index" value="${indexSeleccionado}">
-                                </c:when>
-                                <c:otherwise>
-                                    <input type="hidden" name="accion" value="AgregarArticulo">
-                                </c:otherwise>
-                            </c:choose>
+                            <input type="hidden" name="index" id="indexArticulo" value="${indexSeleccionado}">
                             <div class="row mb-4">
                                 <div class="col custom-card">
                                     <div class="row" style="margin-top: 10px">
                                         <div class="col-md-3">
-                                            <input type="text" name="descripcion" placeholder="Descripción" class="form-control" required
+                                            <input type="text" name="descripcion" placeholder="Descripción" class="form-control"
                                                    value="${detalleSeleccionado.descripcion}">
                                         </div>
                                         <div class="col-md-1">
-                                            <input type="text" inputmode="numeric" name="cantidad" placeholder="Cantidad" class="form-control mask-miles" required
+                                            <input type="text" inputmode="numeric" name="cantidad" placeholder="Cantidad" class="form-control mask-miles"
                                                    value="${not empty detalleSeleccionado ? detalleSeleccionado.cantidad : 1}">
                                         </div>
                                         <div class="col-md-2">
-                                            <input type="text" inputmode="numeric" name="precioCompra" placeholder="Precio de compra" class="form-control mask-miles" required
+                                            <input type="text" inputmode="numeric" name="precioCompra" placeholder="Precio de compra" class="form-control mask-miles"
                                                    value="${detalleSeleccionado.precioCompra}">
                                         </div>
                                         <div class="col-md-2">
-                                            <select name="idTipoImpuesto" class="form-control" required>
+                                            <select name="idTipoImpuesto" class="form-control">
                                                 <option value="">Seleccionar Impuesto</option>
                                                 <c:forEach var="imp" items="${listaTipoImpuesto}">
                                                     <option value="${imp.idTipoImpuesto}"
@@ -329,17 +317,18 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                         <div class="col-md-2">
                                             <c:choose>
                                                 <c:when test="${not empty detalleSeleccionado}">
-                                                    <button type="submit" class="btn btn-warning" <c:if test="${not puedeEditar}">disabled title="No tiene permisos"</c:if>>Actualizar</button>
+                                                    <button type="button" class="btn btn-warning" onclick="actualizarArticulo();"
+                                                            <c:if test="${not puedeEditar}">disabled title="No tiene permisos"</c:if>>Actualizar</button>
                                                 </c:when>
                                                 <c:otherwise>
-                                                    <button type="submit" class="btn btn-success" <c:if test="${not puedeInsertar}">disabled title="No tiene permisos"</c:if>>Agregar Artículo</button>
+                                                    <button type="button" class="btn btn-success" onclick="agregarArticulo();"
+                                                            <c:if test="${not puedeInsertar}">disabled title="No tiene permisos"</c:if>>Agregar Artículo</button>
                                                 </c:otherwise>
                                             </c:choose>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                        </form>
                         </c:if>
 
                         <!--Búsqueda de Artículos - para factura de compra de articulos-->
@@ -503,6 +492,7 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                 </div>
                             </div>
                         </div>
+                        </form>
 
                         <!-- Modal para Buscar Facturas -->
                         <div class="modal fade" id="modalFacturas" tabindex="-1" aria-labelledby="modalFacturasLabel" aria-hidden="true">
@@ -766,6 +756,18 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                 document.getElementById('formPrincipal').submit();
             }
 
+            function agregarArticulo() {
+                limpiarMascaras(document.getElementById('formPrincipal'));
+                document.getElementById('accionPrincipal').value = 'AgregarArticulo';
+                document.getElementById('formPrincipal').submit();
+            }
+
+            function actualizarArticulo() {
+                limpiarMascaras(document.getElementById('formPrincipal'));
+                document.getElementById('accionPrincipal').value = 'ActualizarArticulo';
+                document.getElementById('formPrincipal').submit();
+            }
+
             function cambiarSucursal() {
                 document.getElementById('accionPrincipal').value = 'CambiarSucursal';
                 document.getElementById('formPrincipal').submit();
@@ -810,11 +812,6 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
             $(document).ready(function () {
                 // Máscara de puntos de miles para campos numéricos
                 $('.mask-miles').mask('#.##0', {reverse: true});
-
-                // Limpiar máscara antes de submit en formulario de gasto/fondo fijo
-                $('#formAgregarGasto').on('submit', function() {
-                    limpiarMascaras(this);
-                });
 
                 // Tabla principal de artículos en factura
                 $('#tablaArticulosFactura').DataTable({
