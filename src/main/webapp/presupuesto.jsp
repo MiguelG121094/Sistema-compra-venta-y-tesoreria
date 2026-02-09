@@ -373,7 +373,7 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                         <div class="col-md-3 d-flex align-items-center">
                                             <label style="white-space:" class="me-2">Condición de la compra:</label>
                                                 <select id="selectCondicionCompra" name="condicionCompra" class="form-select" onchange="this.form.submit()"
-                                                        <c:if test="${presupuesto.getIdPresupuesto() == null && newIdPresupuesto == null && presupuesto.getPedidoCompra().getIdPedido() == null}">disabled</c:if>>
+                                                        <c:if test="${presupuesto.getIdPresupuesto() == null && newIdPresupuesto == null && presupuesto.getPedidoCompra().getIdPedido() == null || not empty esReadOnly}">disabled</c:if>>
                                                     <option value="">Seleccionar...</option>
                                                     <option value="Contado" ${presupuesto.getCondicionCompra() eq 'Contado' ? 'selected' : ''}>Contado</option>
                                                     <option value="Credito" ${presupuesto.getCondicionCompra() eq 'Credito' ? 'selected' : ''}>Crédito</option>
