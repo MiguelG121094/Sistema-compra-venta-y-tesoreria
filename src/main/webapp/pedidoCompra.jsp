@@ -330,7 +330,7 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                         <div class="col-auto">
                                             <div class="form-floating mb-3 mb-md-0">
                                                 <button type="button" href="" data-bs-toggle="modal" data-bs-target="#modalArticulos" class="btn btn-outline-primary"
-                                                        <c:if test="${pedidoCompra.getIdPedido() == null && newIdPedido == null && listaDepositos.size()<=0 || empty listaDepositos}">
+                                                        <c:if test="${pedidoCompra.getIdPedido() == null && newIdPedido == null && listaDepositos.size()<=0 || empty listaDepositos || not empty esReadOnly}">
                                                             <c:out value="disabled='disabled'"/></c:if>>Buscar Artículo</button>
                                             </div>
                                         </div>
