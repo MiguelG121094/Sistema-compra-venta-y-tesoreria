@@ -17,7 +17,6 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
 import java.util.logging.Level;
@@ -43,9 +42,6 @@ public class FacturaCompraServlet extends HttpServlet {
     private final FacturaCompraDetalleService facturaCompraDetalleService = new FacturaCompraDetalleService();
     private final OrdenCompraService ordenCompraService = new OrdenCompraService();
     private final OrdenCompraDetalleService ordenCompraDetalleService = new OrdenCompraDetalleService();
-    private final PedidoCompraService pedidoCompraService = new PedidoCompraService();
-    private final PresupuestoService presupuestoService = new PresupuestoService();
-    private final CuentaPagarService cuentaPagarService = new CuentaPagarService();
     private final ProveedorService proveedorService = new ProveedorService();
     private final SucursalService sucursalService = new SucursalService();
     private final ArticuloService articuloService = new ArticuloService();
@@ -804,13 +800,8 @@ public class FacturaCompraServlet extends HttpServlet {
         FacturaCompraState estado = obtenerEstadoORedireccionar(request, response, session, token);
         if (estado == null) return;
 
-        // Leer datos del formulario
-        String numeroComprobanteStr = request.getParameter("numeroComprobante");
-        String timbradoStr = request.getParameter("timbrado");
-        String fechaEmisionStr = request.getParameter("fechaEmision");
-        String fechaVencTimbradoStr = request.getParameter("fechaVencTimbrado");
-        String plazoStr = request.getParameter("plazo");
-        String observacion = request.getParameter("observacion");
+        // Leer todos los datos del formulario
+        leerDatosFormulario(request, estado);
 
         // Validaciones
         if (estado.proveedorSeleccionado == null) {
@@ -825,43 +816,6 @@ public class FacturaCompraServlet extends HttpServlet {
             cargarDatosParaVista(request, estado, token);
             forward(request, response, JSP_FACTURA);
             return;
-        }
-
-        // Setear datos en el objeto factura (numero es String con formato de máscara)
-        if (numeroComprobanteStr != null && !numeroComprobanteStr.isEmpty()) {
-            estado.facturaCompra.setNumero(numeroComprobanteStr);
-        }
-
-        if (timbradoStr != null && !timbradoStr.isEmpty()) {
-            try {
-                estado.facturaCompra.setTimbrado(Integer.parseInt(timbradoStr));
-            } catch (NumberFormatException e) {
-                // Mantener el valor anterior
-            }
-        }
-
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
-        try {
-            if (fechaEmisionStr != null && !fechaEmisionStr.isEmpty()) {
-                estado.facturaCompra.setFechaEmision(sdf.parse(fechaEmisionStr));
-            }
-            if (fechaVencTimbradoStr != null && !fechaVencTimbradoStr.isEmpty()) {
-                estado.facturaCompra.setFechaVenciTimbrado(sdf.parse(fechaVencTimbradoStr));
-            }
-        } catch (ParseException e) {
-            LOGGER.log(Level.WARNING, "Error al parsear fecha", e);
-        }
-
-        if (plazoStr != null && !plazoStr.isEmpty()) {
-            try {
-                estado.facturaCompra.setPlazo(Integer.parseInt(plazoStr));
-            } catch (NumberFormatException e) {
-                // Mantener el valor anterior
-            }
-        }
-
-        if (observacion != null) {
-            estado.facturaCompra.setObservacion(observacion);
         }
 
         // Copiar entidades seleccionadas al objeto factura
@@ -938,35 +892,24 @@ public class FacturaCompraServlet extends HttpServlet {
 
         // Guardar en BD
         if (estado.esNuevo) {
-            Long idInsertado = facturaCompraService.insertarFacturaCompra(estado.facturaCompra);
+            // Construir objetos auxiliares para la transacción
+            CuentaPagar cuentaPagar = construirCuentaPagar(estado);
+            LibroIvaCompra libroIva = construirLibroIvaCompra(estado);
 
-            if (idInsertado != null) {
-                // Insertar detalles
-                for (FacturaCompraDetalle detalle : estado.listaDetalle) {
-                    detalle.setFacturaCompra(new FacturaCompra(idInsertado));
-                    facturaCompraDetalleService.insertarDetalle(detalle);
-                }
+            // Guardar todo en una sola transacción
+            Long idInsertado = facturaCompraService.guardarFacturaCompleta(
+                estado.facturaCompra, estado.listaDetalle,
+                cuentaPagar, libroIva, estado.ordenCompraSeleccionada);
 
-                // Crear cuenta a pagar
-                crearCuentaPagar(idInsertado, estado);
+            limpiarEstado(session, token);
 
-                // Actualizar estados de documentos relacionados a "Completado"
-                actualizarEstadosDocumentosRelacionados(estado);
-
-                // Limpiar sesión después de guardar
-                limpiarEstado(session, token);
-
-                mostrarMensaje(request, "Factura guardada correctamente. ID: " + idInsertado, "alert-success");
-                accionListarModal(request, response);
-                return;
-            } else {
-                mostrarMensaje(request, "Error al guardar la factura", "alert-danger");
-            }
+            mostrarMensaje(request, "Factura guardada correctamente. ID: " + idInsertado, "alert-success");
+            accionListarModal(request, response);
+            return;
         } else {
-            // Actualizar factura existente
-            facturaCompraService.actualizarFacturaCompra(estado.facturaCompra);
-            facturaCompraDetalleService.actualizarDetalles(
-                estado.facturaCompra.getIdFacturaCompra(), estado.listaDetalle);
+            // Actualizar cabecera y detalles en una sola transacción
+            facturaCompraService.actualizarFacturaCompleta(
+                estado.facturaCompra, estado.listaDetalle);
 
             limpiarEstado(session, token);
 
@@ -974,9 +917,6 @@ public class FacturaCompraServlet extends HttpServlet {
             accionListarModal(request, response);
             return;
         }
-
-        cargarDatosParaVista(request, estado, token);
-        forward(request, response, JSP_FACTURA);
     }
 
     /**
@@ -989,11 +929,9 @@ public class FacturaCompraServlet extends HttpServlet {
         if (estado == null) return;
 
         if (estado.facturaCompra.getIdFacturaCompra() != null) {
-            estado.facturaCompra.setEstado("Anulado");
-            facturaCompraService.actualizarFacturaCompra(estado.facturaCompra);
-
-            // Revertir estados de documentos relacionados a "Pendiente"
-            revertirEstadosDocumentosRelacionados(estado);
+            // Anular factura y revertir documentos en una sola transacción
+            facturaCompraService.anularFacturaCompleta(
+                estado.facturaCompra, estado.ordenCompraSeleccionada);
 
             limpiarEstado(session, token);
 
@@ -1018,117 +956,76 @@ public class FacturaCompraServlet extends HttpServlet {
     }
 
     /**
-     * Actualiza los estados de los documentos relacionados a "Completado"
-     * cuando se guarda una factura de compra.
-     * Documentos: OrdenCompra, PedidoCompra, Presupuesto
+     * Construye el objeto CuentaPagar con los datos del estado.
+     * Solo crea el objeto en memoria, no lo persiste.
      */
-    private void actualizarEstadosDocumentosRelacionados(FacturaCompraState estado) {
-        try {
-            OrdenCompra ordenCompra = estado.ordenCompraSeleccionada;
-            if (ordenCompra != null) {
-                // Actualizar estado de la Orden de Compra
-                ordenCompra.setEstado("Completado");
-                ordenCompraService.actualizarOrdenCompra(ordenCompra);
-                LOGGER.log(Level.INFO, "Orden de compra {0} actualizada a Completado", ordenCompra.getIdOrdenCompra());
-
-                // Actualizar estado del Pedido de Compra si existe
-                PedidoCompra pedidoCompra = ordenCompra.getPedidoCompra();
-                if (pedidoCompra != null) {
-                    pedidoCompra.setEstado("Completado");
-                    pedidoCompraService.actualizarPedidoCabecera(pedidoCompra);
-                    LOGGER.log(Level.INFO, "Pedido de compra {0} actualizado a Completado", pedidoCompra.getIdPedido());
-                }
-
-                // Actualizar estado del Presupuesto si existe
-                Presupuesto presupuesto = ordenCompra.getPresupuesto();
-                if (presupuesto != null) {
-                    presupuesto.setEstado("Completado");
-                    presupuestoService.actualizarPresupuestoCabecera(presupuesto);
-                    LOGGER.log(Level.INFO, "Presupuesto {0} actualizado a Completado", presupuesto.getIdPresupuesto());
-                }
+    private CuentaPagar construirCuentaPagar(FacturaCompraState estado) {
+        Long montoTotal = 0L;
+        for (FacturaCompraDetalle detalle : estado.listaDetalle) {
+            if (detalle.getCantidad() != null && detalle.getPrecioCompra() != null) {
+                montoTotal += detalle.getCantidad() * detalle.getPrecioCompra();
             }
-        } catch (SQLException e) {
-            LOGGER.log(Level.WARNING, "Error al actualizar estados de documentos relacionados", e);
         }
+
+        Date fechaVencimiento = estado.facturaCompra.getFechaEmision();
+        if ("Credito".equals(estado.facturaCompra.getCondicion()) && estado.facturaCompra.getPlazo() != null) {
+            java.util.Calendar cal = java.util.Calendar.getInstance();
+            cal.setTime(fechaVencimiento != null ? fechaVencimiento : new Date());
+            cal.add(java.util.Calendar.DAY_OF_MONTH, estado.facturaCompra.getPlazo());
+            fechaVencimiento = cal.getTime();
+        }
+
+        CuentaPagar cuentaPagar = new CuentaPagar();
+        cuentaPagar.setMonto(montoTotal);
+        cuentaPagar.setEstado("Pendiente");
+        cuentaPagar.setFechaVencimiento(fechaVencimiento);
+        cuentaPagar.setSaldo(montoTotal);
+        return cuentaPagar;
     }
 
     /**
-     * Crea una cuenta a pagar asociada a la factura de compra.
-     * - Monto: suma total de los detalles (cantidad * precio)
-     * - Estado: "Pendiente"
-     * - Fecha vencimiento: fecha emisión + plazo (si es crédito) o fecha emisión (si es contado)
-     * - Saldo: igual al monto inicial
+     * Construye el objeto LibroIvaCompra con los totales de IVA calculados del detalle.
+     * Solo crea el objeto en memoria, no lo persiste.
      */
-    private void crearCuentaPagar(Long idFacturaCompra, FacturaCompraState estado) {
-        try {
-            // Calcular el monto total de la factura
-            Long montoTotal = 0L;
-            for (FacturaCompraDetalle detalle : estado.listaDetalle) {
-                if (detalle.getCantidad() != null && detalle.getPrecioCompra() != null) {
-                    montoTotal += detalle.getCantidad() * detalle.getPrecioCompra();
-                }
+    private LibroIvaCompra construirLibroIvaCompra(FacturaCompraState estado) {
+        long totalIva5 = 0, totalIva10 = 0;
+        long totalGravada5 = 0, totalGravada10 = 0;
+        long totalExenta = 0, totalGeneral = 0;
+
+        for (FacturaCompraDetalle detalle : estado.listaDetalle) {
+            long subtotal = detalle.getCantidad() * detalle.getPrecioCompra();
+            totalGeneral += subtotal;
+
+            String descImpuesto = "";
+            if (detalle.getArticulo() != null && detalle.getArticulo().getTipoImpuesto() != null) {
+                descImpuesto = detalle.getArticulo().getTipoImpuesto().getDescripcion();
+            } else if (detalle.getTipoImpuesto() != null) {
+                descImpuesto = detalle.getTipoImpuesto().getDescripcion();
             }
 
-            // Calcular fecha de vencimiento
-            Date fechaVencimiento = estado.facturaCompra.getFechaEmision();
-            if ("Credito".equals(estado.facturaCompra.getCondicion()) && estado.facturaCompra.getPlazo() != null) {
-                // Agregar días de plazo a la fecha de emisión
-                java.util.Calendar cal = java.util.Calendar.getInstance();
-                cal.setTime(fechaVencimiento != null ? fechaVencimiento : new Date());
-                cal.add(java.util.Calendar.DAY_OF_MONTH, estado.facturaCompra.getPlazo());
-                fechaVencimiento = cal.getTime();
+            if (descImpuesto.contains("10")) {
+                long iva = subtotal / 11;
+                totalIva10 += iva;
+                totalGravada10 += subtotal - iva;
+            } else if (descImpuesto.contains("5")) {
+                long iva = subtotal / 21;
+                totalIva5 += iva;
+                totalGravada5 += subtotal - iva;
+            } else {
+                totalExenta += subtotal;
             }
-
-            // Crear la cuenta a pagar
-            CuentaPagar cuentaPagar = new CuentaPagar();
-            cuentaPagar.setFacturaCompra(new FacturaCompra(idFacturaCompra));
-            cuentaPagar.setMonto(montoTotal);
-            cuentaPagar.setEstado("Pendiente");
-            cuentaPagar.setFechaVencimiento(fechaVencimiento);
-            cuentaPagar.setSaldo(montoTotal); // Saldo inicial igual al monto
-
-            Long idCuentaPagar = cuentaPagarService.insertarCuentaPagar(cuentaPagar);
-            if (idCuentaPagar != null) {
-                LOGGER.log(Level.INFO, "Cuenta a pagar creada con ID: {0}, Monto: {1}", new Object[]{idCuentaPagar, montoTotal});
-            }
-        } catch (SQLException e) {
-            LOGGER.log(Level.WARNING, "Error al crear cuenta a pagar", e);
         }
-    }
 
-    /**
-     * Revierte los estados de los documentos relacionados a "Pendiente"
-     * cuando se anula una factura de compra.
-     * Documentos: OrdenCompra, PedidoCompra, Presupuesto
-     */
-    private void revertirEstadosDocumentosRelacionados(FacturaCompraState estado) {
-        try {
-            OrdenCompra ordenCompra = estado.ordenCompraSeleccionada;
-            if (ordenCompra != null) {
-                // Revertir estado de la Orden de Compra a Pendiente
-                ordenCompra.setEstado("Pendiente");
-                ordenCompraService.actualizarOrdenCompra(ordenCompra);
-                LOGGER.log(Level.INFO, "Orden de compra {0} revertida a Pendiente", ordenCompra.getIdOrdenCompra());
-
-                // Revertir estado del Pedido de Compra si existe
-                PedidoCompra pedidoCompra = ordenCompra.getPedidoCompra();
-                if (pedidoCompra != null) {
-                    pedidoCompra.setEstado("Pendiente");
-                    pedidoCompraService.actualizarPedidoCabecera(pedidoCompra);
-                    LOGGER.log(Level.INFO, "Pedido de compra {0} revertido a Pendiente", pedidoCompra.getIdPedido());
-                }
-
-                // Revertir estado del Presupuesto si existe
-                Presupuesto presupuesto = ordenCompra.getPresupuesto();
-                if (presupuesto != null) {
-                    presupuesto.setEstado("Pendiente");
-                    presupuestoService.actualizarPresupuestoCabecera(presupuesto);
-                    LOGGER.log(Level.INFO, "Presupuesto {0} revertido a Pendiente", presupuesto.getIdPresupuesto());
-                }
-            }
-        } catch (SQLException e) {
-            LOGGER.log(Level.WARNING, "Error al revertir estados de documentos relacionados", e);
-        }
+        LibroIvaCompra libroIva = new LibroIvaCompra();
+        libroIva.setFecha(estado.facturaCompra.getFechaEmision() != null
+            ? estado.facturaCompra.getFechaEmision() : new Date());
+        libroIva.setIva5(totalIva5);
+        libroIva.setIva10(totalIva10);
+        libroIva.setGravada5(totalGravada5);
+        libroIva.setGravada10(totalGravada10);
+        libroIva.setExenta(totalExenta);
+        libroIva.setTotal(totalGeneral);
+        return libroIva;
     }
 
     // ==================== MÉTODOS HTTP ====================

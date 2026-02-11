@@ -17,6 +17,10 @@ public class LibroIvaCompra {
     private Date fecha;
     private Long iva5;
     private Long iva10;
+    private Long gravada5;
+    private Long gravada10;
+    private Long exenta;
+    private Long total;
 
     public LibroIvaCompra() {
     }
@@ -27,12 +31,16 @@ public class LibroIvaCompra {
     }
 
     public LibroIvaCompra(Long idLibroIvaCompra, FacturaCompra facturaCompra, Date fecha,
-            Long iva5, Long iva10) {
+            Long iva5, Long iva10, Long gravada5, Long gravada10, Long exenta, Long total) {
         this.idLibroIvaCompra = idLibroIvaCompra;
         this.facturaCompra = facturaCompra;
         this.fecha = fecha;
         this.iva5 = iva5;
         this.iva10 = iva10;
+        this.gravada5 = gravada5;
+        this.gravada10 = gravada10;
+        this.exenta = exenta;
+        this.total = total;
     }
 
     public Long getIdLibroIvaCompra() {
@@ -73,5 +81,37 @@ public class LibroIvaCompra {
 
     public void setIva10(Long iva10) {
         this.iva10 = iva10;
+    }
+
+    public Long getGravada5() {
+        return gravada5;
+    }
+
+    public void setGravada5(Long gravada5) {
+        this.gravada5 = gravada5;
+    }
+
+    public Long getGravada10() {
+        return gravada10;
+    }
+
+    public void setGravada10(Long gravada10) {
+        this.gravada10 = gravada10;
+    }
+
+    public Long getExenta() {
+        return exenta;
+    }
+
+    public void setExenta(Long exenta) {
+        this.exenta = exenta;
+    }
+
+    public Long getTotal() {
+        return total;
+    }
+
+    public void setTotal(Long total) {
+        this.total = total;
     }
 }

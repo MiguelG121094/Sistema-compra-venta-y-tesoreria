@@ -176,4 +176,24 @@ public class CuentaPagarDAO {
             stmt.executeUpdate();
         }
     }
+
+    /**
+     * Elimina las cuentas a pagar asociadas a una factura de compra.
+     *
+     * @param idFacturaCompra ID de la factura de compra
+     * @throws SQLException si ocurre un error de base de datos
+     */
+    public void eliminarPorFactura(Long idFacturaCompra) throws SQLException {
+        if (idFacturaCompra == null) {
+            LOGGER.log(Level.WARNING, "Error: idFacturaCompra es nulo");
+            return;
+        }
+
+        String sql = "DELETE FROM cuenta_pagar WHERE id_fact_comp_cab = ?";
+
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, idFacturaCompra);
+            stmt.executeUpdate();
+        }
+    }
 }
