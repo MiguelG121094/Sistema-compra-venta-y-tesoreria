@@ -414,36 +414,17 @@ public class OrdenCompraServlet extends HttpServlet {
                                     }
                                 }
 
-                                // Insertar orden de compra cabecera
-                                Long idOrdenInserted = ordenCompraService.insertarOrdenCompra(
-                                        new OrdenCompra(null, ordenCompra.getPresupuesto(),
+                                // Guardar cabecera y detalles en una sola transacción
+                                OrdenCompra ordenToInsert = new OrdenCompra(null, ordenCompra.getPresupuesto(),
                                         ordenCompra.getPedidoCompra(), ordenCompra.getProveedor(),
                                         ordenCompra.getSucursal(), usuario, new Date(), "Pendiente",
-                                        ordenCompra.getCondicionCompra(), ordenCompra.getObservacion()));
+                                        ordenCompra.getCondicionCompra(), ordenCompra.getObservacion());
 
-                                if (idOrdenInserted == null) {
-                                    mostrarMensaje(request, "Error al guardar la orden de compra cabecera", "alert-danger");
-                                    LOGGER.log(Level.SEVERE, "Orden de compra no fue insertada correctamente");
-                                    request.getRequestDispatcher("ordenCompra.jsp").forward(request, response);
-                                    break;
-                                } else {
-                                    ordenCompra.setIdOrdenCompra(idOrdenInserted);
-                                }
-
-                                // Insertar detalles
-                                for (OrdenCompraDetalle detalle : listaOrdenCompraDetalle) {
-                                    detalle.setOrdenCompra(ordenCompra);
-                                    ordenCompraDetalleService.insertarDetalle(detalle);
-                                }
-
-                                // Actualizar estado del presupuesto a "Orden Generada"
-//                                if (presupuesto != null) {
-//                                    presupuesto.setEstado("Orden Generada");
-//                                    presupuestoService.actualizarPresupuestoCabecera(presupuesto);
-//                                }
+                                Long idOrdenInserted = ordenCompraService.guardarOrdenCompleta(
+                                        ordenToInsert, listaOrdenCompraDetalle);
 
                                 mostrarMensaje(request, "Orden de compra guardada correctamente", "alert-success");
-                                LOGGER.log(Level.INFO, "Orden de compra insertada correctamente con ID: " + idOrdenInserted);
+                                LOGGER.log(Level.INFO, "Orden de compra insertada correctamente con ID: {0}", idOrdenInserted);
 
                                 // Limpiar datos
                                 ordenCompra = null;
@@ -464,8 +445,8 @@ public class OrdenCompraServlet extends HttpServlet {
                                     listaOrdenCompraDetalle == null || listaOrdenCompraDetalle.isEmpty()) {
                                     mostrarMensaje(request, "Datos de la orden de compra incompletos", "alert-warning");
                                 } else {
-                                    ordenCompraService.actualizarOrdenCompra(ordenCompra);
-                                    ordenCompraDetalleService.actualizarDetalles(ordenCompra.getIdOrdenCompra(), listaOrdenCompraDetalle);
+                                    // Actualizar cabecera y detalles en una sola transacción
+                                    ordenCompraService.actualizarOrdenCompleta(ordenCompra, listaOrdenCompraDetalle);
                                     mostrarMensaje(request, "Orden de compra actualizada correctamente", "alert-success");
                                 }
                             } catch (Exception e) {

@@ -10,6 +10,8 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import modelo.PedidoCompra;
 import modelo.PedidoCompraDAO;
 import modelo.PedidoCompraDetalle;
@@ -21,6 +23,8 @@ import modelo.PresupuestoDetalleDAO;
  * @author Miguel
  */
 public class PedidoCompraService {
+
+    private static final Logger LOGGER = Logger.getLogger(PedidoCompraService.class.getName());
     
     public PedidoCompra getPedidoCompra(Long idPedidoCompra) throws SQLException {
         try ( Connection conn = Conexion.getConnection()) {
@@ -183,26 +187,73 @@ public class PedidoCompraService {
         return idPedCabInserted;
     }
     
-    public void insertarPedidoCabeceraYDetalle(PedidoCompra pedido, List<PedidoCompraDetalle> listapedidoDetalle) throws SQLException {
+    /**
+     * Guarda cabecera y detalles del pedido en una sola transacción.
+     *
+     * @param pedido el pedido a insertar
+     * @param listaDetalle los detalles del pedido
+     * @return ID del pedido insertado
+     * @throws SQLException si ocurre un error (ya se hizo rollback)
+     */
+    public Long guardarPedidoCompleto(PedidoCompra pedido, List<PedidoCompraDetalle> listaDetalle) throws SQLException {
+        Connection conn = null;
+        Long idInsertado = null;
+        try {
+            conn = Conexion.getConnection();
+            conn.setAutoCommit(false);
+
+            PedidoCompraDAO pedidoCompraDAO = new PedidoCompraDAO(conn);
+            idInsertado = pedidoCompraDAO.insertarPedido(pedido);
+
+            PedidoCompraDetalleDAO detalleDAO = new PedidoCompraDetalleDAO(conn);
+            for (PedidoCompraDetalle detalle : listaDetalle) {
+                detalle.setPedido(pedido);
+                detalleDAO.insertarDetalle(detalle);
+            }
+
+            conn.commit();
+            LOGGER.log(Level.INFO, "Pedido guardado completo. ID: {0}", idInsertado);
+        } catch (SQLException e) {
+            if (conn != null) {
+                conn.rollback();
+            }
+            LOGGER.log(Level.SEVERE, "Error en guardarPedidoCompleto - rollback ejecutado", e);
+            throw e;
+        } finally {
+            if (conn != null) {
+                conn.close();
+            }
+        }
+        return idInsertado;
+    }
+
+    /**
+     * Actualiza cabecera y detalles del pedido en una sola transacción.
+     *
+     * @param pedido el pedido a actualizar
+     * @param listaDetalle los detalles actualizados
+     * @throws SQLException si ocurre un error (ya se hizo rollback)
+     */
+    public void actualizarPedidoCompleto(PedidoCompra pedido, List<PedidoCompraDetalle> listaDetalle) throws SQLException {
         Connection conn = null;
         try {
             conn = Conexion.getConnection();
             conn.setAutoCommit(false);
+
             PedidoCompraDAO pedidoCompraDAO = new PedidoCompraDAO(conn);
-            pedidoCompraDAO.insertarPedido(pedido);
-            
-            //insert pedidoDetalle
-            PedidoCompraDetalleDAO pedidoCompraDetalleDAO = new PedidoCompraDetalleDAO(conn);
-            for (PedidoCompraDetalle pedidoCompraDetalle : listapedidoDetalle) {
-                if (pedidoCompraDetalle.getPedido() == null || pedidoCompraDetalle.getPedido().getIdPedido() == null) {
-                    pedidoCompraDetalle.setPedido(pedido);
-                }
-                pedidoCompraDetalleDAO.insertarDetalle(pedidoCompraDetalle);
-            }
+            pedidoCompraDAO.actualizarPedidoCabecera(pedido);
+
+            PedidoCompraDetalleDAO detalleDAO = new PedidoCompraDetalleDAO(conn);
+            detalleDAO.actualizarPedidoDetalles(pedido.getIdPedido(), listaDetalle);
+
             conn.commit();
+            LOGGER.log(Level.INFO, "Pedido actualizado completo. ID: {0}", pedido.getIdPedido());
         } catch (SQLException e) {
-            conn.rollback();
-            System.out.println("Error en PedidoCompraService: " + e);
+            if (conn != null) {
+                conn.rollback();
+            }
+            LOGGER.log(Level.SEVERE, "Error en actualizarPedidoCompleto - rollback ejecutado", e);
+            throw e;
         } finally {
             if (conn != null) {
                 conn.close();

@@ -419,27 +419,8 @@ public class PresupuestoServlet extends HttpServlet {
                                 presupuestoToInsert.setObservacion(presupuesto.getObservacion());
                                 presupuestoToInsert.setCondicionCompra(condicionCompra);
 
-                                Long idPresuInserted = presupuestoService.insertarPresupuesto(presupuestoToInsert);
-
-                                if (idPresuInserted == null) {
-                                    request.setAttribute("Message", "Error al guardar el presupuesto de compra cabecera");
-                                    request.setAttribute("tipoAlert", "alert-danger");
-                                    LOGGER.log(Level.SEVERE, "Presupuesto de compra no fue insertado correctamente");
-                                    request.getRequestDispatcher("presupuesto.jsp").forward(request, response);
-                                    break;
-                                } else {
-                                    presupuesto.setIdPresupuesto(idPresuInserted);
-                                }
-
-                                for (PresupuestoDetalle presupuestoDetalle : listaPresupuestoDetalle) {
-                                    if (presupuestoDetalle.getPresupuesto() == null) {
-                                        mostrarMensaje(request, "Error al guardar presupuesto", "alert-danger");
-                                        System.out.println("Error: no se encontro presupuesto asociado al presupuesto detalle");
-                                        request.getRequestDispatcher("presupuesto.jsp").forward(request, response);
-                                        break;
-                                    }
-                                    presupuestoDetalleService.insertarDetalle(presupuestoDetalle);
-                                }
+                                // Guardar cabecera y detalles en una sola transacción
+                                presupuestoService.guardarPresupuestoCompleto(presupuestoToInsert, listaPresupuestoDetalle);
 
                                 mostrarMensaje(request, "Presupuesto guardado correctamente", "alert-success");
                                 LOGGER.log(Level.INFO, "Presupuesto de compra insertado correctamente");
@@ -452,8 +433,8 @@ public class PresupuestoServlet extends HttpServlet {
                                 if (presupuesto == null || presupuesto.getProveedor() == null || listaPresupuestoDetalle == null || listaPresupuestoDetalle.isEmpty()) {
                                     mostrarMensaje(request, "Datos del presupuesto incompletos", "alert-warning");
                                 } else {
-                                    presupuestoService.actualizarPresupuestoCabecera(presupuesto);
-                                    presupuestoDetalleService.actualizarPresupuestoDetalles(presupuesto.getIdPresupuesto(), listaPresupuestoDetalle);
+                                    // Actualizar cabecera y detalles en una sola transacción
+                                    presupuestoService.actualizarPresupuestoCompleto(presupuesto, listaPresupuestoDetalle);
 
                                     mostrarMensaje(request, "Presupuesto actualizado correctamente", "alert-success");
                                 }

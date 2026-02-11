@@ -363,25 +363,14 @@ public class PedidoCompraServlet extends HttpServlet {
                                     request.setAttribute("listPedCompDetalle", listaPedidoCompraDetalle); //cargar lista de pedidodetalle del pedido seleccionado
                                     mostrarMensaje(request, "Datos del pedido incompletos", "alert-warning");
                                 } else {
-                                    Long idPedCabInserted = pedidoCompraService.insertarPedido(new PedidoCompra(null, usuario, sucursal, new Date(), "Pendiente"));
-                                    if (idPedCabInserted == null) {
-                                        request.setAttribute("Message", "Error al guardar el pedido de compra cabecera");
-                                        request.setAttribute("tipoAlert", "alert-danger");
-                                        break;
-                                    }else{
-                                        pedidoCompra.setIdPedido(idPedCabInserted);
-                                    }
-                                    for (PedidoCompraDetalle pedidoCompraDetalle1 : listaPedidoCompraDetalle) {
-                                        pedidoCompraDetalleService.insertarDetalle(pedidoCompraDetalle1);
-                                    }
-                                    
-                                    //insertar pedidoCompra y pedidoCompraDetalle en una misma transaccion
-//                                    pedidoCompraService.insertarPedidoCabeceraYDetalle(new PedidoCompra
-//                                        (null, usuario, sucursal, new Date(), "Pendiente de compra"), listaPedidoCompraDetalle);
-                                    
+                                    // Guardar cabecera y detalles en una sola transacción
+                                    pedidoCompraService.guardarPedidoCompleto(
+                                        new PedidoCompra(null, usuario, sucursal, new Date(), "Pendiente"),
+                                        listaPedidoCompraDetalle);
+
                                     pedidoCompra = null;
                                     listaPedidoCompraDetalle = null;
-                                    
+
                                     mostrarMensaje(request, "Pedido de compra guardado correctamente", "alert-success");
                                 }
                             } catch (Exception e) {
@@ -394,8 +383,8 @@ public class PedidoCompraServlet extends HttpServlet {
                                 if (pedidoCompra == null || listaPedidoCompraDetalle == null || listaPedidoCompraDetalle.isEmpty()) {
                                     mostrarMensaje(request, "Datos del pedido incompletos", "alert-warning");
                                 } else {
-                                    pedidoCompraService.actualizarPedidoCabecera(pedidoCompra);
-                                    pedidoCompraDetalleService.actualizarPedidoDetalles(pedidoCompra.getIdPedido(), listaPedidoCompraDetalle);
+                                    // Actualizar cabecera y detalles en una sola transacción
+                                    pedidoCompraService.actualizarPedidoCompleto(pedidoCompra, listaPedidoCompraDetalle);
 
                                     mostrarMensaje(request, "Pedido actualizado correctamente", "alert-success");
                                 }

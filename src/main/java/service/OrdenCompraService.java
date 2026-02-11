@@ -8,14 +8,20 @@ import conexion.Conexion;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import modelo.OrdenCompra;
 import modelo.OrdenCompraDAO;
+import modelo.OrdenCompraDetalle;
+import modelo.OrdenCompraDetalleDAO;
 
 /**
  *
  * @author Miguel
  */
 public class OrdenCompraService {
+
+    private static final Logger LOGGER = Logger.getLogger(OrdenCompraService.class.getName());
 
     public OrdenCompra getOrdenCompra(Long idOrdenCompra) throws SQLException {
         try (Connection conn = Conexion.getConnection()) {
@@ -112,6 +118,82 @@ public class OrdenCompraService {
                 conn.rollback();
             }
             System.out.println("Error en OrdenCompraService: " + e);
+        } finally {
+            if (conn != null) {
+                conn.close();
+            }
+        }
+    }
+
+    // ==================== MÉTODOS TRANSACCIONALES ====================
+
+    /**
+     * Guarda cabecera y detalles de la orden en una sola transacción.
+     *
+     * @param ordenCompra la orden a insertar
+     * @param listaDetalle los detalles de la orden
+     * @return ID de la orden insertada
+     * @throws SQLException si ocurre un error (ya se hizo rollback)
+     */
+    public Long guardarOrdenCompleta(OrdenCompra ordenCompra, List<OrdenCompraDetalle> listaDetalle) throws SQLException {
+        Connection conn = null;
+        Long idInsertado = null;
+        try {
+            conn = Conexion.getConnection();
+            conn.setAutoCommit(false);
+
+            OrdenCompraDAO ordenCompraDAO = new OrdenCompraDAO(conn);
+            idInsertado = ordenCompraDAO.insertarOrdenCompra(ordenCompra);
+
+            OrdenCompraDetalleDAO detalleDAO = new OrdenCompraDetalleDAO(conn);
+            for (OrdenCompraDetalle detalle : listaDetalle) {
+                detalle.setOrdenCompra(ordenCompra);
+                detalleDAO.insertarDetalle(detalle);
+            }
+
+            conn.commit();
+            LOGGER.log(Level.INFO, "Orden de compra guardada completa. ID: {0}", idInsertado);
+        } catch (SQLException e) {
+            if (conn != null) {
+                conn.rollback();
+            }
+            LOGGER.log(Level.SEVERE, "Error en guardarOrdenCompleta - rollback ejecutado", e);
+            throw e;
+        } finally {
+            if (conn != null) {
+                conn.close();
+            }
+        }
+        return idInsertado;
+    }
+
+    /**
+     * Actualiza cabecera y detalles de la orden en una sola transacción.
+     *
+     * @param ordenCompra la orden a actualizar
+     * @param listaDetalle los detalles actualizados
+     * @throws SQLException si ocurre un error (ya se hizo rollback)
+     */
+    public void actualizarOrdenCompleta(OrdenCompra ordenCompra, List<OrdenCompraDetalle> listaDetalle) throws SQLException {
+        Connection conn = null;
+        try {
+            conn = Conexion.getConnection();
+            conn.setAutoCommit(false);
+
+            OrdenCompraDAO ordenCompraDAO = new OrdenCompraDAO(conn);
+            ordenCompraDAO.actualizarOrdenCompra(ordenCompra);
+
+            OrdenCompraDetalleDAO detalleDAO = new OrdenCompraDetalleDAO(conn);
+            detalleDAO.actualizarOrdenCompraDetalles(ordenCompra.getIdOrdenCompra(), listaDetalle);
+
+            conn.commit();
+            LOGGER.log(Level.INFO, "Orden de compra actualizada completa. ID: {0}", ordenCompra.getIdOrdenCompra());
+        } catch (SQLException e) {
+            if (conn != null) {
+                conn.rollback();
+            }
+            LOGGER.log(Level.SEVERE, "Error en actualizarOrdenCompleta - rollback ejecutado", e);
+            throw e;
         } finally {
             if (conn != null) {
                 conn.close();

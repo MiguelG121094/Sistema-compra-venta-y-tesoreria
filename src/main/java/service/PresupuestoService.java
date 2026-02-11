@@ -8,14 +8,20 @@ import conexion.Conexion;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import modelo.Presupuesto;
 import modelo.PresupuestoDAO;
+import modelo.PresupuestoDetalle;
+import modelo.PresupuestoDetalleDAO;
 
 /**
  *
  * @author Miguel
  */
 public class PresupuestoService {
+
+    private static final Logger LOGGER = Logger.getLogger(PresupuestoService.class.getName());
     
     public Presupuesto getPresupuesto(Long idPresupuesto) throws SQLException{
         try ( Connection conn = Conexion.getConnection()) {
@@ -110,6 +116,82 @@ public class PresupuestoService {
         } catch (SQLException e) {
             conn.rollback();
             System.out.println("Error en PresupuestoService: " + e);
+        } finally {
+            if (conn != null) {
+                conn.close();
+            }
+        }
+    }
+
+    // ==================== MÉTODOS TRANSACCIONALES ====================
+
+    /**
+     * Guarda cabecera y detalles del presupuesto en una sola transacción.
+     *
+     * @param presupuesto el presupuesto a insertar
+     * @param listaDetalle los detalles del presupuesto
+     * @return ID del presupuesto insertado
+     * @throws SQLException si ocurre un error (ya se hizo rollback)
+     */
+    public Long guardarPresupuestoCompleto(Presupuesto presupuesto, List<PresupuestoDetalle> listaDetalle) throws SQLException {
+        Connection conn = null;
+        Long idInsertado = null;
+        try {
+            conn = Conexion.getConnection();
+            conn.setAutoCommit(false);
+
+            PresupuestoDAO presupuestoDAO = new PresupuestoDAO(conn);
+            idInsertado = presupuestoDAO.insertarPresupuesto(presupuesto);
+
+            PresupuestoDetalleDAO detalleDAO = new PresupuestoDetalleDAO(conn);
+            for (PresupuestoDetalle detalle : listaDetalle) {
+                detalle.setPresupuesto(presupuesto);
+                detalleDAO.insertarDetalle(detalle);
+            }
+
+            conn.commit();
+            LOGGER.log(Level.INFO, "Presupuesto guardado completo. ID: {0}", idInsertado);
+        } catch (SQLException e) {
+            if (conn != null) {
+                conn.rollback();
+            }
+            LOGGER.log(Level.SEVERE, "Error en guardarPresupuestoCompleto - rollback ejecutado", e);
+            throw e;
+        } finally {
+            if (conn != null) {
+                conn.close();
+            }
+        }
+        return idInsertado;
+    }
+
+    /**
+     * Actualiza cabecera y detalles del presupuesto en una sola transacción.
+     *
+     * @param presupuesto el presupuesto a actualizar
+     * @param listaDetalle los detalles actualizados
+     * @throws SQLException si ocurre un error (ya se hizo rollback)
+     */
+    public void actualizarPresupuestoCompleto(Presupuesto presupuesto, List<PresupuestoDetalle> listaDetalle) throws SQLException {
+        Connection conn = null;
+        try {
+            conn = Conexion.getConnection();
+            conn.setAutoCommit(false);
+
+            PresupuestoDAO presupuestoDAO = new PresupuestoDAO(conn);
+            presupuestoDAO.actualizarPresupuestoCabecera(presupuesto);
+
+            PresupuestoDetalleDAO detalleDAO = new PresupuestoDetalleDAO(conn);
+            detalleDAO.actualizarPresupuestoDetalles(presupuesto.getIdPresupuesto(), listaDetalle);
+
+            conn.commit();
+            LOGGER.log(Level.INFO, "Presupuesto actualizado completo. ID: {0}", presupuesto.getIdPresupuesto());
+        } catch (SQLException e) {
+            if (conn != null) {
+                conn.rollback();
+            }
+            LOGGER.log(Level.SEVERE, "Error en actualizarPresupuestoCompleto - rollback ejecutado", e);
+            throw e;
         } finally {
             if (conn != null) {
                 conn.close();
