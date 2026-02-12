@@ -392,23 +392,29 @@ public class PresupuestoServlet extends HttpServlet {
                                     break;
                                 }
 
+                                boolean detalleIncompleto = false;
                                 for (PresupuestoDetalle presupuestoDetalle1 : listaPresupuestoDetalle) {
                                     if (presupuestoDetalle1.getCantidad() == null || presupuestoDetalle1.getPrecioCompra() == null) {
-                                        mostrarMensaje(request, "Detalle del presupuesto incompleto", "alert-warning");
-
-                                        // mantener datos en la vista
-                                        request.setAttribute("listPedCompraConDetalle", listaPedidoCompraConDetalle);
-                                        request.setAttribute("listaPresupuestosConDetalle", presupuestosConDetalle);
-                                        request.setAttribute("listaProveedores", proveedores);
-                                        request.setAttribute("proveedorSeleccionado", proveedor);
-                                        request.setAttribute("presupuesto", presupuesto);
-                                        request.setAttribute("newIdPresupuesto", newIdPresupuesto);
-                                        request.setAttribute("listaPresupuestoDetalle", listaPresupuestoDetalle);
-                                        request.setAttribute("listPedCompDetalle", listaPedidoCompraDetalle);
-                                        request.getRequestDispatcher("presupuesto.jsp").forward(request, response);
+                                        detalleIncompleto = true;
                                         break;
                                     }
                                 }
+                                if (detalleIncompleto) {
+                                    mostrarMensaje(request, "Detalle del presupuesto incompleto", "alert-warning");
+
+                                    // mantener datos en la vista
+                                    request.setAttribute("listPedCompraConDetalle", listaPedidoCompraConDetalle);
+                                    request.setAttribute("listaPresupuestosConDetalle", presupuestosConDetalle);
+                                    request.setAttribute("listaProveedores", proveedores);
+                                    request.setAttribute("proveedorSeleccionado", proveedor);
+                                    request.setAttribute("presupuesto", presupuesto);
+                                    request.setAttribute("newIdPresupuesto", newIdPresupuesto);
+                                    request.setAttribute("listaPresupuestoDetalle", listaPresupuestoDetalle);
+                                    request.setAttribute("listPedCompDetalle", listaPedidoCompraDetalle);
+                                    request.getRequestDispatcher("presupuesto.jsp").forward(request, response);
+                                    break;
+                                }
+
                                 // Obtener condición de compra del formulario
                                 String condicionCompra = request.getParameter("condicionCompra");
 

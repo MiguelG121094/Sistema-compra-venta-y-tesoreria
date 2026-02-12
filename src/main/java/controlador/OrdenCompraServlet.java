@@ -397,21 +397,26 @@ public class OrdenCompraServlet extends HttpServlet {
                                 }
 
                                 // Validar detalles
+                                boolean detalleIncompleto = false;
                                 for (OrdenCompraDetalle detalle : listaOrdenCompraDetalle) {
                                     if (detalle.getCantidad() == null || detalle.getPrecioCompra() == null) {
-                                        mostrarMensaje(request, "Detalle de la orden incompleto. Verifique cantidad y precio.", "alert-warning");
-                                        request.setAttribute("listaPresupuestosConDetalle", presupuestosConDetalle);
-                                        request.setAttribute("listaOrdenesCompraConDetalle", ordenesCompraConDetalle);
-                                        request.setAttribute("listaSucursales", listaSucursales);
-                                        request.setAttribute("ordenCompra", ordenCompra);
-                                        request.setAttribute("newIdOrdenCompra", newIdOrdenCompra);
-                                        request.setAttribute("proveedorSeleccionado", proveedor);
-                                        request.setAttribute("sucursalSeleccionada", sucursal);
-                                        request.setAttribute("listaOrdenCompraDetalle", listaOrdenCompraDetalle);
-                                        request.setAttribute("presupuesto", presupuesto);
-                                        request.getRequestDispatcher("ordenCompra.jsp").forward(request, response);
+                                        detalleIncompleto = true;
                                         break;
                                     }
+                                }
+                                if (detalleIncompleto) {
+                                    mostrarMensaje(request, "Detalle de la orden incompleto. Verifique cantidad y precio.", "alert-warning");
+                                    request.setAttribute("listaPresupuestosConDetalle", presupuestosConDetalle);
+                                    request.setAttribute("listaOrdenesCompraConDetalle", ordenesCompraConDetalle);
+                                    request.setAttribute("listaSucursales", listaSucursales);
+                                    request.setAttribute("ordenCompra", ordenCompra);
+                                    request.setAttribute("newIdOrdenCompra", newIdOrdenCompra);
+                                    request.setAttribute("proveedorSeleccionado", proveedor);
+                                    request.setAttribute("sucursalSeleccionada", sucursal);
+                                    request.setAttribute("listaOrdenCompraDetalle", listaOrdenCompraDetalle);
+                                    request.setAttribute("presupuesto", presupuesto);
+                                    request.getRequestDispatcher("ordenCompra.jsp").forward(request, response);
+                                    break;
                                 }
 
                                 // Guardar cabecera y detalles en una sola transacción
