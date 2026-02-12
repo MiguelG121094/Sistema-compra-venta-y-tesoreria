@@ -245,6 +245,7 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                                 <div class="form-floating mb-3 mb-md-0">
                                                     <input class="form-control" id="timbrado" name="timbrado" type="number" placeholder="Timbrado"
                                                            value="${facturaCompra.timbrado}" min="0" max="99999999"
+                                                           oninput="if(this.value.length>8)this.value=this.value.slice(0,8)"
                                                            <c:if test="${empty token}">disabled</c:if> />
                                                     <label for="timbrado">Timbrado</label>
                                                 </div>
