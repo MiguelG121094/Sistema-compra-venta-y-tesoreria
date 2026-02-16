@@ -818,7 +818,7 @@ public class FacturaCompraServlet extends HttpServlet {
             return;
         }
 
-        // Copiar entidades seleccionadas al objeto factura
+        // Cargar entidades seleccionadas al objeto factura
         estado.facturaCompra.setProveedor(estado.proveedorSeleccionado);
         estado.facturaCompra.setSucursal(estado.sucursalSeleccionada);
         if (estado.ordenCompraSeleccionada != null) {

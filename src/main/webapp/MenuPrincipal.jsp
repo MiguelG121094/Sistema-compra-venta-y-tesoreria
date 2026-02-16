@@ -56,7 +56,7 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                             <li class="breadcrumb-item active">Dashboard</li>
                         </ol>
                         <div class="row">
-                            <div class="col-xl-3 col-md-6">
+<!--                            <div class="col-xl-3 col-md-6">
                                 <div class="card bg-primary text-white mb-4">
                                     <div class="card-body"><h1 style="margin-left: 10px;margin-top: 5px">
                                     <strong>Compra <span style="float: right;font-size: 64px;opacity: 0.8" >
@@ -64,6 +64,30 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                     <div class="card-footer d-flex align-items-center justify-content-between">
                                         <a class="small text-white stretched-link" href="#">View Details</a>
                                         <div class="small text-white"><i class="fas fa-angle-right"></i></div>
+                                    </div>
+                                </div>
+                            </div>-->
+                            <div class="col-xl-3 col-md-6">
+                                <div class="card bg-primary text-white mb-4" style="position: relative;">
+                                    <div class="card-body"><h1 style="margin-left: 10px;margin-top: 5px">
+                                    <strong>Compras <span style="float: right;font-size: 64px;opacity: 0.8" >
+                                            <i class="fa-solid fa-cart-shopping"></i></span></strong></h1></div>
+                                    <div class="card-footer d-flex align-items-center justify-content-between"
+                                         data-bs-toggle="collapse" data-bs-target="#CompraPagesCollapse"
+                                         style="cursor: pointer;">
+                                        <a class="small text-white stretched-link" href="#">Ver detalle </a>
+                                        <div class="small text-white"><i class="fas fa-angle-right"></i></div>
+                                    </div>
+                                    <div class="collapse" id="CompraPagesCollapse"
+                                         style="position: absolute; top: 100%; left: 0; right: 0; z-index: 
+                                         1000; background-color: #0d6efd; border-radius: 0 0 0.375rem 0.375rem;">
+                                        <nav class="sb-sidenav-menu-nested nav flex-column p-2">
+                                            <a class="nav-link text-white py-1" href="PedidoCompraServlet?menu=PedidoCompra&accion=ListarModal">Pedido de compra</a>
+                                            <a class="nav-link text-white py-1" href="PresupuestoServlet?menu=Presupuesto&accion=ListarModal">Presupuesto del proveedor</a>
+                                            <a class="nav-link text-white py-1" href="OrdenCompraServlet?menu=OrdenCompra&accion=ListarModal">Orden de compra</a>
+                                            <a class="nav-link text-white py-1" href="FacturaCompraServlet?menu=FacturaCompra&accion=ListarModal">Factura compra</a>
+                                            <!--<a class="nav-link text-white py-1" href="password.html">Forgot Password</a>-->
+                                        </nav>
                                     </div>
                                 </div>
                             </div>

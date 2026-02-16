@@ -361,9 +361,7 @@ usuario inicio sesion, se debe agregar esta validacion en cada una de las vistas
                                         <label class="me-2">Sucursal:</label>
                                         <form action="OrdenCompraServlet?menu=OrdenCompra&accion=CargarSucursal" method="POST">
                                             <select name="idSucursal" class="form-select" onchange="this.form.submit()"
-                                                <c:if test="${newIdOrdenCompra == null && ordenCompra.getIdOrdenCompra() == null 
-                                                              || not puedeInsertar || not empty esReadOnly}">
-                                                    disabled</c:if>>
+                                                    disabled="true">
                                                 <option value="">Seleccionar sucursal</option>
                                                 <c:forEach var="suc" items="${listaSucursales}">
                                                     <option value="${suc.getIdSucursal()}" ${suc.getIdSucursal() == sucursalSeleccionada.getIdSucursal() ? 'selected' : ''}>
