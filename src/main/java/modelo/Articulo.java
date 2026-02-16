@@ -8,7 +8,9 @@ package modelo;
  *
  * @author Miguel
  */
-public class Articulo {
+public class Articulo implements java.io.Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private Long idArticulo;
     private TipoArticulo tipoArticulo;

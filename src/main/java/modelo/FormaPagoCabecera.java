@@ -8,7 +8,9 @@ package modelo;
  *
  * @author Miguel
  */
-public class FormaPagoCabecera {
+public class FormaPagoCabecera implements java.io.Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private Long idFormaPagoCabecera;
     private String descripcion;

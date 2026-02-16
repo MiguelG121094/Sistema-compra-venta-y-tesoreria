@@ -10,7 +10,9 @@ import java.util.Date;
  *
  * @author Miguel
  */
-public class AjusteStockCabecera {
+public class AjusteStockCabecera implements java.io.Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private Long idAjusteStockCabecera;
     private Date fecha;

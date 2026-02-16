@@ -10,7 +10,9 @@ import java.util.Date;
  *
  * @author Miguel
  */
-public class RecaudacionDepositar {
+public class RecaudacionDepositar implements java.io.Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private Long idRecaudacionDepositar;
     private Date fecha;

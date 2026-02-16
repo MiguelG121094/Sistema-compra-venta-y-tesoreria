@@ -8,7 +8,9 @@ package modelo;
  *
  * @author Miguel
  */
-public class CobroDetalle {
+public class CobroDetalle implements java.io.Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private Cobro cobro;
     private CuentaCobrar cuentaCobrar;

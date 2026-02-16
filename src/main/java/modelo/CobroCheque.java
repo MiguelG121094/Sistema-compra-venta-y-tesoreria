@@ -8,7 +8,9 @@ package modelo;
  *
  * @author Miguel
  */
-public class CobroCheque {
+public class CobroCheque implements java.io.Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private Long idCobroCheque;
     private Cobro cobro;

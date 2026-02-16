@@ -10,7 +10,9 @@ import java.sql.Timestamp;
  *
  * @author Miguel
  */
-public class AperturaCierreCaja {
+public class AperturaCierreCaja implements java.io.Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private Long idAperturaCierreCaja;
     private Timestamp fechaApertura;

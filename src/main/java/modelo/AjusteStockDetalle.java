@@ -8,7 +8,9 @@ package modelo;
  *
  * @author Miguel
  */
-public class AjusteStockDetalle {
+public class AjusteStockDetalle implements java.io.Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private AjusteStockCabecera ajusteStockCabecera;
     private Articulo articulo;

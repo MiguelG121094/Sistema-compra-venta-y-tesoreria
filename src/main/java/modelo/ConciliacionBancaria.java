@@ -10,7 +10,9 @@ import java.util.Date;
  *
  * @author Miguel
  */
-public class ConciliacionBancaria {
+public class ConciliacionBancaria implements java.io.Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private Long idConciliacionBancaria;
     private Cuenta cuenta;

@@ -10,7 +10,9 @@ import java.util.Date;
  *
  * @author Miguel
  */
-public class NotaDebitoVenta {
+public class NotaDebitoVenta implements java.io.Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private Long idNotaDebitoVenta;
     private Integer numero;

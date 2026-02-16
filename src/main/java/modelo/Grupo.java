@@ -10,7 +10,9 @@ import java.sql.Date;
  *
  * @author Miguel
  */
-public class Grupo {
+public class Grupo implements java.io.Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private Long idGrupo;
     private String descripcion;

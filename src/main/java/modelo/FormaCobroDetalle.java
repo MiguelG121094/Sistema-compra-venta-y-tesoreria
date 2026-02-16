@@ -8,7 +8,9 @@ package modelo;
  *
  * @author Miguel
  */
-public class FormaCobroDetalle {
+public class FormaCobroDetalle implements java.io.Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private FormaCobro formaCobro;
     private Cobro cobro;

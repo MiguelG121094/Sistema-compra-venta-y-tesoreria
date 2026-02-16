@@ -11,7 +11,9 @@ import java.util.List;
  *
  * @author Miguel
  */
-public class PedidoCompra {
+public class PedidoCompra implements java.io.Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private Long idPedido;
     private Usuario usuario;

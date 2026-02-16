@@ -11,7 +11,9 @@ import java.util.List;
  *
  * @author Miguel
  */
-public class NotaDebitoCompra {
+public class NotaDebitoCompra implements java.io.Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private Long idNotaDebitoCompra;
     private Integer numero;

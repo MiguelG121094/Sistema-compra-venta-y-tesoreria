@@ -8,7 +8,9 @@ package modelo;
  *
  * @author Miguel
  */
-public class ConciliacionBancariaDetalle {
+public class ConciliacionBancariaDetalle implements java.io.Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private ConciliacionBancaria conciliacionBancaria;
     private Long numeroItem;

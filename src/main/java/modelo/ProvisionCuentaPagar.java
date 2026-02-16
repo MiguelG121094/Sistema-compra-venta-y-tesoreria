@@ -10,7 +10,9 @@ import java.util.Date;
  *
  * @author Miguel
  */
-public class ProvisionCuentaPagar {
+public class ProvisionCuentaPagar implements java.io.Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private Long idProvisionCuentaPagar;
     private String estado;

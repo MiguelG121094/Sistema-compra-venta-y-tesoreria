@@ -8,7 +8,9 @@ package modelo;
  *
  * @author Miguel
  */
-public class TipoEntidad {
+public class TipoEntidad implements java.io.Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private Long idTipoEntidad;
     private String descripcion;

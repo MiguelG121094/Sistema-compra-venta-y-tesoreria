@@ -10,7 +10,9 @@ import java.util.Date;
  *
  * @author Miguel
  */
-public class ArqueoCaja {
+public class ArqueoCaja implements java.io.Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private Long idArqueoCaja;
     private Date fechaHora;

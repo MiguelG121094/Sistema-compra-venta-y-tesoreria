@@ -10,7 +10,9 @@ import java.sql.Date;
  *
  * @author Miguel
  */
-public class Persona {
+public class Persona implements java.io.Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private Long idPersona;
     private String nombre;

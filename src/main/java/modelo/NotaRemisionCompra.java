@@ -10,7 +10,9 @@ import java.util.Date;
  *
  * @author Miguel
  */
-public class NotaRemisionCompra {
+public class NotaRemisionCompra implements java.io.Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private Long idNotaRemisionCompra;
     private Long numero;

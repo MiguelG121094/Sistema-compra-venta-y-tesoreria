@@ -10,7 +10,9 @@ import java.util.Date;
  *
  * @author Miguel
  */
-public class ChequeRecibido {
+public class ChequeRecibido implements java.io.Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private Long idChequeRecibido;
     private Long numero;

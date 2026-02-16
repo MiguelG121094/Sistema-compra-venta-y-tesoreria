@@ -10,7 +10,9 @@ import java.util.Date;
  *
  * @author Miguel
  */
-public class CuentaCobrar {
+public class CuentaCobrar implements java.io.Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private Long idCuentaCobrar;
     private FacturaVenta facturaVenta;

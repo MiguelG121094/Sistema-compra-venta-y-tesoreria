@@ -8,7 +8,9 @@ package modelo;
  *
  * @author Miguel
  */
-public class TipoCheque {
+public class TipoCheque implements java.io.Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private Long idTipoCheque;
     private String descripcion;

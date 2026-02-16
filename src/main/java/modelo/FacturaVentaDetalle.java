@@ -8,7 +8,9 @@ package modelo;
  *
  * @author Miguel
  */
-public class FacturaVentaDetalle {
+public class FacturaVentaDetalle implements java.io.Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private FacturaVenta facturaVenta;
     private Articulo articulo;

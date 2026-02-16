@@ -8,7 +8,9 @@ package modelo;
  *
  * @author Miguel
  */
-public class RecaudacionDepositarDetalle {
+public class RecaudacionDepositarDetalle implements java.io.Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private Long idRecaudacionDepositarDetalle;
     private RecaudacionDepositar recaudacionDepositar;

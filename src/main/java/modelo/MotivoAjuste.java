@@ -8,7 +8,9 @@ package modelo;
  *
  * @author Miguel
  */
-public class MotivoAjuste {
+public class MotivoAjuste implements java.io.Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private Long idMotivoAjuste;
     private String descripcion;

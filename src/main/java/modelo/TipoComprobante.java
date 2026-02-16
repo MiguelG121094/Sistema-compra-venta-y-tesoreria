@@ -8,7 +8,9 @@ package modelo;
  *
  * @author Miguel
  */
-public class TipoComprobante {
+public class TipoComprobante implements java.io.Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private Long idTipoComprobante;
     private String descripcion;

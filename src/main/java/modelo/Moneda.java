@@ -8,7 +8,9 @@ package modelo;
  *
  * @author Miguel
  */
-public class Moneda {
+public class Moneda implements java.io.Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private Long idMoneda;
     private String descripcion;

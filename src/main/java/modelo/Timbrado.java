@@ -10,7 +10,9 @@ import java.util.Date;
  *
  * @author Miguel
  */
-public class Timbrado {
+public class Timbrado implements java.io.Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private Long idTimbrado;
     private Integer numero;

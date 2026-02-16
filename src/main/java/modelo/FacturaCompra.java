@@ -11,7 +11,9 @@ import java.util.List;
  *
  * @author Miguel
  */
-public class FacturaCompra {
+public class FacturaCompra implements java.io.Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private Long idFacturaCompra;
     private String numero;

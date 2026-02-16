@@ -8,7 +8,9 @@ package modelo;
  *
  * @author Miguel
  */
-public class EntidadFinanciera {
+public class EntidadFinanciera implements java.io.Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private Long idEntidadFinanciera;
     private String nombre;

@@ -11,7 +11,9 @@ import java.util.List;
  *
  * @author Miguel
  */
-public class Presupuesto {
+public class Presupuesto implements java.io.Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private Long idPresupuesto;
     private PedidoCompra pedidoCompra;

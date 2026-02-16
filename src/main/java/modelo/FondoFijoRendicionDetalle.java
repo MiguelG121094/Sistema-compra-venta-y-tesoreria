@@ -8,7 +8,9 @@ package modelo;
  *
  * @author Miguel
  */
-public class FondoFijoRendicionDetalle {
+public class FondoFijoRendicionDetalle implements java.io.Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private Long idFondoFijoRendicionDetalle;
     private FondoFijoRendicion fondoFijoRendicion;

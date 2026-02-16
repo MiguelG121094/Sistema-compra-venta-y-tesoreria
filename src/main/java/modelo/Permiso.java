@@ -8,7 +8,9 @@ package modelo;
  *
  * @author Miguel
  */
-public class Permiso {
+public class Permiso implements java.io.Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private Grupo grupo;
     private Modulo modulo;

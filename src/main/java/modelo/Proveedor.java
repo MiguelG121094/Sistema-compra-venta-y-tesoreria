@@ -8,7 +8,9 @@ package modelo;
  *
  * @author Miguel
  */
-public class Proveedor {
+public class Proveedor implements java.io.Serializable {
+
+    private static final long serialVersionUID = 1L;
     
     private Long idProveedor;
     private String razonSocial;

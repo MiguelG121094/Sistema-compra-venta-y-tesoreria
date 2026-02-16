@@ -10,7 +10,9 @@ import java.util.Date;
  *
  * @author Miguel
  */
-public class LibroIvaVenta {
+public class LibroIvaVenta implements java.io.Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private Long idLibroIvaVenta;
     private FacturaVenta facturaVenta;

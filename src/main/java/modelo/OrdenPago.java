@@ -10,7 +10,9 @@ import java.util.Date;
  *
  * @author Miguel
  */
-public class OrdenPago {
+public class OrdenPago implements java.io.Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private Long idOrdenPago;
     private Integer numero;

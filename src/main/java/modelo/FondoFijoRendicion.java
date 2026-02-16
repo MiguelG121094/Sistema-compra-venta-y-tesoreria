@@ -10,7 +10,9 @@ import java.util.Date;
  *
  * @author Miguel
  */
-public class FondoFijoRendicion {
+public class FondoFijoRendicion implements java.io.Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private Long idFondoFijoRendicion;
     private FondoFijo fondoFijo;

@@ -10,7 +10,9 @@ import java.util.Date;
  *
  * @author Miguel
  */
-public class FormaPagoDetalle {
+public class FormaPagoDetalle implements java.io.Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private Long idFormaPagoDetalle;
     private FormaPagoCabecera formaPagoCabecera;

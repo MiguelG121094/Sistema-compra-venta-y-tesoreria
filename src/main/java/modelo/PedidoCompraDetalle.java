@@ -8,7 +8,9 @@ package modelo;
  *
  * @author Miguel
  */
-public class PedidoCompraDetalle {
+public class PedidoCompraDetalle implements java.io.Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private PedidoCompra pedido;
     private Articulo articulo;

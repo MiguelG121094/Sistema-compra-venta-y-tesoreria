@@ -8,7 +8,9 @@ package modelo;
  *
  * @author Miguel
  */
-public class TipoCuenta {
+public class TipoCuenta implements java.io.Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private Long idTipoCuenta;
     private String descripcion;
