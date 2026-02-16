@@ -238,7 +238,6 @@ public class FacturaCompraDAO {
                 if (generatedKeys.next()) {
                     Long idGenerado = generatedKeys.getLong(1);
                     facturaCompra.setIdFacturaCompra(idGenerado);
-                    LOGGER.log(Level.INFO, "Factura de compra insertada correctamente con ID: {0}", idGenerado);
                     return idGenerado;
                 } else {
                     throw new SQLException("Error: No se generó ningún ID para la factura de compra.");
