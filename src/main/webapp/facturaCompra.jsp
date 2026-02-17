@@ -449,13 +449,7 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                                                         </div>
                                                                         <div class="modal-footer">
                                                                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">No</button>
-                                                                            <form action="FacturaCompraServlet" method="POST">
-                                                                                <input type="hidden" name="menu" value="FacturaCompra">
-                                                                                <input type="hidden" name="accion" value="EliminarArticulo">
-                                                                                <input type="hidden" name="token" value="${token}">
-                                                                                <input type="hidden" name="index" value="${status.index}">
-                                                                                <button type="submit" class="btn btn-danger">Sí, Eliminar</button>
-                                                                            </form>
+                                                                            <button type="button" class="btn btn-danger" onclick="eliminarArticulo(${status.index});">Sí, Eliminar</button>
                                                                         </div>
                                                                     </div>
                                                                 </div>
@@ -766,6 +760,12 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
             function actualizarArticulo() {
                 limpiarMascaras(document.getElementById('formPrincipal'));
                 document.getElementById('accionPrincipal').value = 'ActualizarArticulo';
+                document.getElementById('formPrincipal').submit();
+            }
+
+            function eliminarArticulo(index) {
+                document.getElementById('indexArticulo').value = index;
+                document.getElementById('accionPrincipal').value = 'EliminarArticulo';
                 document.getElementById('formPrincipal').submit();
             }
 
