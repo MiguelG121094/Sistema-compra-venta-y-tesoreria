@@ -1,4 +1,4 @@
-<%-- 
+<%--
     Document   : notaRemision
     Created on : 17/02/2026, 11:28:11 PM
     Author     : Miguel
@@ -16,6 +16,7 @@
 
 <!DOCTYPE html>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt"%>
 <%@ page contentType="text/html;charset=UTF-8" language="java"  pageEncoding="UTF-8" %>
 <html>
     <jsp:include page="header.jsp" />
@@ -53,11 +54,6 @@
                 margin: 16px 0;
                 padding-top: 16px;
             }
-            .btn-responsive {
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-            }
         </style>
     </head>
     <body class="sb-nav-fixed">
@@ -67,46 +63,60 @@
             <div id="layoutSidenav_content">
                 <main>
                     <div class="container-fluid px-4">
-                        <!-- Título -->
+                        <!-- Título y botones -->
                         <div class="row mb-4">
                             <div style="text-align: center; background-color: #dadada; border-radius: 10px; border: 2px solid black; margin-top: 20px;">
                                 <span style="height: 100%; width: 100%;">
                                     <h1 style="text-align: center">
-                                        <strong>NOTA DE REMISIÓN</strong>
-                                    </h1>
-                                </span>
+                                        <strong>NOTA DE REMISIÓN</strong></h1></span>
                             </div>
+
+                            <!--linea debajo del titulo-->
                             <div style="border-bottom: 1px solid black; width: 100%; margin: 20px 0;"></div>
+
+                            <!-- Botones principales -->
+                            <div class="col-auto">
+                                <a href="#" class="btn btn-success">Nuevo</a>
+                                <button type="button" data-bs-toggle="modal" data-bs-target="#modalRemisiones"
+                                        class="btn btn-info text-white">Buscar Nota de Remisión</button>
+                                <button class="btn btn-danger" disabled>Anular</button>
+                            </div>
                         </div>
 
-                        <form method="post" action="notaRemision.jsp">
-                            <!-- Cabecera - Primera fila -->
-                            <div class="row mb-4">
-                                <div class="col custom-card">
-                                    <h3 class="section-title">Cabecera</h3>
+                        <!-- Formulario principal -->
+                        <form id="formPrincipal" method="post" action="notaRemision.jsp">
+
+                        <!-- Cabecera -->
+                        <div class="row mb-4">
+                            <div class="col custom-card">
+                                <h3>Cabecera</h3>
+                                <div class="card-body">
                                     <div class="card-body">
                                         <div class="row mb-3">
                                             <div class="col-md-2">
-                                                <div class="form-floating">
+                                                <div class="form-floating mb-3 mb-md-0">
+                                                    <input class="form-control" id="usuario" type="text" placeholder="Usuario"
+                                                           value="<%= usuario.getUsername() %>" readonly />
                                                     <label for="usuario">Usuario</label>
                                                 </div>
                                             </div>
                                             <div class="col-md-2">
-                                                <div class="form-floating">
-                                                    <input class="form-control" id="fecha" type="date" placeholder="Fecha" />
+                                                <div class="form-floating mb-3 mb-md-0">
+                                                    <input class="form-control" id="fecha" name="fecha" type="date" placeholder="Fecha" />
                                                     <label for="fecha">Fecha</label>
                                                 </div>
                                             </div>
                                             <div class="col-md-2">
-                                                <div class="form-floating">
-                                                    <input class="form-control" id="estado" type="text" placeholder="Estado" value="Pendiente" readonly />
+                                                <div class="form-floating mb-3 mb-md-0">
+                                                    <input class="form-control" id="estado" type="text" placeholder="Estado"
+                                                           value="Pendiente" readonly />
                                                     <label for="estado">Estado</label>
                                                 </div>
                                             </div>
                                             <div class="col-md-2">
-                                                <div class="form-floating">
+                                                <div class="form-floating mb-3 mb-md-0">
                                                     <select class="form-control" id="sucursal" name="sucursal">
-                                                        <option>Seleccionar Sucursal</option>
+                                                        <option value="">Seleccionar Sucursal</option>
                                                         <option>Asunción - Sajonia</option>
                                                         <option>Asunción - Mercado 4</option>
                                                         <option>Central - Lambaré</option>
@@ -115,25 +125,23 @@
                                                 </div>
                                             </div>
                                             <div class="col-md-2">
-                                                <div class="form-floating">
-                                                    <input class="form-control" id="emisor" type="text" placeholder="Emisor" />
+                                                <div class="form-floating mb-3 mb-md-0">
+                                                    <input class="form-control" id="emisor" name="emisor" type="text" placeholder="Emisor" />
                                                     <label for="emisor">Emisor</label>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            <!-- Segunda fila - Depósito destino y Receptor -->
-                            <div class="row mb-4">
-                                <div class="col custom-card">
+                                <!-- Depósito, Receptor, Comprobante -->
+                                <div class="card-body">
                                     <div class="card-body">
                                         <div class="row mb-3">
                                             <div class="col-md-2">
-                                                <div class="form-floating">
+                                                <div class="form-floating mb-3 mb-md-0">
                                                     <select class="form-control" id="depositoDestino" name="depositoDestino">
-                                                        <option>Seleccionar depósito</option>
+                                                        <option value="">Seleccionar depósito</option>
                                                         <option>Depósito Asunción 1</option>
                                                         <option>Depósito Asunción 2</option>
                                                         <option>Depósito Central</option>
@@ -143,76 +151,81 @@
                                                 </div>
                                             </div>
                                             <div class="col-md-2">
-                                                <div class="form-floating">
-                                                    <input class="form-control" id="receptor" type="text" placeholder="Receptor" />
+                                                <div class="form-floating mb-3 mb-md-0">
+                                                    <input class="form-control" id="receptor" name="receptor" type="text" placeholder="Receptor" />
                                                     <label for="receptor">Receptor</label>
                                                 </div>
                                             </div>
                                             <div class="col-md-2">
-                                                <div class="form-floating">
-                                                    <input class="form-control" id="comprobanteN" type="text" placeholder="000-000-0000000" />
+                                                <div class="form-floating mb-3 mb-md-0">
+                                                    <input class="form-control" id="comprobanteN" name="comprobanteN" type="text"
+                                                           placeholder="000-000-0000000" />
                                                     <label for="comprobanteN">Comprobante N°</label>
                                                 </div>
                                             </div>
                                             <div class="col-md-2">
-                                                <div class="form-floating">
-                                                    <input class="form-control" id="fechaEmision" type="date" placeholder="Fecha de emisión" />
+                                                <div class="form-floating mb-3 mb-md-0">
+                                                    <input class="form-control" id="fechaEmision" name="fechaEmision" type="date"
+                                                           placeholder="Fecha de emisión" />
                                                     <label for="fechaEmision">Fecha de emisión</label>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            <!-- Tercera fila - Timbrado y fechas -->
-                            <div class="row mb-4">
-                                <div class="col custom-card">
+                                <!-- Timbrado y Observaciones -->
+                                <div class="card-body">
                                     <div class="card-body">
                                         <div class="row mb-3">
                                             <div class="col-md-2">
-                                                <div class="form-floating">
-                                                    <input class="form-control" id="timbrado" type="text" placeholder="Timbrado" />
+                                                <div class="form-floating mb-3 mb-md-0">
+                                                    <input class="form-control" id="timbrado" name="timbrado" type="number"
+                                                           placeholder="Timbrado" min="0" max="99999999"
+                                                           oninput="if(this.value.length>8)this.value=this.value.slice(0,8)" />
                                                     <label for="timbrado">Timbrado</label>
                                                 </div>
                                             </div>
                                             <div class="col-md-2">
-                                                <div class="form-floating">
-                                                    <input class="form-control" id="fechaInicioTimb" type="date" placeholder="Fecha de inicio" />
+                                                <div class="form-floating mb-3 mb-md-0">
+                                                    <input class="form-control" id="fechaInicioTimb" name="fechaInicioTimb" type="date"
+                                                           placeholder="Fecha de inicio" />
                                                     <label for="fechaInicioTimb">Fecha de inicio</label>
                                                 </div>
                                             </div>
                                             <div class="col-md-2">
-                                                <div class="form-floating">
-                                                    <input class="form-control" id="fechaVencimientoTimb" type="date" placeholder="Fecha de vencimiento" />
-                                                    <label for="fechaVencimientoTimb">Fecha de vencimiento</label>
+                                                <div class="form-floating mb-3 mb-md-0">
+                                                    <input class="form-control" id="fechaVencimientoTimb" name="fechaVencimientoTimb" type="date"
+                                                           placeholder="Fecha de vencimiento" />
+                                                    <label for="fechaVencimientoTimb">Fecha Venc. Timbrado</label>
                                                 </div>
                                             </div>
                                             <div class="col-md-4">
-                                                <div class="form-floating">
-                                                    <input class="form-control" id="obs" type="text" placeholder="Observaciones" />
+                                                <div class="form-floating mb-3 mb-md-0">
+                                                    <input class="form-control" id="obs" name="observaciones" type="text"
+                                                           placeholder="Observaciones" />
                                                     <label for="obs">Observaciones</label>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            <!-- Cuarta fila - Vehículo y Conductor -->
-                            <div class="row mb-4">
-                                <div class="col custom-card">
+                                <!-- Vehículo y Conductor -->
+                                <div class="card-body">
                                     <div class="card-body">
                                         <div class="row mb-3">
                                             <div class="col-md-2">
-                                                <div class="form-floating">
-                                                    <input class="form-control" id="vehiculo" type="text" placeholder="Vehículo" />
+                                                <div class="form-floating mb-3 mb-md-0">
+                                                    <input class="form-control" id="vehiculo" name="vehiculo" type="text"
+                                                           placeholder="Vehículo" />
                                                     <label for="vehiculo">Vehículo</label>
                                                 </div>
                                             </div>
                                             <div class="col-md-2">
-                                                <div class="form-floating">
-                                                    <input class="form-control" id="conductor" type="text" placeholder="Conductor" />
+                                                <div class="form-floating mb-3 mb-md-0">
+                                                    <input class="form-control" id="conductor" name="conductor" type="text"
+                                                           placeholder="Conductor" />
                                                     <label for="conductor">Conductor</label>
                                                 </div>
                                             </div>
@@ -220,47 +233,37 @@
                                     </div>
                                 </div>
                             </div>
+                        </div>
 
-                            <!-- Búsqueda de Artículos -->
-                            <div class="row mb-4">
-                                <div class="col custom-card">
-                                    <div class="card-body">
-                                        <div class="row mb-3 align-items-end">
-                                            <div class="col-md-auto">
-                                                <div class="mb-3 mb-md-0">
-                                                    <button type="button" data-bs-toggle="modal" 
-                                                        data-bs-target="#modalArticulos" class="btn btn-outline-primary">
-                                                        <span class="d-none d-md-inline">Buscar Artículo</span>
-                                                        <span class="d-md-none">Buscar</span>
-                                                    </button>
-                                                </div>
-                                            </div>
-                                            <div class="col-md-3">
-                                                <div class="form-floating">
-                                                    <input class="form-control" id="descripcion" type="text" placeholder="Descripción" />
-                                                    <label for="descripcion">Descripción</label>
-                                                </div>
-                                            </div>
-                                            <div class="col-md-1">
-                                                <div class="form-floating">
-                                                    <input class="form-control" id="cantidad" type="number" placeholder="Cantidad" />
-                                                    <label for="cantidad">Cantidad</label>
-                                                </div>
-                                            </div>
-                                            <div class="col-md-2">
-                                                <button type="button" class="btn btn-success w-100">Agregar Producto</button>
-                                            </div>
-                                        </div>
+                        <!-- Línea separadora -->
+                        <div class="border-section"></div>
+
+                        <!-- Búsqueda de Artículos -->
+                        <div class="row mb-4">
+                            <div class="col custom-card">
+                                <div class="row" style="margin-top: 10px">
+                                    <div class="col-auto">
+                                        <button type="button" data-bs-toggle="modal"
+                                                data-bs-target="#modalArticulos" class="btn btn-outline-primary">Buscar Artículo</button>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <input type="text" name="descripcion" id="descripcion" placeholder="Descripción" class="form-control" readonly />
+                                    </div>
+                                    <div class="col-md-1">
+                                        <input type="number" name="cantidad" id="cantidad" placeholder="Cantidad" class="form-control" value="1" />
+                                    </div>
+                                    <div class="col-md-2">
+                                        <button type="button" class="btn btn-success">Agregar Artículo</button>
                                     </div>
                                 </div>
                             </div>
-                        </form>
+                        </div>
 
-                        <!-- Tabla de Artículos -->
+                        <!-- Tabla de Artículos (Detalle de la remisión) -->
                         <div class="row mb-4">
                             <div class="col custom-card">
                                 <div class="table-responsive">
-                                    <table id="tablaArticulosRemision" class="table table-bordered table-sm">
+                                    <table id="tablaArticulosRemision" class="table table-bordered table-sm custom-table">
                                         <thead>
                                             <tr>
                                                 <th class="text-bg-dark text-center">Id. Artículo</th>
@@ -295,12 +298,13 @@
                                 <!-- Botones finales -->
                                 <div class="row mt-3">
                                     <div class="col-md-6">
-                                        <button class="btn btn-success">Registrar</button>
-                                        <button class="btn btn-secondary">Cancelar</button>
+                                        <button type="button" class="btn btn-success">Guardar</button>
+                                        <button type="button" class="btn btn-danger">Cancelar</button>
                                     </div>
                                 </div>
                             </div>
                         </div>
+                        </form>
 
                         <!-- Modal para Buscar Artículos -->
                         <div class="modal fade" id="modalArticulos" tabindex="-1" aria-labelledby="modalArticulosLabel" aria-hidden="true">
@@ -338,6 +342,38 @@
                                                             <button class="btn btn-primary btn-sm">Seleccionar</button>
                                                         </td>
                                                     </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Modal para Buscar Notas de Remisión -->
+                        <div class="modal fade" id="modalRemisiones" tabindex="-1" aria-labelledby="modalRemisionesLabel" aria-hidden="true">
+                            <div class="modal-dialog modal-lg">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">Buscar Notas de Remisión</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div class="table-responsive">
+                                            <table id="tablaModalRemisiones" class="table table-bordered table-striped">
+                                                <thead>
+                                                    <tr>
+                                                        <th class="text-bg-dark text-center">N°</th>
+                                                        <th class="text-bg-dark text-center">Comprobante</th>
+                                                        <th class="text-bg-dark text-center">Fecha</th>
+                                                        <th class="text-bg-dark text-center">Estado</th>
+                                                        <th class="text-bg-dark text-center no-search">Acciones</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
                                                 </tbody>
                                             </table>
                                         </div>
@@ -411,6 +447,28 @@
                     },
                     language: { url: "DataTables 2/es-ES.json" }
                 });
+
+                // Inicializar modal de remisiones
+                $('#tablaModalRemisiones').DataTable({
+                    initComplete: function () {
+                        this.api().columns().every(function () {
+                            var column = this;
+                            var title = column.footer().textContent;
+                            if (title !== "Acciones" && !$(column.header()).hasClass('no-search') && !$(column.footer()).hasClass('no-search')) {
+                                $('<input style="width: 100%" type="text" placeholder="Buscar ' + title + '" />')
+                                    .appendTo($(column.footer()).empty())
+                                    .on('keyup change clear', function () {
+                                        if (column.search() !== this.value) {
+                                            column.search(this.value).draw();
+                                        }
+                                    });
+                            } else {
+                                $(column.footer()).empty();
+                            }
+                        });
+                    },
+                    language: { url: "DataTables 2/es-ES.json" }
+                });
             });
         </script>
 
@@ -421,7 +479,7 @@
             <div id="mensaje" class="alert <%= tipoAlert != null ? tipoAlert : "alert-info"%>"
                  style="position:absolute; top: 80px; right: 10px; opacity: 80%; transition: opacity 1s ease; min-width: 200px;" role="alert">
                 <%= Message%>
-                <button type="button" style="border: none; width: 25px; height: 25px; float:right; display:inline-block; padding:0px 5px;" 
+                <button type="button" style="border: none; width: 25px; height: 25px; float:right; display:inline-block; padding:0px 5px;"
                         class="btn <%= tipoAlert != null ? tipoAlert + " btn-close" : "alert-info"%>" data-bs-dismiss="alert" aria-label="Close">
                 </button>
             </div>
@@ -436,6 +494,6 @@
                     }, 1000);
                 }
             }, 7000);
-        </script>   
+        </script>
     </body>
 </html>
