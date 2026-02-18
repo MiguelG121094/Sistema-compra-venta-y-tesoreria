@@ -5,8 +5,8 @@
 --%>
 <%@ page contentType="text/html;charset=UTF-8" language="java" pageEncoding="UTF-8" %>
 
-<!--bloque de codigo que hace que las páginas JSP solo sean accesibles si el
-usuario inicio sesion, se debe agregar esta validación en cada una de las vistas JSP-->
+<!--bloque de codigo que hace que las pÃ¡ginas JSP solo sean accesibles si el
+usuario inicio sesion, se debe agregar esta validaciÃ³n en cada una de las vistas JSP-->
 <%@ page import="modelo.Usuario" %>
 <%
     HttpSession sessionObj = request.getSession(false);
@@ -24,9 +24,9 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                     <div class="sb-sidenav-menu-heading">Vista principal</div>
                     <a class="nav-link" href="base.jsp">
                         <div class="sb-nav-link-icon"><i class="fas fa-tachometer-alt"></i></div>
-                        Menú principal
+                        MenÃº principal
                     </a>
-                    <div class="sb-sidenav-menu-heading">Módulo Compras</div>
+                    <div class="sb-sidenav-menu-heading">MÃ³dulo Compras</div>
                     <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapsePaginasCompras" aria-expanded="false" aria-controls="collapsePaginasCompras">
                         <div class="sb-nav-link-icon"><i class="fas fa-book-open"></i></div>
                         Referenciales
@@ -41,9 +41,9 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                             </a>
                             <div class="collapse" id="paginasCollapseReferencialesCompra" aria-labelledby="headingOne" data-bs-parent="#sidenavAccordeonPaginasCompra">
                                 <nav class="sb-sidenav-menu-nested nav">
-                                    <a class="nav-link" href="TipoArticuloServlet?menu=TipoArticulo&accion=Listar">Tipo de artículo</a>
+                                    <a class="nav-link" href="TipoArticuloServlet?menu=TipoArticulo&accion=Listar">Tipo de artÃ­culo</a>
                                     <a class="nav-link" href="marca.jsp">Marca</a>
-                                    <a class="nav-link" href="articulo.jsp">Artículos</a>
+                                    <a class="nav-link" href="articulo.jsp">ArtÃ­culos</a>
                                 </nav>
                             </div>
                             <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#pagesCollapseError" aria-expanded="false" aria-controls="pagesCollapseError">
@@ -69,11 +69,12 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                             <a class="nav-link" href="PresupuestoServlet?menu=Presupuesto&accion=ListarModal">Presupuesto del proveedor</a>
                             <a class="nav-link" href="OrdenCompraServlet?menu=OrdenCompra&accion=ListarModal">Orden de compra</a>
                             <a class="nav-link" href="FacturaCompraServlet?menu=FacturaCompra&accion=ListarModal">Factura compra</a>
-                            <a class="nav-link" href="layout-sidenav-light.html">Notas de Crédito y Débito</a>
+                            <a class="nav-link" href="notaRemision.jsp">Nota de Remisión</a>
+                            <a class="nav-link" href="layout-sidenav-light.html">Notas de CrÃ©dito y DÃ©bito</a>
                         </nav>
                     </div>
 
-                    <div class="sb-sidenav-menu-heading">Módulo Tesorería</div>
+                    <div class="sb-sidenav-menu-heading">MÃ³dulo TesorerÃ­a</div>
                     <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapsePages" aria-expanded="false" aria-controls="collapsePages">
                         <div class="sb-nav-link-icon"><i class="fas fa-book-open"></i></div>
                         Referenciales
@@ -83,7 +84,7 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                         <nav class="sb-sidenav-menu-nested nav accordion" id="sidenavAccordionPages">
                             <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#pagesCollapseAuth" aria-expanded="false" aria-controls="pagesCollapseAuth">
                                 Referenciales
-                                Tesorería
+                                TesorerÃ­a
                                 <div class="sb-sidenav-collapse-arrow"><i class="fas fa-angle-down"></i></div>
                             </a>
                             <div class="collapse" id="pagesCollapseAuth" aria-labelledby="headingOne" data-bs-parent="#sidenavAccordionPages">
@@ -112,7 +113,7 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                     </a>
                     <div class="collapse" id="collapseLayouts" aria-labelledby="headingOne" data-bs-parent="#sidenavAccordion">
                         <nav class="sb-sidenav-menu-nested nav">
-                            <a class="nav-link" href="layout-static.html">Provisión de Cta. Pagar</a>
+                            <a class="nav-link" href="layout-static.html">ProvisiÃ³n de Cta. Pagar</a>
                             <a class="nav-link" href="layout-sidenav-light.html">Orden de Pago</a>
                         </nav>
                     </div>
