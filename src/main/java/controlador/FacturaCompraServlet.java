@@ -833,6 +833,13 @@ public class FacturaCompraServlet extends HttpServlet {
             return;
         }
 
+        if (estado.facturaCompra.getFechaEmision() == null) {
+            mostrarMensaje(request, "Debe ingresar la fecha de emisión", "alert-warning");
+            cargarDatosParaVista(request, estado, token);
+            forward(request, response, JSP_FACTURA);
+            return;
+        }
+
         if (estado.sucursalSeleccionada == null) {
             mostrarMensaje(request, "Debe seleccionar una sucursal", "alert-warning");
             cargarDatosParaVista(request, estado, token);

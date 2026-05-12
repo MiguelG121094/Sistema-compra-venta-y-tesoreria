@@ -260,13 +260,37 @@ public class FacturaCompraDAO {
                     "WHERE id_fact_comp_cab = ?";
 
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, facturaCompra.getNumero());
-            stmt.setInt(2, facturaCompra.getTimbrado());
-            stmt.setDate(3, new java.sql.Date(facturaCompra.getFechaVenciTimbrado().getTime()));
-            stmt.setDate(4, new java.sql.Date(facturaCompra.getFechaEmision().getTime()));
-            stmt.setDate(5, new java.sql.Date(facturaCompra.getFechaCarga().getTime()));
+            if (facturaCompra.getNumero() != null) {
+                stmt.setString(1, facturaCompra.getNumero());
+            } else {
+                stmt.setNull(1, java.sql.Types.VARCHAR);
+            }
+            if (facturaCompra.getTimbrado() != null) {
+                stmt.setInt(2, facturaCompra.getTimbrado());
+            } else {
+                stmt.setNull(2, java.sql.Types.INTEGER);
+            }
+            if (facturaCompra.getFechaVenciTimbrado() != null) {
+                stmt.setDate(3, new java.sql.Date(facturaCompra.getFechaVenciTimbrado().getTime()));
+            } else {
+                stmt.setNull(3, java.sql.Types.DATE);
+            }
+            if (facturaCompra.getFechaEmision() != null) {
+                stmt.setDate(4, new java.sql.Date(facturaCompra.getFechaEmision().getTime()));
+            } else {
+                stmt.setNull(4, java.sql.Types.DATE);
+            }
+            if (facturaCompra.getFechaCarga() != null) {
+                stmt.setDate(5, new java.sql.Date(facturaCompra.getFechaCarga().getTime()));
+            } else {
+                stmt.setNull(5, java.sql.Types.DATE);
+            }
             stmt.setString(6, facturaCompra.getCondicion());
-            stmt.setInt(7, facturaCompra.getPlazo());
+            if (facturaCompra.getPlazo() != null) {
+                stmt.setInt(7, facturaCompra.getPlazo());
+            } else {
+                stmt.setNull(7, java.sql.Types.INTEGER);
+            }
             if (facturaCompra.getFechaVencimiento() != null) {
                 stmt.setDate(8, new java.sql.Date(facturaCompra.getFechaVencimiento().getTime()));
             } else {
@@ -275,6 +299,15 @@ public class FacturaCompraDAO {
             stmt.setString(9, facturaCompra.getObservacion());
             stmt.setString(10, facturaCompra.getEstado());
             stmt.setString(11, facturaCompra.getTipoFactura());
+            if (facturaCompra.getProveedor() == null || facturaCompra.getProveedor().getIdProveedor() == null) {
+                throw new SQLException("El proveedor es requerido para actualizar la factura");
+            }
+            if (facturaCompra.getSucursal() == null || facturaCompra.getSucursal().getIdSucursal() == null) {
+                throw new SQLException("La sucursal es requerida para actualizar la factura");
+            }
+            if (facturaCompra.getUsuario() == null || facturaCompra.getUsuario().getIdUsuario() == null) {
+                throw new SQLException("El usuario es requerido para actualizar la factura");
+            }
             stmt.setLong(12, facturaCompra.getProveedor().getIdProveedor());
             stmt.setLong(13, facturaCompra.getSucursal().getIdSucursal());
             stmt.setLong(14, facturaCompra.getUsuario().getIdUsuario());

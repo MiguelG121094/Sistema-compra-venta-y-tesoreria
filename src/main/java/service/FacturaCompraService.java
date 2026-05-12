@@ -104,9 +104,11 @@ public class FacturaCompraService {
             if (conn != null) {
                 conn.rollback();
             }
-            System.out.println("Error en FacturaCompraService: " + e);
+            LOGGER.log(Level.SEVERE, "Error en eliminarFacturaCompra - rollback ejecutado", e);
+            throw e;
         } finally {
             if (conn != null) {
+                conn.setAutoCommit(true);
                 conn.close();
             }
         }
