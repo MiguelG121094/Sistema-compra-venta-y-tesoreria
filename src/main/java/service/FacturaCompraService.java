@@ -254,14 +254,16 @@ public class FacturaCompraService {
     }
 
     /**
-     * Actualiza cabecera y detalles de una factura en una sola transacción.
+     * Actualiza cabecera, detalles y cuenta a pagar de una factura en una sola transacción.
      *
      * @param facturaCompra la factura a actualizar
      * @param listaDetalle los detalles actualizados
+     * @param cuentaPagar cuenta a pagar reconstruida con los nuevos montos/fecha (puede ser null si no aplica)
      * @throws SQLException si ocurre un error (ya se hizo rollback)
      */
     public void actualizarFacturaCompleta(FacturaCompra facturaCompra,
-            List<FacturaCompraDetalle> listaDetalle) throws SQLException {
+            List<FacturaCompraDetalle> listaDetalle,
+            CuentaPagar cuentaPagar) throws SQLException {
 
         Connection conn = null;
         try {
@@ -274,6 +276,12 @@ public class FacturaCompraService {
             FacturaCompraDetalleDAO detalleDAO = new FacturaCompraDetalleDAO(conn);
             detalleDAO.actualizarFacturaCompraDetalles(
                 facturaCompra.getIdFacturaCompra(), listaDetalle);
+
+            if (cuentaPagar != null && cuentaPagar.getIdCuentaPagar() != null) {
+                CuentaPagarDAO cuentaPagarDAO = new CuentaPagarDAO(conn);
+                cuentaPagar.setFacturaCompra(new FacturaCompra(facturaCompra.getIdFacturaCompra()));
+                cuentaPagarDAO.actualizarCuentaPagar(cuentaPagar);
+            }
 
             conn.commit();
             LOGGER.log(Level.INFO, "Factura actualizada completa. ID: {0}", facturaCompra.getIdFacturaCompra());
@@ -319,9 +327,9 @@ public class FacturaCompraService {
             LibroIvaCompraDAO libroIvaDAO = new LibroIvaCompraDAO(conn);
             libroIvaDAO.eliminarPorFactura(facturaCompra.getIdFacturaCompra());
 
-            // 3. Eliminar cuenta a pagar asociada
+            // 3. Anular cuenta a pagar asociada (UPDATE, no DELETE, para preservar trazabilidad)
             CuentaPagarDAO cuentaPagarDAO = new CuentaPagarDAO(conn);
-            cuentaPagarDAO.eliminarPorFactura(facturaCompra.getIdFacturaCompra());
+            cuentaPagarDAO.anularPorFactura(facturaCompra.getIdFacturaCompra());
 
             // 4. Revertir documentos relacionados a "Pendiente"
             if (ordenCompra != null) {

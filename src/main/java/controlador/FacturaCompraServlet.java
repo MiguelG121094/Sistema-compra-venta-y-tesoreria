@@ -46,6 +46,7 @@ public class FacturaCompraServlet extends HttpServlet {
     private final SucursalService sucursalService = new SucursalService();
     private final ArticuloService articuloService = new ArticuloService();
     private final TipoImpuestoService tipoImpuestoService = new TipoImpuestoService();
+    private final CuentaPagarService cuentaPagarService = new CuentaPagarService();
 
     // ==================== CLASE DE ESTADO ====================
 
@@ -914,9 +915,39 @@ public class FacturaCompraServlet extends HttpServlet {
             accionListarModal(request, response);
             return;
         } else {
-            // Actualizar cabecera y detalles en una sola transacción
+            // Validar que la cuenta a pagar no tenga pagos aplicados antes de permitir editar.
+            // Si los tiene, bloquear la edición: primero se deben reversar los pagos.
+            CuentaPagar cuentaPagarActual = cuentaPagarService.getByFactura(estado.facturaCompra.getIdFacturaCompra());
+            if (cuentaPagarActual != null && "Anulado".equals(cuentaPagarActual.getEstado())) {
+                mostrarMensaje(request,
+                    "No se puede editar: la cuenta a pagar asociada está anulada.",
+                    "alert-warning");
+                cargarDatosParaVista(request, estado, token);
+                forward(request, response, JSP_FACTURA);
+                return;
+            }
+            if (cuentaPagarActual != null && cuentaPagarActual.getSaldo() != null
+                    && cuentaPagarActual.getMonto() != null
+                    && cuentaPagarActual.getSaldo() < cuentaPagarActual.getMonto()) {
+                mostrarMensaje(request,
+                    "No se puede editar: la factura tiene pagos aplicados. "
+                    + "Reverse los pagos desde Orden de Pago antes de editar.",
+                    "alert-warning");
+                cargarDatosParaVista(request, estado, token);
+                forward(request, response, JSP_FACTURA);
+                return;
+            }
+
+            // Reconstruir cuenta a pagar con los nuevos montos/fecha y preservar su id existente
+            CuentaPagar cuentaPagarNueva = null;
+            if (cuentaPagarActual != null) {
+                cuentaPagarNueva = construirCuentaPagar(estado);
+                cuentaPagarNueva.setIdCuentaPagar(cuentaPagarActual.getIdCuentaPagar());
+            }
+
+            // Actualizar cabecera, detalles y cuenta a pagar en una sola transacción
             facturaCompraService.actualizarFacturaCompleta(
-                estado.facturaCompra, estado.listaDetalle);
+                estado.facturaCompra, estado.listaDetalle, cuentaPagarNueva);
 
             limpiarEstado(session, token);
 
@@ -936,6 +967,21 @@ public class FacturaCompraServlet extends HttpServlet {
         if (estado == null) return;
 
         if (estado.facturaCompra.getIdFacturaCompra() != null) {
+            // Validar que la cuenta a pagar no tenga pagos aplicados (saldo < monto).
+            // Si los tiene, bloquear la anulación: primero se deben reversar los pagos
+            // desde el módulo de Orden de Pago.
+            CuentaPagar cuentaPagar = cuentaPagarService.getByFactura(estado.facturaCompra.getIdFacturaCompra());
+            if (cuentaPagar != null && cuentaPagar.getSaldo() != null && cuentaPagar.getMonto() != null
+                    && cuentaPagar.getSaldo() < cuentaPagar.getMonto()) {
+                mostrarMensaje(request,
+                    "No se puede anular: la factura tiene pagos aplicados. "
+                    + "Reverse los pagos desde Orden de Pago antes de anular.",
+                    "alert-warning");
+                cargarDatosParaVista(request, estado, token);
+                forward(request, response, JSP_FACTURA);
+                return;
+            }
+
             // Anular factura y revertir documentos en una sola transacción
             facturaCompraService.anularFacturaCompleta(
                 estado.facturaCompra, estado.ordenCompraSeleccionada);
@@ -974,12 +1020,17 @@ public class FacturaCompraServlet extends HttpServlet {
             }
         }
 
-        Date fechaVencimiento = estado.facturaCompra.getFechaEmision();
+        Date fechaVencimiento;
         if ("Credito".equals(estado.facturaCompra.getCondicion()) && estado.facturaCompra.getPlazo() != null) {
+            Date base = estado.facturaCompra.getFechaEmision() != null
+                ? estado.facturaCompra.getFechaEmision() : new Date();
             java.util.Calendar cal = java.util.Calendar.getInstance();
-            cal.setTime(fechaVencimiento != null ? fechaVencimiento : new Date());
+            cal.setTime(base);
             cal.add(java.util.Calendar.DAY_OF_MONTH, estado.facturaCompra.getPlazo());
             fechaVencimiento = cal.getTime();
+        } else {
+            // Contado: vencimiento es el momento de carga (tesorería debe procesar el pago ya)
+            fechaVencimiento = new Date();
         }
 
         CuentaPagar cuentaPagar = new CuentaPagar();

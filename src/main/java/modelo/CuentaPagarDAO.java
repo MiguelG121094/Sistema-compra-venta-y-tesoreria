@@ -196,4 +196,54 @@ public class CuentaPagarDAO {
             stmt.executeUpdate();
         }
     }
+
+    /**
+     * Obtiene la cuenta a pagar asociada a una factura de compra.
+     * Asume una única cuenta a pagar por factura.
+     */
+    public CuentaPagar getByFactura(Long idFacturaCompra) throws SQLException {
+        if (idFacturaCompra == null) {
+            LOGGER.log(Level.WARNING, "Error: idFacturaCompra es nulo");
+            return null;
+        }
+
+        String sql = "SELECT id_cta_pagar, id_fact_comp_cab, cta_pag_monto, cta_pag_estado, " +
+                    "cta_pag_fecha_venci, cta_pag_saldo FROM cuenta_pagar " +
+                    "WHERE id_fact_comp_cab = ?";
+
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, idFacturaCompra);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    CuentaPagar cp = new CuentaPagar();
+                    cp.setIdCuentaPagar(rs.getLong("id_cta_pagar"));
+                    cp.setFacturaCompra(new FacturaCompra(rs.getLong("id_fact_comp_cab")));
+                    cp.setMonto(rs.getLong("cta_pag_monto"));
+                    cp.setEstado(rs.getString("cta_pag_estado"));
+                    cp.setFechaVencimiento(rs.getDate("cta_pag_fecha_venci"));
+                    cp.setSaldo(rs.getLong("cta_pag_saldo"));
+                    return cp;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Cambia el estado a 'Anulado' de la cuenta a pagar asociada a una factura.
+     * No elimina el registro, para preservar trazabilidad.
+     */
+    public void anularPorFactura(Long idFacturaCompra) throws SQLException {
+        if (idFacturaCompra == null) {
+            LOGGER.log(Level.WARNING, "Error: idFacturaCompra es nulo");
+            return;
+        }
+
+        String sql = "UPDATE cuenta_pagar SET cta_pag_estado = 'Anulado' WHERE id_fact_comp_cab = ?";
+
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, idFacturaCompra);
+            stmt.executeUpdate();
+        }
+    }
 }

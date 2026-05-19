@@ -27,6 +27,16 @@ public class CuentaPagarService {
         }
     }
 
+    public CuentaPagar getByFactura(Long idFacturaCompra) throws SQLException {
+        try (Connection conn = Conexion.getConnection()) {
+            CuentaPagarDAO dao = new CuentaPagarDAO(conn);
+            return dao.getByFactura(idFacturaCompra);
+        } catch (SQLException e) {
+            System.out.println("Error en CuentaPagarService: " + e);
+            return null;
+        }
+    }
+
     public List<CuentaPagar> listarCuentasPagar() throws SQLException {
         try (Connection conn = Conexion.getConnection()) {
             CuentaPagarDAO dao = new CuentaPagarDAO(conn);
