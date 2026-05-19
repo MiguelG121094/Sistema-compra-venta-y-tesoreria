@@ -872,6 +872,15 @@ public class FacturaCompraServlet extends HttpServlet {
             return;
         }
 
+        // Si es Crédito, el plazo es obligatorio y debe ser mayor a cero
+        if ("Credito".equals(estado.facturaCompra.getCondicion())
+                && (estado.facturaCompra.getPlazo() == null || estado.facturaCompra.getPlazo() <= 0)) {
+            mostrarMensaje(request, "No puede guardar una factura a crédito sin plazo", "alert-warning");
+            cargarDatosParaVista(request, estado, token);
+            forward(request, response, JSP_FACTURA);
+            return;
+        }
+
         // Validar fecha de vencimiento del timbrado sea mayor o igual a la fecha actual
         if (estado.facturaCompra.getFechaVenciTimbrado() != null) {
             Date fechaActual = new Date();
