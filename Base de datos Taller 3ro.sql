@@ -118,7 +118,7 @@ CREATE TABLE public.debitos (
                 CONSTRAINT id_debitos PRIMARY KEY (id_debitos)
 );
 COMMENT ON TABLE public.debitos IS 'comisiones bancarias, comisiones por cheques en dolars, gastos administrativos del banco';
-COMMENT ON COLUMN public.debitos.debitos_detalle IS 'concepto de que se carga el debito';
+COMMENT ON COLUMN public.debitos.debitos_detalle IS 'concepto de que se carga el debito, ejemplo descuento de comisiones bancaria, debito automatico de TC';
 
 
 ALTER SEQUENCE public.debitos_id_debitos_seq OWNED BY public.debitos.id_debitos;
@@ -837,7 +837,7 @@ CREATE TABLE public.creditos (
 );
 COMMENT ON TABLE public.creditos IS 'deposito bancario, comisiones cobradas, capitalizacion de intereses';
 COMMENT ON COLUMN public.creditos.creditos_nro_comprobante IS 'comprobante puede ser nro de boleta de deposito';
-COMMENT ON COLUMN public.creditos.creditos_detalle IS 'concepto de que se carga el credito';
+COMMENT ON COLUMN public.creditos.creditos_detalle IS 'concepto de que se carga el credito, ejemplo ingresos como una venta donde se carga la boleta de deposito';
 
 
 ALTER SEQUENCE public.creditos_id_creditos_seq OWNED BY public.creditos.id_creditos;
@@ -1017,7 +1017,7 @@ CREATE SEQUENCE public.factura_compra_cabecera_id_fact_comp_cab_seq;
 CREATE TABLE public.factura_compra_cabecera (
                 id_fact_comp_cab INTEGER NOT NULL DEFAULT nextval('public.factura_compra_cabecera_id_fact_comp_cab_seq'),
                 fact_comp_numero VARCHAR NOT NULL,
-                fact_comp_timbrado INTEGER NOT NULL,
+                fact_comp_timbrado INTEGER,
                 fact_comp_fecha_venci_timb DATE NOT NULL,
                 fact_comp_fecha_emision DATE NOT NULL,
                 fact_comp_fecha_carga DATE NOT NULL,
@@ -1045,19 +1045,24 @@ COMMENT ON COLUMN public.factura_compra_cabecera.id_orden_compra_cab IS 'debe pe
 
 ALTER SEQUENCE public.factura_compra_cabecera_id_fact_comp_cab_seq OWNED BY public.factura_compra_cabecera.id_fact_comp_cab;
 
+CREATE SEQUENCE public.factura_compra_detalle_id_fact_comp_det_seq;
+
 CREATE TABLE public.factura_compra_detalle (
-                id_fact_comp_det INTEGER NOT NULL,
+                id_fact_comp_det INTEGER NOT NULL DEFAULT nextval('public.factura_compra_detalle_id_fact_comp_det_seq'),
                 id_fact_comp_cab INTEGER NOT NULL,
                 id_articulo INTEGER,
+                id_impuesto INTEGER,
                 fact_comp_cantidad INTEGER,
                 fact_comp_precio_compra INTEGER,
                 fact_det_descripcion VARCHAR,
                 CONSTRAINT id_fact_comp_detalle PRIMARY KEY (id_fact_comp_det)
 );
-COMMENT ON TABLE public.factura_compra_detalle IS 'Para factura_compra_detalle no se puede usar clave compuesta con id_articulo porque puede ser NULL (para gastos).
- Se necesita agregar una columna autoincremental.';
+COMMENT ON TABLE public.factura_compra_detalle IS 'Para factura_compra_detalle no se puede usar clave compuesta con id_articulo porque puede ser NULL (para gastos).  Se necesita agregar una columna autoincremental.';
+COMMENT ON COLUMN public.factura_compra_detalle.id_impuesto IS 'se agrega el impuesto (IVA 5, 10 o exentas) para cada articulo ya que se debe agregar el impuesto de manera manual si el tipo de factura es por compra de algun mueble o por compra de fondo fijo';
 COMMENT ON COLUMN public.factura_compra_detalle.fact_det_descripcion IS 'Para items sin artículo (compra por gasto, mantenimineto,servicio, etc)';
 
+
+ALTER SEQUENCE public.factura_compra_detalle_id_fact_comp_det_seq OWNED BY public.factura_compra_detalle.id_fact_comp_det;
 
 CREATE SEQUENCE public.cuenta_pagar_id_cta_pagar_seq;
 
@@ -1068,9 +1073,11 @@ CREATE TABLE public.cuenta_pagar (
                 cta_pag_estado VARCHAR(100) NOT NULL,
                 cta_pag_fecha_venci DATE NOT NULL,
                 cta_pag_saldo INTEGER NOT NULL,
+                cta_pag_plazo INTEGER,
                 CONSTRAINT id_cta_pagar PRIMARY KEY (id_cta_pagar, id_fact_comp_cab)
 );
 COMMENT ON TABLE public.cuenta_pagar IS 'una factura de fondo fijo está con estado RENDICION PENDIENTE y luego cuando se realiza la rendicion pasa a estado PENDIENTE DE PROVISION o PENDIENTE o algo asi';
+COMMENT ON COLUMN public.cuenta_pagar.cta_pag_plazo IS 'plazo total para pagar la factura, en días o meses';
 
 
 ALTER SEQUENCE public.cuenta_pagar_id_cta_pagar_seq OWNED BY public.cuenta_pagar.id_cta_pagar;
@@ -1169,16 +1176,28 @@ CREATE TABLE public.nota_credito_compra_detalle (
 );
 
 
+CREATE SEQUENCE public.libro_iva_compra_id_libro_iva_compra_seq;
+
 CREATE TABLE public.libro_iva_compra (
-                id_libro_iva_compra INTEGER NOT NULL,
+                id_libro_iva_compra INTEGER NOT NULL DEFAULT nextval('public.libro_iva_compra_id_libro_iva_compra_seq'),
                 id_fact_comp_cab INTEGER NOT NULL,
-                libro_iva_comp_fecha DATE NOT NULL,
-                libro_iva_comp_5 INTEGER NOT NULL,
-                libro_iva_comp_10 INTEGER NOT NULL,
+                libro_iva_comp_fecha DATE,
+                libro_iva_comp_5 INTEGER,
+                libro_iva_comp_10 INTEGER,
+                libro_iva_comp_gravada_10 INTEGER,
+                libro_iva_comp_gravada_5 INTEGER,
+                libro_iva_comp_exentas INTEGER,
+                libro_iva_comp_total INTEGER,
                 CONSTRAINT id_libro_iva_compra PRIMARY KEY (id_libro_iva_compra, id_fact_comp_cab)
 );
 COMMENT ON TABLE public.libro_iva_compra IS 'se guarda el total del IVA5 e IVA10 de las facturas (Se recomienda poner en el informe las gravadas)';
+COMMENT ON COLUMN public.libro_iva_compra.libro_iva_comp_gravada_10 IS 'subtotal / 11';
+COMMENT ON COLUMN public.libro_iva_compra.libro_iva_comp_gravada_5 IS 'subtotal / 21';
+COMMENT ON COLUMN public.libro_iva_compra.libro_iva_comp_exentas IS 'ítems exentos de IVA 0%';
+COMMENT ON COLUMN public.libro_iva_compra.libro_iva_comp_total IS 'total general de la factura compra';
 
+
+ALTER SEQUENCE public.libro_iva_compra_id_libro_iva_compra_seq OWNED BY public.libro_iva_compra.id_libro_iva_compra;
 
 CREATE TABLE public.orden_compra_detalle (
                 id_orden_compra_cab INTEGER NOT NULL,
@@ -1531,6 +1550,13 @@ ON UPDATE NO ACTION
 NOT DEFERRABLE;
 
 ALTER TABLE public.articulo ADD CONSTRAINT impuesto_articulo_fk
+FOREIGN KEY (id_impuesto)
+REFERENCES public.impuesto (id_impuesto)
+ON DELETE NO ACTION
+ON UPDATE NO ACTION
+NOT DEFERRABLE;
+
+ALTER TABLE public.factura_compra_detalle ADD CONSTRAINT impuesto_factura_compra_detalle_fk
 FOREIGN KEY (id_impuesto)
 REFERENCES public.impuesto (id_impuesto)
 ON DELETE NO ACTION
