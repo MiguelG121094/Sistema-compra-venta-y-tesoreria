@@ -23,6 +23,7 @@ public class LibroIvaCompra implements java.io.Serializable {
     private Long gravada10;
     private Long exenta;
     private Long total;
+    private String estado;
 
     public LibroIvaCompra() {
     }
@@ -115,5 +116,13 @@ public class LibroIvaCompra implements java.io.Serializable {
 
     public void setTotal(Long total) {
         this.total = total;
+    }
+
+    public String getEstado() {
+        return estado;
+    }
+
+    public void setEstado(String estado) {
+        this.estado = estado;
     }
 }

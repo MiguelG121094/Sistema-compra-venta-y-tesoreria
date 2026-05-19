@@ -39,8 +39,9 @@ public class LibroIvaCompraDAO {
 
         String sql = "INSERT INTO libro_iva_compra (id_fact_comp_cab, libro_iva_comp_fecha, " +
                     "libro_iva_comp_5, libro_iva_comp_10, libro_iva_comp_gravada_5, " +
-                    "libro_iva_comp_gravada_10, libro_iva_comp_exenta, libro_iva_comp_total) " +
-                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+                    "libro_iva_comp_gravada_10, libro_iva_comp_exenta, libro_iva_comp_total, " +
+                    "libro_iva_comp_estado) " +
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         try (PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             stmt.setLong(1, libroIva.getFacturaCompra().getIdFacturaCompra());
@@ -51,6 +52,7 @@ public class LibroIvaCompraDAO {
             setNullableLong(stmt, 6, libroIva.getGravada10());
             setNullableLong(stmt, 7, libroIva.getExenta());
             setNullableLong(stmt, 8, libroIva.getTotal());
+            stmt.setString(9, libroIva.getEstado() != null ? libroIva.getEstado() : "Activo");
 
             int filasAfectadas = stmt.executeUpdate();
             if (filasAfectadas == 0) {
@@ -90,6 +92,25 @@ public class LibroIvaCompraDAO {
         }
 
         String sql = "DELETE FROM libro_iva_compra WHERE id_fact_comp_cab = ?";
+
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, idFacturaCompra);
+            stmt.executeUpdate();
+        }
+    }
+
+    /**
+     * Marca como 'Anulado' los registros del libro IVA asociados a una factura.
+     * Preserva el registro para trazabilidad fiscal (no se elimina físicamente).
+     */
+    public void anularPorFactura(Long idFacturaCompra) throws SQLException {
+        if (idFacturaCompra == null) {
+            LOGGER.log(Level.WARNING, "Error: idFacturaCompra es nulo");
+            return;
+        }
+
+        String sql = "UPDATE libro_iva_compra SET libro_iva_comp_estado = 'Anulado' "
+                   + "WHERE id_fact_comp_cab = ?";
 
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setLong(1, idFacturaCompra);

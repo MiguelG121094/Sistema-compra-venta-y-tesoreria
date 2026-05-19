@@ -323,9 +323,10 @@ public class FacturaCompraService {
             facturaCompra.setEstado("Anulado");
             facturaCompraDAO.actualizarFacturaCompra(facturaCompra);
 
-            // 2. Eliminar registro del libro IVA compra
+            // 2. Anular registro del libro IVA compra (UPDATE, no DELETE,
+            //    para preservar trazabilidad fiscal/SET)
             LibroIvaCompraDAO libroIvaDAO = new LibroIvaCompraDAO(conn);
-            libroIvaDAO.eliminarPorFactura(facturaCompra.getIdFacturaCompra());
+            libroIvaDAO.anularPorFactura(facturaCompra.getIdFacturaCompra());
 
             // 3. Anular cuenta a pagar asociada (UPDATE, no DELETE, para preservar trazabilidad)
             CuentaPagarDAO cuentaPagarDAO = new CuentaPagarDAO(conn);

@@ -1186,15 +1186,17 @@ CREATE TABLE public.libro_iva_compra (
                 libro_iva_comp_10 INTEGER,
                 libro_iva_comp_gravada_10 INTEGER,
                 libro_iva_comp_gravada_5 INTEGER,
-                libro_iva_comp_exentas INTEGER,
+                libro_iva_comp_exenta INTEGER,
                 libro_iva_comp_total INTEGER,
+                libro_iva_comp_estado VARCHAR(20) NOT NULL DEFAULT 'Activo',
                 CONSTRAINT id_libro_iva_compra PRIMARY KEY (id_libro_iva_compra, id_fact_comp_cab)
 );
 COMMENT ON TABLE public.libro_iva_compra IS 'se guarda el total del IVA5 e IVA10 de las facturas (Se recomienda poner en el informe las gravadas)';
 COMMENT ON COLUMN public.libro_iva_compra.libro_iva_comp_gravada_10 IS 'subtotal / 11';
 COMMENT ON COLUMN public.libro_iva_compra.libro_iva_comp_gravada_5 IS 'subtotal / 21';
-COMMENT ON COLUMN public.libro_iva_compra.libro_iva_comp_exentas IS 'ítems exentos de IVA 0%';
+COMMENT ON COLUMN public.libro_iva_compra.libro_iva_comp_exenta IS 'ítems exentos de IVA 0%';
 COMMENT ON COLUMN public.libro_iva_compra.libro_iva_comp_total IS 'total general de la factura compra';
+COMMENT ON COLUMN public.libro_iva_compra.libro_iva_comp_estado IS 'Activo o Anulado — se preserva el registro para trazabilidad fiscal';
 
 
 ALTER SEQUENCE public.libro_iva_compra_id_libro_iva_compra_seq OWNED BY public.libro_iva_compra.id_libro_iva_compra;

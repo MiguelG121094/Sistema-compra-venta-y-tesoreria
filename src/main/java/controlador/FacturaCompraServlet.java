@@ -131,16 +131,30 @@ public class FacturaCompraServlet extends HttpServlet {
     }
 
     /**
-     * Calcula subtotal, gravadas, IVA y exenta para cada detalle,
-     * y setea los totales como atributos del request.
+     * DTO con los totales de IVA calculados sobre una lista de detalles.
      */
-    private void calcularImpuestos(HttpServletRequest request, List<FacturaCompraDetalle> listaDetalle) {
-        long totalGeneral = 0, totalIva10 = 0, totalIva5 = 0, totalExenta = 0;
+    private static class TotalesIva {
+        long total;
+        long iva10;
+        long iva5;
+        long gravada10;
+        long gravada5;
+        long exenta;
+    }
+
+    /**
+     * Calcula subtotal/gravada/iva/exenta por cada detalle (mutando los items),
+     * y devuelve los totales agregados.
+     * Único lugar donde vive la lógica de cálculo de IVA — usado tanto por la
+     * vista como por la construcción del libro IVA.
+     */
+    private TotalesIva calcularTotalesIva(List<FacturaCompraDetalle> listaDetalle) {
+        TotalesIva totales = new TotalesIva();
 
         for (FacturaCompraDetalle detalle : listaDetalle) {
             long subtotal = detalle.getCantidad() * detalle.getPrecioCompra();
             detalle.setSubtotal(subtotal);
-            totalGeneral += subtotal;
+            totales.total += subtotal;
 
             // Reiniciar campos calculados
             detalle.setGravada10(0L);
@@ -161,22 +175,32 @@ public class FacturaCompraServlet extends HttpServlet {
                 long iva = subtotal / 11;
                 detalle.setIva10(iva);
                 detalle.setGravada10(subtotal - iva);
-                totalIva10 += iva;
+                totales.iva10 += iva;
+                totales.gravada10 += subtotal - iva;
             } else if (descImpuesto.contains("5")) {
                 long iva = subtotal / 21;
                 detalle.setIva5(iva);
                 detalle.setGravada5(subtotal - iva);
-                totalIva5 += iva;
+                totales.iva5 += iva;
+                totales.gravada5 += subtotal - iva;
             } else {
                 detalle.setExenta(subtotal);
-                totalExenta += subtotal;
+                totales.exenta += subtotal;
             }
         }
 
-        request.setAttribute("totalGeneral", totalGeneral);
-        request.setAttribute("totalIva10", totalIva10);
-        request.setAttribute("totalIva5", totalIva5);
-        request.setAttribute("totalExenta", totalExenta);
+        return totales;
+    }
+
+    /**
+     * Calcula impuestos y setea los totales como atributos del request para la vista.
+     */
+    private void calcularImpuestos(HttpServletRequest request, List<FacturaCompraDetalle> listaDetalle) {
+        TotalesIva totales = calcularTotalesIva(listaDetalle);
+        request.setAttribute("totalGeneral", totales.total);
+        request.setAttribute("totalIva10", totales.iva10);
+        request.setAttribute("totalIva5", totales.iva5);
+        request.setAttribute("totalExenta", totales.exenta);
     }
 
     /**
@@ -1055,43 +1079,18 @@ public class FacturaCompraServlet extends HttpServlet {
      * Solo crea el objeto en memoria, no lo persiste.
      */
     private LibroIvaCompra construirLibroIvaCompra(FacturaCompraState estado) {
-        long totalIva5 = 0, totalIva10 = 0;
-        long totalGravada5 = 0, totalGravada10 = 0;
-        long totalExenta = 0, totalGeneral = 0;
-
-        for (FacturaCompraDetalle detalle : estado.listaDetalle) {
-            long subtotal = detalle.getCantidad() * detalle.getPrecioCompra();
-            totalGeneral += subtotal;
-
-            String descImpuesto = "";
-            if (detalle.getArticulo() != null && detalle.getArticulo().getTipoImpuesto() != null) {
-                descImpuesto = detalle.getArticulo().getTipoImpuesto().getDescripcion();
-            } else if (detalle.getTipoImpuesto() != null) {
-                descImpuesto = detalle.getTipoImpuesto().getDescripcion();
-            }
-
-            if (descImpuesto.contains("10")) {
-                long iva = subtotal / 11;
-                totalIva10 += iva;
-                totalGravada10 += subtotal - iva;
-            } else if (descImpuesto.contains("5")) {
-                long iva = subtotal / 21;
-                totalIva5 += iva;
-                totalGravada5 += subtotal - iva;
-            } else {
-                totalExenta += subtotal;
-            }
-        }
+        TotalesIva totales = calcularTotalesIva(estado.listaDetalle);
 
         LibroIvaCompra libroIva = new LibroIvaCompra();
         libroIva.setFecha(estado.facturaCompra.getFechaEmision() != null
             ? estado.facturaCompra.getFechaEmision() : new Date());
-        libroIva.setIva5(totalIva5);
-        libroIva.setIva10(totalIva10);
-        libroIva.setGravada5(totalGravada5);
-        libroIva.setGravada10(totalGravada10);
-        libroIva.setExenta(totalExenta);
-        libroIva.setTotal(totalGeneral);
+        libroIva.setIva5(totales.iva5);
+        libroIva.setIva10(totales.iva10);
+        libroIva.setGravada5(totales.gravada5);
+        libroIva.setGravada10(totales.gravada10);
+        libroIva.setExenta(totales.exenta);
+        libroIva.setTotal(totales.total);
+        libroIva.setEstado("Activo");
         return libroIva;
     }
 
