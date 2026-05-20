@@ -373,6 +373,7 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                         <thead>
                                             <tr>
                                                 <th class="text-bg-dark text-center">Descripción</th>
+                                                <th class="text-bg-dark text-center">Depósito</th>
                                                 <th class="text-bg-dark text-center">Cantidad</th>
                                                 <th class="text-bg-dark text-center">Precio de compra</th>
                                                 <th class="text-bg-dark text-center">Sub. Total</th>
@@ -391,6 +392,9 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                                 <tr>
                                                     <td class="text-center">
                                                         ${detalle.descripcionDisplay}
+                                                    </td>
+                                                    <td class="text-center">
+                                                        ${detalle.deposito.descripcion}
                                                     </td>
                                                     <td class="text-center">
                                                         <fmt:formatNumber value="${detalle.cantidad}" pattern="#,###"/>

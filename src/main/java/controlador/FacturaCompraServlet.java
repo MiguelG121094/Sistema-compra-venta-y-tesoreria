@@ -47,6 +47,7 @@ public class FacturaCompraServlet extends HttpServlet {
     private final ArticuloService articuloService = new ArticuloService();
     private final TipoImpuestoService tipoImpuestoService = new TipoImpuestoService();
     private final CuentaPagarService cuentaPagarService = new CuentaPagarService();
+    private final PedidoCompraDetalleService pedidoCompraDetalleService = new PedidoCompraDetalleService();
 
     // ==================== CLASE DE ESTADO ====================
 
@@ -518,6 +519,22 @@ public class FacturaCompraServlet extends HttpServlet {
             estado.proveedorSeleccionado = ordenCompra.getProveedor();
             estado.sucursalSeleccionada = ordenCompra.getSucursal();
 
+            // Construir mapa articulo -> deposito a partir del Pedido relacionado.
+            // El depósito vive en pedido_compra_detalle; presupuesto y orden no lo conservan,
+            // así que lo recuperamos del pedido para poblarlo en la factura.
+            java.util.Map<Long, Deposito> articuloDeposito = new java.util.HashMap<>();
+            if (ordenCompra.getPedidoCompra() != null) {
+                List<PedidoCompraDetalle> pedDetalles =
+                    pedidoCompraDetalleService.listarDetallesPorPedido(ordenCompra.getPedidoCompra().getIdPedido());
+                if (pedDetalles != null) {
+                    for (PedidoCompraDetalle pd : pedDetalles) {
+                        if (pd.getArticulo() != null && pd.getDeposito() != null) {
+                            articuloDeposito.put(pd.getArticulo().getIdArticulo(), pd.getDeposito());
+                        }
+                    }
+                }
+            }
+
             // Cargar detalles de la orden como detalles de factura
             List<OrdenCompraDetalle> ordenDetalles = ordenCompraDetalleService.listarDetallesPorOrdenCompra(idOrden);
             estado.listaDetalle.clear();
@@ -526,6 +543,9 @@ public class FacturaCompraServlet extends HttpServlet {
                 fd.setArticulo(od.getArticulo());
                 fd.setCantidad(od.getCantidad());
                 fd.setPrecioCompra(od.getPrecioCompra());
+                if (od.getArticulo() != null) {
+                    fd.setDeposito(articuloDeposito.get(od.getArticulo().getIdArticulo()));
+                }
                 estado.listaDetalle.add(fd);
             }
 
@@ -948,6 +968,19 @@ public class FacturaCompraServlet extends HttpServlet {
             accionListarModal(request, response);
             return;
         } else {
+            // Bloquear edición de facturas de compra de artículos: el stock ya fue
+            // sumado por trigger al insertar; editar requeriría revertir+reaplicar y
+            // genera complejidad innecesaria. Para corregir, anular y crear de nuevo.
+            if ("compraArt".equals(estado.facturaCompra.getTipoFactura())) {
+                mostrarMensaje(request,
+                    "No se puede editar una factura de compra de artículos porque ya afectó al stock. "
+                    + "Si necesita corregirla, anúlela y cree una nueva.",
+                    "alert-warning");
+                cargarDatosParaVista(request, estado, token);
+                forward(request, response, JSP_FACTURA);
+                return;
+            }
+
             // Validar que la cuenta a pagar no tenga pagos aplicados antes de permitir editar.
             // Si los tiene, bloquear la edición: primero se deben reversar los pagos.
             CuentaPagar cuentaPagarActual = cuentaPagarService.getByFactura(estado.facturaCompra.getIdFacturaCompra());

@@ -18,6 +18,7 @@ public class FacturaCompraDetalle implements java.io.Serializable {
     private Long precioCompra;
     private String descripcion;
     private TipoImpuesto tipoImpuesto;
+    private Deposito deposito;
 
     // Campos calculados (no persistidos en BD)
     private Long subtotal;
@@ -95,6 +96,14 @@ public class FacturaCompraDetalle implements java.io.Serializable {
 
     public void setTipoImpuesto(TipoImpuesto tipoImpuesto) {
         this.tipoImpuesto = tipoImpuesto;
+    }
+
+    public Deposito getDeposito() {
+        return deposito;
+    }
+
+    public void setDeposito(Deposito deposito) {
+        this.deposito = deposito;
     }
 
     /**
