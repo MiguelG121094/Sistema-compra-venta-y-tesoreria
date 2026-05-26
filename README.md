@@ -16,10 +16,11 @@ Este sistema permite gestionar el ciclo completo de operaciones comerciales de u
 |------|------------|
 | **Backend** | Java EE 8, Servlets, JAX-RS |
 | **Frontend** | JSP, Bootstrap 5.3.3, DataTables 2 |
-| **Base de Datos** | PostgreSQL |
+| **Base de Datos** | PostgreSQL (con triggers PL/pgSQL para stock) |
 | **Servidor** | GlassFish / Payara |
 | **Build** | Maven |
 | **Notificaciones** | Toastr.js |
+| **JS auxiliar** | jQuery Mask (máscaras de input) |
 
 ---
 
@@ -306,8 +307,11 @@ Sistema-compra-venta-y-tesoreria/
 │           ├── facturaCompra.jsp
 │           └── ...
 ├── pom.xml
-├── Base de datos Taller 3ro.sql
-└── README.md
+├── Base de datos Taller 3ro.sql               # Schema canónico
+├── Procedimientos y Triggers para BD.sql      # Triggers PL/pgSQL para stock
+├── README.md
+├── DOCUMENTACION_PROYECTO.md
+└── ARQUITECTURA_SERVLETS.md
 ```
 
 ---
@@ -321,11 +325,11 @@ Sistema-compra-venta-y-tesoreria/
 | Pedido de Compra | ✅ | ✅ | ✅ | ✅ | ✅ | **Completo** |
 | Presupuesto | ✅ | ✅ | ✅ | ✅ | ✅ | **Completo** |
 | Orden de Compra | ✅ | ✅ | ✅ | ✅ | ✅ | **Completo** |
-| Factura de Compra | ✅ | ✅ | ✅ | ✅ | ✅ | **Completo** |
+| Factura de Compra | ✅ | ✅ | ✅ | ✅ | ✅ | **Completo** (con triggers stock + Libro IVA + Cuenta a Pagar) |
 | Nota Crédito Compra | ✅ | ✅ | ✅ | ❌ | ❌ | Pendiente |
 | Nota Débito Compra | ✅ | ✅ | ✅ | ❌ | ❌ | Pendiente |
-| Nota Remisión Compra | ✅ | ❌ | ❌ | ❌ | ❌ | Pendiente |
-| Cuenta a Pagar | ✅ | ⚠️ | ⚠️ | ❌ | ❌ | Pendiente |
+| Nota Remisión Compra | ✅ | ❌ | ❌ | ❌ | ⚠️ | Parcial (vista inicial) |
+| Cuenta a Pagar | ✅ | ✅ | ✅ | ❌ | ❌ | Backend listo (integrado con Factura Compra) |
 
 ### Módulo de Ventas
 
@@ -345,9 +349,19 @@ Sistema-compra-venta-y-tesoreria/
 | Apertura/Cierre Caja | ✅ | ✅ | ✅ | Backend listo |
 | Cobro | ✅ | ✅ | ✅ | Backend listo |
 | Cuenta a Cobrar | ✅ | ✅ | ✅ | Backend listo |
-| Cuenta a Pagar | ✅ | ⚠️ | ⚠️ | Parcial |
+| Cuenta a Pagar | ✅ | ✅ | ✅ | Backend listo (sincronizado con Factura Compra) |
 | Orden de Pago | ✅ | ✅ | ✅ | Backend listo |
 | Timbrado | ✅ | ✅ | ✅ | Backend listo |
+| Libro IVA Compra | ✅ | ✅ | ✅ | Backend listo (integrado en Factura Compra) |
+
+### Módulo de Seguridad
+
+| Componente | Estado |
+|------------|--------|
+| AuthFilter (autenticación por sesión) | ✅ Completo |
+| AuthorizationFilter (permisos por módulo: leer/insertar/editar/borrar) | ✅ Completo |
+| Permiso DAO + Service | ✅ Completo |
+| Gestión UI de Módulos / Permisos | ❌ Pendiente |
 
 **Leyenda:** ✅ Completo | ⚠️ Parcial | ❌ Pendiente
 
@@ -368,9 +382,14 @@ Sistema-compra-venta-y-tesoreria/
 CREATE DATABASE taller_3ro_compras_tesoreria;
 ```
 
-2. Ejecutar script de creación:
+2. Ejecutar script de creación del schema:
 ```bash
 psql -U postgres -d taller_3ro_compras_tesoreria -f "Base de datos Taller 3ro.sql"
+```
+
+3. Ejecutar script de triggers (actualización automática de stock):
+```bash
+psql -U postgres -d taller_3ro_compras_tesoreria -f "Procedimientos y Triggers para BD.sql"
 ```
 
 ### Configuración de GlassFish
@@ -413,6 +432,9 @@ asadmin deploy target/Taller3ro-1.0-SNAPSHOT.war
 
 - Autenticación basada en sesiones
 - Filtro de autenticación (`AuthFilter.java`) para proteger recursos
+- Filtro de autorización (`AuthorizationFilter.java`) con permisos por módulo (leer/insertar/editar/borrar)
+- Permisos cargados al login en `Map<String, Permiso>` y validados server-side antes de cada acción
+- Botones de JSP condicionados con `<c:if>` según permisos
 - Validación de sesión en cada JSP
 - Timeout de sesión: 30 minutos
 

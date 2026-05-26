@@ -1520,22 +1520,35 @@ public class FacturaCompraBean implements Serializable {
 
 ## Plan de Migración
 
-### Fase 1: FacturaCompra (nuevo)
-- Implementar con el nuevo patrón Session + Token
-- Usar estilo form-floating
-- Servir como referencia para otros módulos
+### Estado actual
 
-### Fase 2: Migrar módulos existentes (opcional, futuro)
+| Módulo | Patrón | Estado |
+|--------|--------|--------|
+| FacturaCompra | Session + Token + Formulario único + JS | ✅ Implementado (referencia) |
+| PedidoCompra | Variables de instancia (legacy, bug concurrencia) | ⏳ Pendiente migrar |
+| Presupuesto | Variables de instancia (legacy, bug concurrencia) | ⏳ Pendiente migrar |
+| OrdenCompra | Variables de instancia (legacy, bug concurrencia) | ⏳ Pendiente migrar |
+| NotaRemision | — | Solo vista JSP, sin servlet aún |
+| FacturaVenta y resto | — | Backend listo, sin UI |
+
+### Fase 1: FacturaCompra ✅ COMPLETADO
+- Implementado con patrón Session + Token
+- Estilo form-floating
+- Refactor transaccional (DAOs con `setAutoCommit(false)` + commit/rollback)
+- Integración con Libro IVA y Cuenta a Pagar
+- Triggers PostgreSQL para stock
+- Sirve como referencia para otros módulos
+
+### Fase 2: Migrar módulos existentes (pendiente)
 - PedidoCompra
 - Presupuesto
 - OrdenCompra
-- FacturaVenta
-- NotaCredito/Debito
+- (Y aplicar el patrón a los nuevos: FacturaVenta, NotaCredito/Debito, NotaRemision, etc.)
 
 ### Consideraciones
-- Los módulos existentes funcionan (con el bug de concurrencia)
-- Migrar solo si hay tiempo o si se reportan problemas
-- Priorizar módulos más usados
+- Los módulos legacy funcionan pero **tienen bug de concurrencia activo** — usuarios concurrentes pueden ver datos mezclados.
+- Migrar es prioritario si el sistema se va a usar multiusuario.
+- Priorizar módulos más usados y los que comparten flujo con FacturaCompra.
 
 ---
 
@@ -1792,8 +1805,52 @@ Configurar en `web.xml`:
 
 ---
 
+## Capa Transaccional (DAOs)
+
+A partir del refactor de marzo 2026, los DAOs de los módulos principales de compras manejan transacciones explícitas para garantizar atomicidad entre cabecera, detalles, Libro IVA y Cuenta a Pagar.
+
+**Patrón:**
+
+```java
+public Long insertarFacturaCompra(FacturaCompra factura, List<FacturaCompraDetalle> detalles) throws SQLException {
+    Connection conn = null;
+    try {
+        conn = Conexion.obtenerConexion();
+        conn.setAutoCommit(false);
+
+        Long idFactura = insertarCabecera(conn, factura);
+        insertarDetalles(conn, idFactura, detalles);     // dispara triggers de stock
+        insertarLibroIva(conn, idFactura, factura);
+        insertarCuentaPagar(conn, idFactura, factura);
+
+        conn.commit();
+        return idFactura;
+    } catch (SQLException e) {
+        if (conn != null) conn.rollback();
+        throw e;
+    } finally {
+        if (conn != null) {
+            conn.setAutoCommit(true);
+            conn.close();
+        }
+    }
+}
+```
+
+**DAOs que ya siguen este patrón:**
+- `FacturaCompraDAO`
+- `PedidoCompraDAO`
+- `PresupuestoDAO`
+- `OrdenCompraDAO`
+
+**Reglas implícitas en el modelo de negocio:**
+- Una factura anulada **no se puede des-anular**.
+- Los detalles de una factura guardada son **inmutables** (no se editan cantidades, no se eliminan ni agregan líneas). Esto justifica que los triggers de stock solo cubran INSERT (detalle) y UPDATE de estado (cabecera → 'Anulado').
+
+---
+
 *Documento creado: Enero 2026*
-*Última actualización: Febrero 2026*
+*Última actualización: Mayo 2026*
 
 ---
 
@@ -1806,3 +1863,5 @@ Configurar en `web.xml`:
 | Enero 2026 | Documentada funcionalidad de facturas de gasto/fondo fijo con selección de impuesto |
 | Enero 2026 | Actualizado patrón a "Switch-Case con Métodos Delegados" |
 | Febrero 2026 | Documentado Sistema de Permisos y Autorización (AuthorizationFilter, flujo completo, patrones JSP) |
+| Marzo 2026 | Agregada sección "Capa Transaccional" describiendo el refactor de DAOs con commit/rollback explícito |
+| Mayo 2026 | Actualizado Plan de Migración con estado real; documentadas reglas de inmutabilidad de detalles (justifica triggers de stock) |

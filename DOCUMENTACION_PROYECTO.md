@@ -185,9 +185,17 @@ src/main/webapp/
 ## Pendientes por Desarrollar
 
 ### 1. DAOs (Data Access Objects)
-Faltan crear los DAOs para las nuevas entidades:
+
+**Stock**: Nota — se decidió que el stock se gestiona vía **triggers PL/pgSQL** en PostgreSQL (ver `Procedimientos y Triggers para BD.sql`), no vía DAO en Java. Por eso `StockDAO` no figura en pendientes.
+
+Faltan crear los DAOs para las siguientes entidades:
 
 ```
+[x] PermisoDAO ✅ (creado 2026-02-06)
+[x] LibroIvaCompraDAO ✅ (creado en refactor transaccional de Factura Compra)
+[ ] LibroIvaVentaDAO
+[ ] NotaRemisionCompraDAO
+[ ] NotaRemisionCompraDetalleDAO
 [ ] MonedaDAO
 [ ] TipoEntidadFinancieraDAO
 [ ] EntidadFinancieraDAO
@@ -198,12 +206,10 @@ Faltan crear los DAOs para las nuevas entidades:
 [ ] ChequeDAO
 [ ] ChequeRecibidoDAO
 [ ] TitularDAO
-[ ] StockDAO
 [ ] MotivoAjusteDAO
 [ ] AjusteStockCabeceraDAO
 [ ] AjusteStockDetalleDAO
 [ ] ModuloDAO
-[x] PermisoDAO ✅ (creado 2026-02-06)
 [ ] FormaPagoCabeceraDAO
 [ ] FormaPagoDetalleDAO
 [ ] FormaCobroDAO
@@ -227,27 +233,23 @@ Faltan crear los DAOs para las nuevas entidades:
 [ ] CobroTarjetaDAO
 [ ] CobroChequeDAO
 [ ] ArqueoCajaDAO
-[ ] LibroIvaVentaDAO
-[ ] LibroIvaCompraDAO
-[ ] NotaRemisionCompraDAO
-[ ] NotaRemisionCompraDetalleDAO
 ```
 
 ### 2. Services (REST)
 Faltan crear los servicios REST para las nuevas entidades:
 
 ```
+[x] PermisoService ✅ (creado 2026-02-06)
+[x] LibroIvaCompraService ✅ (creado en refactor transaccional)
+[ ] LibroIvaVentaService
 [ ] MonedaService
 [ ] EntidadFinancieraService
 [ ] CuentaService
 [ ] ChequeService
-[ ] StockService
 [ ] AjusteStockService
-[x] PermisoService ✅ (creado 2026-02-06)
 [ ] ConciliacionBancariaService
 [ ] FondoFijoService
 [ ] ArqueoCajaService
-[ ] LibroIvaService
 ... (y demás servicios)
 ```
 
@@ -269,6 +271,7 @@ Faltan crear los controladores para las nuevas funcionalidades:
 Faltan crear las vistas para las nuevas funcionalidades:
 
 ```
+[⚠] notaRemision.jsp        (vista inicial creada, sin servlet aún)
 [ ] cuentaBancaria.jsp
 [ ] cheque.jsp
 [ ] stock.jsp
@@ -282,6 +285,15 @@ Faltan crear las vistas para las nuevas funcionalidades:
 
 ### 5. Funcionalidades por Implementar
 
+#### Compras
+- [x] Triggers de stock al guardar/anular Factura Compra ✅ (2026-03)
+- [x] Libro IVA Compra con preservación al anular ✅ (2026-03)
+- [x] Sincronización Cuenta a Pagar al editar/anular Factura ✅ (2026-03)
+- [x] Validación de plazo en facturas a crédito ✅ (2026-04)
+- [⚠] Nota de Remisión Compra (vista inicial creada)
+- [ ] Nota Crédito Compra (UI)
+- [ ] Nota Débito Compra (UI)
+
 #### Tesorería
 - [ ] CRUD de Cuentas Bancarias
 - [ ] Gestión de Chequeras y Cheques
@@ -292,15 +304,18 @@ Faltan crear las vistas para las nuevas funcionalidades:
 - [ ] Rendición de Fondo Fijo
 - [ ] Arqueo de Caja
 - [ ] Recaudaciones a Depositar
+- [ ] UI de Cuenta a Pagar (backend ya integrado con Factura Compra)
 
 #### Inventario
-- [ ] Control de Stock por Depósito
-- [ ] Ajustes de Stock (entrada/salida)
+- [x] Control de Stock por Depósito vía triggers PL/pgSQL ✅ (2026-03)
+- [ ] UI de visualización de stock
+- [ ] Ajustes de Stock (entrada/salida) — UI
 - [ ] Stock mínimo/máximo con alertas
 
 #### Contabilidad
+- [x] Libro IVA Compras (backend integrado en Factura Compra) ✅
 - [ ] Libro IVA Ventas
-- [ ] Libro IVA Compras
+- [ ] UI consulta Libro IVA
 - [ ] Reportes fiscales
 
 #### Seguridad
@@ -360,6 +375,38 @@ Todas las entidades siguen el patrón POJO:
 ---
 
 ## Historial de Cambios
+
+### 2026-05 — Triggers de Stock en PostgreSQL
+
+Se agrega archivo `Procedimientos y Triggers para BD.sql` con triggers PL/pgSQL que mantienen el stock al guardar y anular facturas de compra. Decisión de arquitectura: el stock se actualiza en BD vía triggers, no vía DAO Java.
+
+**Triggers creados:**
+- `trg_factura_compra_detalle_stock_ins` (AFTER INSERT en `factura_compra_detalle`): UPSERT atómico con `ON CONFLICT (id_deposito, id_articulo)`. Auto-crea la fila de stock con min/max=0 si no existe. Ignora detalles sin artículo o sin depósito (caso gasto/fondo fijo).
+- `trg_factura_compra_estado_anular` (AFTER UPDATE OF estado en `factura_compra_cabecera`): revierte el stock cuando la factura pasa a `Anulado`. Idempotente: solo actúa en la transición no-anulado → Anulado.
+
+**Reglas de negocio asumidas por los triggers:**
+- Una factura anulada no se puede des-anular.
+- Los detalles de una factura guardada son inmutables (no se editan cantidades, no se eliminan ni agregan líneas).
+
+### 2026-04 — Validación de Plazo en Crédito
+
+`FacturaCompraServlet`: cuando la condición es `Crédito`, el plazo es obligatorio y debe ser mayor a 0. Validación server-side antes de persistir.
+
+### 2026-03 — Refactor Transaccional + Libro IVA + Sincronización Cuenta a Pagar
+
+Refactor mayor del módulo Factura de Compra para garantizar atomicidad y trazabilidad fiscal/contable.
+
+**Cambios principales:**
+- `FacturaCompraDAO`, `PedidoCompraDAO`, `PresupuestoDAO`, `OrdenCompraDAO`: métodos transaccionales (control explícito de `setAutoCommit(false)` + `commit/rollback`).
+- `LibroIvaCompra` + `LibroIvaCompraDAO` + `LibroIvaCompraService`: registro fiscal generado dentro de la misma transacción que la factura.
+- **Preservación de trazabilidad al anular**: al anular una factura no se borran las filas del Libro IVA, se preservan con el estado actualizado. Deduplicación del cálculo de impuestos (un solo lugar de cálculo).
+- **Sincronización Cuenta a Pagar**: al editar o anular una factura, su Cuenta a Pagar asociada se actualiza/cancela. Validación de que no haya pagos aplicados antes de permitir anular. Ajuste automático de fecha de vencimiento cuando la condición es Contado.
+- Manejo de nulls y validaciones reforzadas en todo el módulo.
+- Todas las 85 entidades del modelo implementan `Serializable` (necesario para guardar `State` en sesión de forma segura).
+
+### 2026-02 — Nota de Remisión (vista inicial)
+
+Se crea `notaRemision.jsp` con estilo unificado al de `facturaCompra.jsp` (form-floating, layout de cards). Se agrega entrada en el menú principal. **Aún no tiene servlet ni DAOs**: es un esqueleto de vista para futura implementación.
 
 ### 2026-02-06
 
@@ -552,12 +599,20 @@ REFERENCES public.impuesto (id_impuesto);
 
 ## Próximos Módulos a Implementar
 
-### 1. Módulo de Stock (siguiente)
-Gestión de inventario: control de existencias por depósito, ajustes de stock (entrada/salida), stock mínimo/máximo con alertas.
-- Entidades: Articulo, Stock, Deposito, MotivoAjuste, AjusteStockCabecera, AjusteStockDetalle
-- Requiere: DAOs, Services, Servlet, JSP
+### 1. Nota de Remisión Compra (en progreso)
+La vista JSP ya existe (`notaRemision.jsp`), falta implementar el servlet, DAOs y service.
+- Patrón a usar: Session + Token (referencia: `FacturaCompraServlet`)
 
-### 2. Módulo de Tesorería (después de Stock)
+### 2. Módulo de Stock (UI)
+El stock ya se mantiene automáticamente por triggers PL/pgSQL, falta la UI de consulta y ajustes manuales.
+- Entidades: Stock, Deposito, MotivoAjuste, AjusteStockCabecera, AjusteStockDetalle
+- Requiere: DAOs (consulta), Services, Servlet, JSP
+
+### 3. Módulo de Ventas
+Todos los backends (Pedido, Factura, Nota Crédito/Débito/Remisión) tienen modelo + DAO + Service. Falta la capa UI completa.
+- Reusar patrón de Factura Compra (Session+Token, transaccional, Libro IVA, triggers de stock)
+
+### 4. Módulo de Tesorería
 Gestión financiera completa: cuentas bancarias, cheques, cobros, pagos, caja, fondo fijo, conciliación bancaria.
 - Submódulos: Bancos, Cheques, Cobros/Pagos, Caja, Fondo Fijo, Conciliación
 - Requiere: DAOs, Services, Servlets, JSPs para cada submódulo
@@ -566,8 +621,12 @@ Gestión financiera completa: cuentas bancarias, cheques, cobros, pagos, caja, f
 
 ## Otros Pendientes
 
-1. **Crear DAOs** para las entidades restantes (~40 pendientes)
+1. **Crear DAOs** para entidades de tesorería restantes (~40 pendientes)
 2. **Crear Services REST** para exponer las operaciones
 3. **Crear vistas JSP** para las nuevas funcionalidades
 4. ~~**Implementar sistema de permisos** por módulo~~ ✅ (implementado 2026-02-06)
-5. **Completar Factura de Compra** - Sección de artículos del catálogo (actualmente comentada)
+5. ~~**Refactor transaccional Factura Compra + Libro IVA**~~ ✅ (implementado 2026-03)
+6. ~~**Triggers de stock**~~ ✅ (implementado 2026-05)
+7. **Migrar PedidoCompra, Presupuesto, OrdenCompra al patrón Session+Token** — actualmente usan variables de instancia, lo que genera bug de concurrencia en uso multiusuario (ver `ARQUITECTURA_SERVLETS.md`).
+8. **Eliminar `facturaCompra_old.jsp`** una vez confirmado que no se necesita como referencia.
+9. **Completar Factura de Compra** - Sección de artículos del catálogo (actualmente comentada).
