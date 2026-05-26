@@ -108,7 +108,7 @@
                                                 <div class="col-md-2">
                                                     <div class="form-floating mb-3 mb-md-0">
                                                         <input class="form-control" id="usuario" type="text" placeholder="Usuario"
-                                                               value="<%= usuario != null ? usuario.getNombre() : "" %>" readonly />
+                                                               value="<%= usuario != null ? usuario.getUsername() : "" %>" readonly />
                                                         <label for="usuario">Usuario</label>
                                                     </div>
                                                 </div>
