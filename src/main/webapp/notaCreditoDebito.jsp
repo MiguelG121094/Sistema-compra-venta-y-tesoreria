@@ -247,46 +247,44 @@
                             <!-- Línea separadora -->
                             <div class="border-section"></div>
 
-                            <!-- Búsqueda y agregado de artículos -->
+                            <%-- Botón Buscar Artículo comentado por ahora — la NC/ND no agrega artículos nuevos,
+                                 solo modifica los que vienen de la factura referenciada.
+                            <button type="button" data-bs-toggle="modal" data-bs-target="#modalArticulos"
+                                    class="btn btn-outline-primary w-100 btn-responsive"
+                                    style="overflow: hidden; text-overflow: ellipsis;"
+                                    title="Buscar Artículo">Buscar Artículo</button>
+                            --%>
+
+                            <!-- Modificación de artículos (estilo fondo fijo de facturaCompra) -->
+                            <input type="hidden" name="index" id="indexArticulo" value="${indexSeleccionado}">
                             <div class="row mb-4">
                                 <div class="col custom-card">
-                                    <div class="row align-items-end" style="margin-top: 10px">
-                                        <div class="col-md-1">
-                                            <div class="mb-3 mb-md-0">
-                                                <button type="button" data-bs-toggle="modal" data-bs-target="#modalArticulos"
-                                                        class="btn btn-outline-primary w-100 btn-responsive"
-                                                        style="overflow: hidden; text-overflow: ellipsis;"
-                                                        title="Buscar Artículo">Buscar Artículo</button>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-2">
-                                            <div class="form-floating mb-3 mb-md-0">
-                                                <input class="form-control" id="idArticulo" name="idArticulo" type="text" placeholder="Id. Artículo" readonly />
-                                                <label for="idArticulo">Id. Artículo</label>
-                                            </div>
-                                        </div>
+                                    <div class="row" style="margin-top: 10px">
                                         <div class="col-md-3">
-                                            <div class="form-floating mb-3 mb-md-0">
-                                                <input class="form-control" id="descripcionArticulo" type="text" placeholder="Descripción" readonly />
-                                                <label for="descripcionArticulo">Descripción</label>
-                                            </div>
+                                            <input type="text" name="descripcion" placeholder="Descripción" class="form-control"
+                                                   value="${detalleSeleccionado.descripcion}">
                                         </div>
                                         <div class="col-md-1">
-                                            <div class="form-floating mb-3 mb-md-0">
-                                                <input class="form-control mask-miles" id="cantidad" name="cantidad" type="text" inputmode="numeric"
-                                                       placeholder="Cantidad" value="1" />
-                                                <label for="cantidad">Cantidad</label>
-                                            </div>
+                                            <input type="text" inputmode="numeric" name="cantidad" placeholder="Cantidad" class="form-control mask-miles"
+                                                   value="${not empty detalleSeleccionado ? detalleSeleccionado.cantidad : 1}">
                                         </div>
                                         <div class="col-md-2">
-                                            <div class="form-floating mb-3 mb-md-0">
-                                                <input class="form-control mask-miles" id="precioCompra" name="precioCompra" type="text" inputmode="numeric"
-                                                       placeholder="Precio de compra" />
-                                                <label for="precioCompra">Precio de compra</label>
-                                            </div>
+                                            <input type="text" inputmode="numeric" name="precioCompra" placeholder="Precio de compra" class="form-control mask-miles"
+                                                   value="${detalleSeleccionado.precioCompra}">
                                         </div>
                                         <div class="col-md-2">
-                                            <button type="button" class="btn btn-success w-100" style="height: 58px;">Agregar Artículo</button>
+                                            <select name="idTipoImpuesto" class="form-control">
+                                                <option value="">Seleccionar Impuesto</option>
+                                                <c:forEach var="imp" items="${listaTipoImpuesto}">
+                                                    <option value="${imp.idTipoImpuesto}"
+                                                        ${detalleSeleccionado.tipoImpuesto.idTipoImpuesto == imp.idTipoImpuesto ? 'selected' : ''}>
+                                                        ${imp.descripcion}
+                                                    </option>
+                                                </c:forEach>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <button type="button" class="btn btn-warning">Modificar</button>
                                         </div>
                                     </div>
                                 </div>
