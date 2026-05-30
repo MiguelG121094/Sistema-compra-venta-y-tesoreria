@@ -8,6 +8,8 @@ Sistema ERP desarrollado en Java EE para la gestión integral de procesos de com
 
 Este sistema permite gestionar el ciclo completo de operaciones comerciales de una empresa, desde la solicitud de compra hasta el pago a proveedores, y desde la venta hasta el cobro a clientes. Incluye módulos de tesorería para el control de cuentas bancarias, cheques, cajas y fondos.
 
+> **Alcance:** el sistema **no incluye un módulo de contabilidad**. El flujo de dinero se gestiona íntegramente en **Tesorería**, y el aspecto fiscal/contable solo se cubre hasta el **Libro IVA de Compra y de Venta** (más Timbrado y Tipo de Comprobante como soporte). No hay asientos contables, plan de cuentas, balances ni estados financieros.
+
 ---
 
 ## Tecnologías Utilizadas
@@ -128,15 +130,15 @@ Gestiona las entidades relacionadas con personas.
 | Sucursal | Puntos de venta/operación |
 | Usuario | Usuarios del sistema |
 
-### 6. Módulo de Contabilidad
-Gestiona aspectos fiscales y contables.
+### 6. Soporte Fiscal (no es un módulo de contabilidad)
+El sistema **no implementa contabilidad** (asientos, plan de cuentas, balances). Solo roza el área fiscal mediante las siguientes entidades de apoyo:
 
 | Entidad | Descripción |
 |---------|-------------|
 | Timbrado | Autorización fiscal |
 | Tipo Comprobante | Clasificación de documentos |
-| Libro IVA Compra | Registro fiscal de compras |
-| Libro IVA Venta | Registro fiscal de ventas |
+| Libro IVA Compra | Registro fiscal de compras (hasta aquí llega el alcance contable) |
+| Libro IVA Venta | Registro fiscal de ventas (hasta aquí llega el alcance contable) |
 
 ---
 
@@ -326,8 +328,8 @@ Sistema-compra-venta-y-tesoreria/
 | Presupuesto | ✅ | ✅ | ✅ | ✅ | ✅ | **Completo** |
 | Orden de Compra | ✅ | ✅ | ✅ | ✅ | ✅ | **Completo** |
 | Factura de Compra | ✅ | ✅ | ✅ | ✅ | ✅ | **Completo** (con triggers stock + Libro IVA + Cuenta a Pagar) |
-| Nota Crédito Compra | ✅ | ✅ | ✅ | ❌ | ❌ | Pendiente |
-| Nota Débito Compra | ✅ | ✅ | ✅ | ❌ | ❌ | Pendiente |
+| Nota Crédito Compra | ✅ | ✅ | ✅ | ❌ | ⚠️ | Parcial (vista `notaCreditoDebito.jsp`, sin servlet) |
+| Nota Débito Compra | ✅ | ✅ | ✅ | ❌ | ⚠️ | Parcial (vista `notaCreditoDebito.jsp`, sin servlet) |
 | Nota Remisión Compra | ✅ | ❌ | ❌ | ❌ | ⚠️ | Parcial (vista inicial) |
 | Cuenta a Pagar | ✅ | ✅ | ✅ | ❌ | ❌ | Backend listo (integrado con Factura Compra) |
 

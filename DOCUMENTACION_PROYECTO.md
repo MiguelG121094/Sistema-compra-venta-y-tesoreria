@@ -5,9 +5,11 @@
 Sistema ERP desarrollado en Java EE para la gestión integral de:
 - **Compras**: Pedidos, presupuestos, órdenes de compra, facturas de compra
 - **Ventas**: Pedidos, facturas de venta, notas de remisión
-- **Tesorería**: Cuentas bancarias, cheques, cobros, pagos, conciliación bancaria
+- **Tesorería**: Cuentas bancarias, cheques, cobros, pagos, conciliación bancaria (maneja todo el flujo de dinero)
 - **Inventario**: Artículos, stock, ajustes de stock
 - **Seguridad**: Usuarios, grupos, permisos por módulo
+
+> **Alcance fiscal/contable:** el sistema **no incluye contabilidad** (asientos, plan de cuentas, balances, estados financieros). Solo roza el área fiscal mediante el **Libro IVA de Compra y de Venta** (más Timbrado y Tipo de Comprobante como soporte). Hasta ahí llega el alcance contable.
 
 ---
 
@@ -156,7 +158,9 @@ src/main/webapp/
 | AjusteStockCabecera | ajuste_stock_cabecera | ✅ |
 | AjusteStockDetalle | ajuste_stock_detalle | ✅ |
 
-#### Módulo de Contabilidad
+#### Soporte Fiscal (no es contabilidad)
+> El sistema **no implementa contabilidad**. Estas entidades solo cubren el aspecto fiscal hasta el Libro IVA:
+
 | Entidad | Tabla SQL | Estado |
 |---------|-----------|--------|
 | LibroIvaVenta | libro_iva_venta | ✅ |
@@ -272,6 +276,7 @@ Faltan crear las vistas para las nuevas funcionalidades:
 
 ```
 [⚠] notaRemision.jsp        (vista inicial creada, sin servlet aún)
+[⚠] notaCreditoDebito.jsp   (vista Nota Crédito/Débito Compra creada, sin servlet aún)
 [ ] cuentaBancaria.jsp
 [ ] cheque.jsp
 [ ] stock.jsp
@@ -291,8 +296,8 @@ Faltan crear las vistas para las nuevas funcionalidades:
 - [x] Sincronización Cuenta a Pagar al editar/anular Factura ✅ (2026-03)
 - [x] Validación de plazo en facturas a crédito ✅ (2026-04)
 - [⚠] Nota de Remisión Compra (vista inicial creada)
-- [ ] Nota Crédito Compra (UI)
-- [ ] Nota Débito Compra (UI)
+- [⚠] Nota Crédito Compra (vista `notaCreditoDebito.jsp` creada, falta servlet)
+- [⚠] Nota Débito Compra (vista `notaCreditoDebito.jsp` creada, falta servlet)
 
 #### Tesorería
 - [ ] CRUD de Cuentas Bancarias
@@ -312,11 +317,11 @@ Faltan crear las vistas para las nuevas funcionalidades:
 - [ ] Ajustes de Stock (entrada/salida) — UI
 - [ ] Stock mínimo/máximo con alertas
 
-#### Contabilidad
+#### Soporte Fiscal (no hay módulo de contabilidad)
 - [x] Libro IVA Compras (backend integrado en Factura Compra) ✅
 - [ ] Libro IVA Ventas
 - [ ] UI consulta Libro IVA
-- [ ] Reportes fiscales
+- _Fuera de alcance: asientos contables, plan de cuentas, balances y estados financieros._
 
 #### Seguridad
 - [ ] Gestión de Módulos (UI para ABM de módulos)
@@ -375,6 +380,10 @@ Todas las entidades siguen el patrón POJO:
 ---
 
 ## Historial de Cambios
+
+### 2026-05 — Nota de Crédito / Débito Compra (vista inicial)
+
+Se crea `notaCreditoDebito.jsp`, una vista combinada para Nota de Crédito y Débito de Compra, con estilo unificado al de `facturaCompra.jsp` (form-floating, layout de cards) y adaptada su sección de artículos. Se agrega entrada en el menú principal y lateral para su acceso. **Aún no tiene servlet ni integración de backend**: es un esqueleto de vista para futura implementación (botón "Buscar Artículo" comentado por ahora).
 
 ### 2026-05 — Triggers de Stock en PostgreSQL
 
