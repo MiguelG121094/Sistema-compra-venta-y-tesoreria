@@ -296,8 +296,8 @@ Faltan crear las vistas para las nuevas funcionalidades:
 - [x] Sincronización Cuenta a Pagar al editar/anular Factura ✅ (2026-03)
 - [x] Validación de plazo en facturas a crédito ✅ (2026-04)
 - [⚠] Nota de Remisión Compra (vista inicial creada)
-- [⚠] Nota Crédito Compra (vista `notaCreditoDebito.jsp` creada, falta servlet)
-- [⚠] Nota Débito Compra (vista `notaCreditoDebito.jsp` creada, falta servlet)
+- [⚠] Nota Crédito Compra (vista `notaCreditoDebito.jsp` creada, falta servlet — ver [plan](NOTA_CREDITO_DEBITO_PLAN.md))
+- [⚠] Nota Débito Compra (vista `notaCreditoDebito.jsp` creada, falta servlet — ver [plan](NOTA_CREDITO_DEBITO_PLAN.md))
 
 #### Tesorería
 - [ ] CRUD de Cuentas Bancarias
@@ -384,6 +384,8 @@ Todas las entidades siguen el patrón POJO:
 ### 2026-05 — Nota de Crédito / Débito Compra (vista inicial)
 
 Se crea `notaCreditoDebito.jsp`, una vista combinada para Nota de Crédito y Débito de Compra, con estilo unificado al de `facturaCompra.jsp` (form-floating, layout de cards) y adaptada su sección de artículos. Se agrega entrada en el menú principal y lateral para su acceso. **Aún no tiene servlet ni integración de backend**: es un esqueleto de vista para futura implementación (botón "Buscar Artículo" comentado por ahora).
+
+El diseño de la implementación (cambios de BD, efecto en Cuenta a Pagar y Libro IVA, flujos y checklist) está documentado en [`NOTA_CREDITO_DEBITO_PLAN.md`](NOTA_CREDITO_DEBITO_PLAN.md).
 
 ### 2026-05 — Triggers de Stock en PostgreSQL
 

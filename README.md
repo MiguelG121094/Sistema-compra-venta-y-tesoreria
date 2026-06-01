@@ -313,7 +313,8 @@ Sistema-compra-venta-y-tesoreria/
 ├── Procedimientos y Triggers para BD.sql      # Triggers PL/pgSQL para stock
 ├── README.md
 ├── DOCUMENTACION_PROYECTO.md
-└── ARQUITECTURA_SERVLETS.md
+├── ARQUITECTURA_SERVLETS.md
+└── NOTA_CREDITO_DEBITO_PLAN.md                 # Plan de implementación NC/ND de compra
 ```
 
 ---
@@ -328,8 +329,8 @@ Sistema-compra-venta-y-tesoreria/
 | Presupuesto | ✅ | ✅ | ✅ | ✅ | ✅ | **Completo** |
 | Orden de Compra | ✅ | ✅ | ✅ | ✅ | ✅ | **Completo** |
 | Factura de Compra | ✅ | ✅ | ✅ | ✅ | ✅ | **Completo** (con triggers stock + Libro IVA + Cuenta a Pagar) |
-| Nota Crédito Compra | ✅ | ✅ | ✅ | ❌ | ⚠️ | Parcial (vista `notaCreditoDebito.jsp`, sin servlet) |
-| Nota Débito Compra | ✅ | ✅ | ✅ | ❌ | ⚠️ | Parcial (vista `notaCreditoDebito.jsp`, sin servlet) |
+| Nota Crédito Compra | ✅ | ✅ | ✅ | ❌ | ⚠️ | Parcial (vista `notaCreditoDebito.jsp`, sin servlet — ver [plan](NOTA_CREDITO_DEBITO_PLAN.md)) |
+| Nota Débito Compra | ✅ | ✅ | ✅ | ❌ | ⚠️ | Parcial (vista `notaCreditoDebito.jsp`, sin servlet — ver [plan](NOTA_CREDITO_DEBITO_PLAN.md)) |
 | Nota Remisión Compra | ✅ | ❌ | ❌ | ❌ | ⚠️ | Parcial (vista inicial) |
 | Cuenta a Pagar | ✅ | ✅ | ✅ | ❌ | ❌ | Backend listo (integrado con Factura Compra) |
 
