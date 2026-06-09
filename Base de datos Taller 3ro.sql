@@ -406,9 +406,9 @@ CREATE TABLE public.ajuste_stock_detalle (
 CREATE TABLE public.stock (
                 id_deposito INTEGER NOT NULL,
                 id_articulo INTEGER NOT NULL,
-                stk_cantidad_minima INTEGER NOT NULL,
-                stk_cantidad_maxima INTEGER NOT NULL,
-                stk_stock_actual INTEGER NOT NULL,
+                stk_cantidad_minima INTEGER DEFAULT 0,
+                stk_cantidad_maxima INTEGER DEFAULT 0,
+                stk_stock_actual INTEGER,
                 CONSTRAINT id_stock PRIMARY KEY (id_deposito, id_articulo)
 );
 
@@ -1052,6 +1052,7 @@ CREATE TABLE public.factura_compra_detalle (
                 id_fact_comp_cab INTEGER NOT NULL,
                 id_articulo INTEGER,
                 id_impuesto INTEGER,
+                id_deposito INTEGER,
                 fact_comp_cantidad INTEGER,
                 fact_comp_precio_compra INTEGER,
                 fact_det_descripcion VARCHAR,
@@ -1120,13 +1121,13 @@ CREATE SEQUENCE public.nota_debito_compra_cabecera_id_nota_debi_comp_cab_seq;
 
 CREATE TABLE public.nota_debito_compra_cabecera (
                 id_nota_debi_comp_cab INTEGER NOT NULL DEFAULT nextval('public.nota_debito_compra_cabecera_id_nota_debi_comp_cab_seq'),
-                nota_debi_comp_numero INTEGER NOT NULL,
+                nota_debi_comp_numero VARCHAR NOT NULL,
                 nota_debi_comp_timbrado INTEGER NOT NULL,
                 nota_debi_comp_fecha_venci_timb DATE NOT NULL,
                 nota_debi_comp_fecha_emision DATE NOT NULL,
                 nota_debi_comp_fecha_carga DATE NOT NULL,
                 nota_debi_comp_estado VARCHAR(100) NOT NULL,
-                nota_debi_comp_observacion VARCHAR(255) NOT NULL,
+                nota_debi_comp_observacion VARCHAR(255),
                 id_usuario INTEGER NOT NULL,
                 id_proveedor INTEGER NOT NULL,
                 id_fact_comp_cab INTEGER NOT NULL,
@@ -1137,26 +1138,33 @@ CREATE TABLE public.nota_debito_compra_cabecera (
 
 ALTER SEQUENCE public.nota_debito_compra_cabecera_id_nota_debi_comp_cab_seq OWNED BY public.nota_debito_compra_cabecera.id_nota_debi_comp_cab;
 
+CREATE SEQUENCE public.nota_debito_compra_detalle_id_nota_debito_det_seq;
+
 CREATE TABLE public.nota_debito_compra_detalle (
-                id_nota_debi_comp_cab INTEGER NOT NULL,
-                id_articulo INTEGER NOT NULL,
+                id_nota_debito_det INTEGER NOT NULL DEFAULT nextval('public.nota_debito_compra_detalle_id_nota_debito_det_seq'),
+                id_articulo INTEGER,
                 nota_debi_comp_cantidad INTEGER NOT NULL,
                 nota_debi_monto INTEGER NOT NULL,
-                CONSTRAINT id_nota_debi_comp_det PRIMARY KEY (id_nota_debi_comp_cab, id_articulo)
+                id_impuesto INTEGER,
+                nota_debito_descripcion VARCHAR,
+                id_nota_debi_comp_cab INTEGER NOT NULL,
+                CONSTRAINT id_nota_debi_comp_det PRIMARY KEY (id_nota_debito_det)
 );
 
+
+ALTER SEQUENCE public.nota_debito_compra_detalle_id_nota_debito_det_seq OWNED BY public.nota_debito_compra_detalle.id_nota_debito_det;
 
 CREATE SEQUENCE public.nota_credito_compra_cabecera_id_nota_cred_comp_cab_seq;
 
 CREATE TABLE public.nota_credito_compra_cabecera (
                 id_nota_cred_comp_cab INTEGER NOT NULL DEFAULT nextval('public.nota_credito_compra_cabecera_id_nota_cred_comp_cab_seq'),
-                nota_cred_comp_numero INTEGER NOT NULL,
+                nota_cred_comp_numero VARCHAR NOT NULL,
                 nota_cred_comp_timbrado INTEGER NOT NULL,
                 nota_cred_comp_fecha_venci_timb DATE NOT NULL,
                 nota_cred_comp_fecha_emision DATE NOT NULL,
                 nota_cred_comp_fecha_carga DATE NOT NULL,
                 nota_cred_comp_estado VARCHAR(100) NOT NULL,
-                nota_cred_comp_observacion VARCHAR(255) NOT NULL,
+                nota_cred_comp_observacion VARCHAR(255),
                 id_usuario INTEGER NOT NULL,
                 id_proveedor INTEGER NOT NULL,
                 id_fact_comp_cab INTEGER NOT NULL,
@@ -1167,20 +1175,13 @@ CREATE TABLE public.nota_credito_compra_cabecera (
 
 ALTER SEQUENCE public.nota_credito_compra_cabecera_id_nota_cred_comp_cab_seq OWNED BY public.nota_credito_compra_cabecera.id_nota_cred_comp_cab;
 
-CREATE TABLE public.nota_credito_compra_detalle (
-                id_articulo INTEGER NOT NULL,
-                id_nota_cred_comp_cab INTEGER NOT NULL,
-                nota_cred_comp_cantidad INTEGER NOT NULL,
-                nota_cred_monto INTEGER NOT NULL,
-                CONSTRAINT id_nota_cred_comp_det PRIMARY KEY (id_articulo, id_nota_cred_comp_cab)
-);
-
-
 CREATE SEQUENCE public.libro_iva_compra_id_libro_iva_compra_seq;
 
 CREATE TABLE public.libro_iva_compra (
                 id_libro_iva_compra INTEGER NOT NULL DEFAULT nextval('public.libro_iva_compra_id_libro_iva_compra_seq'),
-                id_fact_comp_cab INTEGER NOT NULL,
+                id_fact_comp_cab INTEGER,
+                id_nota_cred_comp_cab INTEGER,
+                id_nota_debi_comp_cab INTEGER,
                 libro_iva_comp_fecha DATE,
                 libro_iva_comp_5 INTEGER,
                 libro_iva_comp_10 INTEGER,
@@ -1188,18 +1189,36 @@ CREATE TABLE public.libro_iva_compra (
                 libro_iva_comp_gravada_5 INTEGER,
                 libro_iva_comp_exenta INTEGER,
                 libro_iva_comp_total INTEGER,
-                libro_iva_comp_estado VARCHAR(20) NOT NULL DEFAULT 'Activo',
-                CONSTRAINT id_libro_iva_compra PRIMARY KEY (id_libro_iva_compra, id_fact_comp_cab)
+                libro_iva_comp_estado VARCHAR,
+                libro_iva_comp_origen VARCHAR,
+                CONSTRAINT id_libro_iva_compra PRIMARY KEY (id_libro_iva_compra)
 );
 COMMENT ON TABLE public.libro_iva_compra IS 'se guarda el total del IVA5 e IVA10 de las facturas (Se recomienda poner en el informe las gravadas)';
 COMMENT ON COLUMN public.libro_iva_compra.libro_iva_comp_gravada_10 IS 'subtotal / 11';
 COMMENT ON COLUMN public.libro_iva_compra.libro_iva_comp_gravada_5 IS 'subtotal / 21';
 COMMENT ON COLUMN public.libro_iva_compra.libro_iva_comp_exenta IS 'ítems exentos de IVA 0%';
 COMMENT ON COLUMN public.libro_iva_compra.libro_iva_comp_total IS 'total general de la factura compra';
-COMMENT ON COLUMN public.libro_iva_compra.libro_iva_comp_estado IS 'Activo o Anulado — se preserva el registro para trazabilidad fiscal';
+COMMENT ON COLUMN public.libro_iva_compra.libro_iva_comp_estado IS 'Activo o Anulado — se pone estado para preservar el registro para trazabilidad fiscal';
+COMMENT ON COLUMN public.libro_iva_compra.libro_iva_comp_origen IS 'seria el tipo de comprobante que es la fila (factura, nota de crédito o nota de débito)';
 
 
 ALTER SEQUENCE public.libro_iva_compra_id_libro_iva_compra_seq OWNED BY public.libro_iva_compra.id_libro_iva_compra;
+
+CREATE SEQUENCE public.nota_credito_compra_detalle_id_nota_credito_det_seq;
+
+CREATE TABLE public.nota_credito_compra_detalle (
+                id_nota_credito_det INTEGER NOT NULL DEFAULT nextval('public.nota_credito_compra_detalle_id_nota_credito_det_seq'),
+                id_articulo INTEGER,
+                nota_cred_comp_cantidad INTEGER NOT NULL,
+                nota_cred_monto INTEGER NOT NULL,
+                id_impuesto INTEGER,
+                nota_credito_descripcion VARCHAR,
+                id_nota_cred_comp_cab INTEGER NOT NULL,
+                CONSTRAINT id_nota_cred_comp_det PRIMARY KEY (id_nota_credito_det)
+);
+
+
+ALTER SEQUENCE public.nota_credito_compra_detalle_id_nota_credito_det_seq OWNED BY public.nota_credito_compra_detalle.id_nota_credito_det;
 
 CREATE TABLE public.orden_compra_detalle (
                 id_orden_compra_cab INTEGER NOT NULL,
@@ -1565,6 +1584,20 @@ ON DELETE NO ACTION
 ON UPDATE NO ACTION
 NOT DEFERRABLE;
 
+ALTER TABLE public.nota_credito_compra_detalle ADD CONSTRAINT impuesto_nota_credito_compra_detalle_fk
+FOREIGN KEY (id_impuesto)
+REFERENCES public.impuesto (id_impuesto)
+ON DELETE NO ACTION
+ON UPDATE NO ACTION
+NOT DEFERRABLE;
+
+ALTER TABLE public.nota_debito_compra_detalle ADD CONSTRAINT impuesto_nota_debito_compra_detalle_fk
+FOREIGN KEY (id_impuesto)
+REFERENCES public.impuesto (id_impuesto)
+ON DELETE NO ACTION
+ON UPDATE NO ACTION
+NOT DEFERRABLE;
+
 ALTER TABLE public.usuario ADD CONSTRAINT grupo_usuario_fk
 FOREIGN KEY (id_grupo)
 REFERENCES public.grupo (id_grupo)
@@ -1628,6 +1661,13 @@ ON DELETE NO ACTION
 ON UPDATE NO ACTION
 NOT DEFERRABLE;
 
+ALTER TABLE public.factura_compra_detalle ADD CONSTRAINT deposito_factura_compra_detalle_fk
+FOREIGN KEY (id_deposito)
+REFERENCES public.deposito (id_deposito)
+ON DELETE NO ACTION
+ON UPDATE NO ACTION
+NOT DEFERRABLE;
+
 ALTER TABLE public.articulo ADD CONSTRAINT tipo_articulo_articulo_fk
 FOREIGN KEY (id_tipo_articulo)
 REFERENCES public.tipo_articulo (id_tipo_articulo)
@@ -1677,20 +1717,6 @@ ON DELETE NO ACTION
 ON UPDATE NO ACTION
 NOT DEFERRABLE;
 
-ALTER TABLE public.nota_credito_compra_detalle ADD CONSTRAINT articulo_nota_credito_compra_detalle_fk
-FOREIGN KEY (id_articulo)
-REFERENCES public.articulo (id_articulo)
-ON DELETE NO ACTION
-ON UPDATE NO ACTION
-NOT DEFERRABLE;
-
-ALTER TABLE public.nota_debito_compra_detalle ADD CONSTRAINT articulo_nota_debito_compra_detalle_fk
-FOREIGN KEY (id_articulo)
-REFERENCES public.articulo (id_articulo)
-ON DELETE NO ACTION
-ON UPDATE NO ACTION
-NOT DEFERRABLE;
-
 ALTER TABLE public.pedido_venta_detalle ADD CONSTRAINT articulo_pedido_venta_detalle_fk
 FOREIGN KEY (id_articulo)
 REFERENCES public.articulo (id_articulo)
@@ -1727,6 +1753,20 @@ ON UPDATE NO ACTION
 NOT DEFERRABLE;
 
 ALTER TABLE public.factura_compra_detalle ADD CONSTRAINT articulo_factura_compra_detalle_fk
+FOREIGN KEY (id_articulo)
+REFERENCES public.articulo (id_articulo)
+ON DELETE NO ACTION
+ON UPDATE NO ACTION
+NOT DEFERRABLE;
+
+ALTER TABLE public.nota_credito_compra_detalle ADD CONSTRAINT articulo_nota_credito_compra_detalle_fk
+FOREIGN KEY (id_articulo)
+REFERENCES public.articulo (id_articulo)
+ON DELETE NO ACTION
+ON UPDATE NO ACTION
+NOT DEFERRABLE;
+
+ALTER TABLE public.nota_debito_compra_detalle ADD CONSTRAINT articulo_nota_debito_compra_detalle_fk
 FOREIGN KEY (id_articulo)
 REFERENCES public.articulo (id_articulo)
 ON DELETE NO ACTION
@@ -2244,13 +2284,6 @@ ON DELETE NO ACTION
 ON UPDATE NO ACTION
 NOT DEFERRABLE;
 
-ALTER TABLE public.libro_iva_compra ADD CONSTRAINT factura_compra_cabecera_libro_iva_compra_fk
-FOREIGN KEY (id_fact_comp_cab)
-REFERENCES public.factura_compra_cabecera (id_fact_comp_cab)
-ON DELETE NO ACTION
-ON UPDATE NO ACTION
-NOT DEFERRABLE;
-
 ALTER TABLE public.nota_credito_compra_cabecera ADD CONSTRAINT factura_compra_cabecera_nota_credito_compra_cabecera_fk
 FOREIGN KEY (id_fact_comp_cab)
 REFERENCES public.factura_compra_cabecera (id_fact_comp_cab)
@@ -2273,6 +2306,13 @@ ON UPDATE NO ACTION
 NOT DEFERRABLE;
 
 ALTER TABLE public.factura_compra_detalle ADD CONSTRAINT factura_compra_cabecera_factura_compra_detalle_fk
+FOREIGN KEY (id_fact_comp_cab)
+REFERENCES public.factura_compra_cabecera (id_fact_comp_cab)
+ON DELETE NO ACTION
+ON UPDATE NO ACTION
+NOT DEFERRABLE;
+
+ALTER TABLE public.libro_iva_compra ADD CONSTRAINT factura_compra_cabecera_libro_iva_compra_fk
 FOREIGN KEY (id_fact_comp_cab)
 REFERENCES public.factura_compra_cabecera (id_fact_comp_cab)
 ON DELETE NO ACTION
@@ -2307,7 +2347,21 @@ ON DELETE NO ACTION
 ON UPDATE NO ACTION
 NOT DEFERRABLE;
 
+ALTER TABLE public.libro_iva_compra ADD CONSTRAINT nota_debito_compra_cabecera_libro_iva_compra_fk
+FOREIGN KEY (id_nota_debi_comp_cab)
+REFERENCES public.nota_debito_compra_cabecera (id_nota_debi_comp_cab)
+ON DELETE NO ACTION
+ON UPDATE NO ACTION
+NOT DEFERRABLE;
+
 ALTER TABLE public.nota_credito_compra_detalle ADD CONSTRAINT nota_credito_compra_cabecera_nota_credito_compra_detalle_fk
+FOREIGN KEY (id_nota_cred_comp_cab)
+REFERENCES public.nota_credito_compra_cabecera (id_nota_cred_comp_cab)
+ON DELETE NO ACTION
+ON UPDATE NO ACTION
+NOT DEFERRABLE;
+
+ALTER TABLE public.libro_iva_compra ADD CONSTRAINT nota_credito_compra_cabecera_libro_iva_compra_fk
 FOREIGN KEY (id_nota_cred_comp_cab)
 REFERENCES public.nota_credito_compra_cabecera (id_nota_cred_comp_cab)
 ON DELETE NO ACTION
