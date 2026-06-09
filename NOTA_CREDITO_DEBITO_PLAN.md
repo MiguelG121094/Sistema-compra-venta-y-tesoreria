@@ -154,7 +154,11 @@ ALTER TABLE public.nota_debito_compra_cabecera
 
 ## 4. Efecto en Cuenta a Pagar
 
-### 4.1 Principio
+> ⚠️ **SIN DECIDIR.** Hay **dos enfoques** sobre la mesa. Ninguno está aprobado todavía.
+> El Enfoque 2 es el preferido por trazabilidad, pero implica más cambios de esquema y efectos
+> colaterales. Decidir antes de implementar.
+
+### Enfoque 1 — Mutar el saldo de la `cuenta_pagar` de la factura *(más simple, con limitación)*
 
 La nota ajusta el **saldo** (`cta_pag_saldo`) de la `cuenta_pagar` de la factura referenciada,
 **dentro de la misma transacción** que persiste la nota (mismo patrón que la sincronización ya
@@ -166,29 +170,145 @@ implementada en Factura de Compra — en Java, **no** por trigger).
 `cta_pag_monto` se mantiene **inmutable** (= total original de la factura, valor fiscal de
 referencia). El "monto vigente" se deriva del saldo y el historial de notas.
 
-### 4.2 Recálculo de estado
-
+**Recálculo de estado:**
 - Si tras una **NC** el `cta_pag_saldo` llega a `0` → estado `Cancelado` / `Pagado`.
 - Si una **ND** vuelve a poner saldo `> 0` sobre una cuenta saldada → vuelve a `Pendiente`.
 
-### 4.3 Reglas y validaciones (cerradas)
-
+**Reglas y validaciones:**
 1. La factura referenciada **no puede estar anulada**.
 2. La factura debe tener una `cuenta_pagar` asociada con saldo gestionable.
 3. **NC:** `monto_nota` no puede ser mayor que el `cta_pag_saldo` vigente
-   (no se permite saldo negativo — ver caso borde en §6).
-4. No reducir el saldo por debajo de lo **ya pagado** (validar pagos/provisiones aplicados,
-   igual que la validación previa a anular una factura).
+   (no se permite saldo negativo).
+4. No reducir el saldo por debajo de lo **ya pagado** (validar pagos/provisiones aplicados).
 
-### 4.4 Anulación de la nota (reversa idempotente)
-
-Al anular la nota, **revertir exactamente** su ajuste:
-
+**Anulación (reversa idempotente):**
 - NC anulada → `cta_pag_saldo = cta_pag_saldo + monto_nota`
 - ND anulada → `cta_pag_saldo = cta_pag_saldo - monto_nota`
 
-La nota **no se borra**: pasa a estado `Anulado` y se preserva (trazabilidad, igual que Libro IVA
-en factura). La reversa solo actúa en la transición no-anulado → `Anulado`.
+**Limitación principal:** una NC mayor al saldo (factura ya pagada total/parcial) generaría saldo
+a favor, que este enfoque no puede representar → habría que **bloquearla** (ver §6). Devolver
+mercadería *después* de pagar es un caso real y frecuente, así que esta limitación es relevante.
+
+**Ejemplos del problema** (por qué el saldo no puede quedar negativo en este enfoque):
+
+```
+Caso normal (sin problema):
+  Factura:        1.000.000
+  Pagado:                 0
+  Saldo:          1.000.000
+  NC de:            200.000
+  Saldo nuevo:      800.000   ✅ todo bien
+
+Caso problemático (NC > saldo):
+  Factura:        1.000.000
+  Pagado:           900.000   (ya pagaste casi todo)
+  Saldo:            100.000
+  NC de:            300.000   (devolviste mercadería por 300.000)
+  Saldo nuevo:     -200.000   ❌ negativo → los 200.000 son saldo a favor
+
+Caso extremo (factura totalmente pagada):
+  Saldo:                  0
+  NC de:            300.000
+  Saldo nuevo:     -300.000   ❌ todo el monto es saldo a favor
+```
+
+El `-200.000` significa que el proveedor ahora **te debe a vos** (o tenés crédito para futuras
+compras). Eso ya no es deuda → `cuenta_pagar` (que modela deuda, indexada por factura) no tiene
+dónde representarlo. De ahí la necesidad del Enfoque 2.
+
+### Enfoque 2 — `cuenta_pagar` como mayor de cuenta corriente por proveedor *(preferido, más completo)*
+
+En lugar de una sola fila por factura que las notas mutan, **cada comprobante es su propia línea**
+en `cuenta_pagar` (factura, ND y NC). La tabla pasa de "una deuda por factura" a un **mayor de
+cuenta corriente por proveedor**.
+
+| Origen | Monto/Saldo | Significado |
+|---|---|---|
+| Factura | **+** positivo | deuda |
+| Nota Débito | **+** positivo | deuda adicional |
+| Nota Crédito | **−** negativo | **saldo a favor** (crédito con el proveedor) |
+
+La **deuda neta con el proveedor** = suma de saldos de sus líneas no anuladas. El saldo a favor de
+una NC queda vivo como línea negativa hasta consumirse contra una compra futura. **No hay que
+bloquear nada**: el negativo tiene dónde vivir. Resuelve el caso borde "NC > saldo" de §6.
+
+**Ejemplo:**
+```
+Proveedor X
+Línea   Origen      Monto       Saldo
+F#20    FACTURA     1.000.000   100.000     (ya pagaste 900.000)
+NC#5    NOTA_CRED    -300.000   -300.000    (devolución por 300.000)
+                                ─────────
+                       Neto:    -200.000    → el proveedor te debe 200.000
+
+Llega una compra nueva:
+F#25    FACTURA       500.000   500.000
+                                ─────────
+                       Neto:     300.000    → pagás 300.000 (los 200.000 a favor descontaron)
+```
+
+**Cambios de esquema en `cuenta_pagar`:**
+```sql
+-- ya no depende solo de la factura
+ALTER TABLE public.cuenta_pagar ALTER COLUMN id_fact_comp_cab DROP NOT NULL;
+ALTER TABLE public.cuenta_pagar ADD COLUMN id_nota_cred_comp_cab INTEGER;
+ALTER TABLE public.cuenta_pagar ADD COLUMN id_nota_debi_comp_cab INTEGER;
+ALTER TABLE public.cuenta_pagar ADD COLUMN id_proveedor INTEGER;     -- para agrupar/netear por proveedor
+ALTER TABLE public.cuenta_pagar ADD COLUMN cta_pag_origen VARCHAR(10) NOT NULL DEFAULT 'FACTURA';
+ALTER TABLE public.cuenta_pagar ALTER COLUMN cta_pag_fecha_venci DROP NOT NULL;  -- una NC a favor no vence
+-- FKs reales (nullable) a las cabeceras de nota, igual que en libro_iva_compra
+```
+
+Dos puntos clave:
+1. **`id_proveedor` directo** en la tabla: hoy el proveedor se obtiene vía la factura, pero para
+   netear por proveedor y aplicar el crédito de una NC a *otra* factura conviene tenerlo directo.
+2. **La PK actual es compuesta** `(id_cta_pagar, id_fact_comp_cab)`. Si `id_fact_comp_cab` pasa a
+   nullable, esa PK no sirve → dejar **`id_cta_pagar` como PK única** (ya es serial).
+
+**Sub-decisión (también sin decidir) — cómo se consume el saldo a favor:**
+
+- **Opción A — Neteo implícito.** Nunca se tocan las líneas; el "a pagar del proveedor" es siempre
+  la suma. Simple, pero **no se sabe qué crédito pagó qué factura** (la NC queda siempre con su
+  saldo original y no se ve que ya se usó).
+- **Opción B — Aplicación explícita** *(recomendada por trazabilidad).* Al aplicar el crédito de
+  una NC a una factura, se registra esa aplicación: la línea de la NC reduce su saldo hacia 0 y la
+  factura reduce el suyo. Requiere una **tabla de aplicación** (`aplicacion_credito`:
+  `id_cta_pagar_credito`, `id_cta_pagar_debito`, `monto`, `fecha`). Cada movimiento queda auditado.
+
+  **Ejemplo paso a paso (Opción B):**
+  ```
+  NC#5 nace con saldo -300.000   (crédito a favor disponible)
+
+    → aplica 100.000 a F#20   →  F#20 saldo 0          | NC#5 saldo -200.000
+    → aplica 200.000 a F#25   →  F#25 saldo 300.000     | NC#5 saldo 0 (estado 'Aplicado')
+
+  Cada aplicación queda registrada en aplicacion_credito (qué crédito pagó qué factura y cuánto).
+  ```
+  Con la Opción A esos saldos nunca cambian (la NC#5 quedaría siempre en -300.000); el neteo es
+  implícito y no se ve qué factura consumió el crédito.
+
+**Efectos colaterales a revisar (si se elige el Enfoque 2):**
+- `orden_pago_detalle`, `provision_cuenta_pagar_detalle`, `fondo_fijo_rendicion_detalle`
+  referencian `(id_cta_pagar, id_fact_comp_cab)`. Al cambiar la PK a solo `id_cta_pagar`, esas FKs
+  se simplifican y hay que ajustarlas. Los pagos aplican a líneas de **deuda** (factura/ND), nunca
+  a una NC (crédito).
+- `FacturaCompraDAO` (sincronización existente): al crear la `cuenta_pagar` de una factura debe
+  setear `id_proveedor`, `cta_pag_origen='FACTURA'` y signo positivo. Cambio menor.
+- **Estados nuevos** para la línea de NC: ej. `Disponible` / `Aplicado` (cuando su saldo llega a
+  0), distintos de los estados de deuda (`Pendiente` / `Cancelado`).
+
+**Consistencia:** el Enfoque 2 deja `cuenta_pagar` y `libro_iva_compra` con el **mismo patrón**
+("línea por comprobante con `origen` + FKs de nota"), lo cual es coherente.
+
+### Estado de la decisión
+
+| Decisión | Opciones | Estado |
+|---|---|---|
+| Enfoque de `cuenta_pagar` | 1 (mutar saldo) vs 2 (mayor de cuenta corriente) | **Sin decidir** (preferencia: 2) |
+| Consumo del saldo a favor (si Enfoque 2) | A (neteo implícito) vs B (aplicación explícita) | **Sin decidir** (preferencia: B) |
+
+> Mientras no se decida, todo lo de arriba es propuesta. La implementación no debe arrancar hasta
+> cerrar estas dos decisiones.
 
 ---
 
@@ -200,15 +320,45 @@ y una ND debe **sumar**.
 
 ### 5.1 Opción recomendada — fila de Libro IVA por nota
 
-Permitir que el libro registre también el origen "nota", agregando una referencia opcional a la nota:
+Permitir que el libro registre también las notas, agregando a cada fila una referencia a la nota
+que la generó (vía **FK real**, no columna suelta) y un discriminador de origen:
 
 ```sql
 ALTER TABLE public.libro_iva_compra ADD COLUMN id_nota_cred_comp_cab INTEGER;
 ALTER TABLE public.libro_iva_compra ADD COLUMN id_nota_debi_comp_cab INTEGER;
 ALTER TABLE public.libro_iva_compra ADD COLUMN libro_iva_comp_origen VARCHAR(10)
-    DEFAULT 'FACTURA';   -- FACTURA | NOTA_CRED | NOTA_DEBI
--- FKs opcionales a las cabeceras de nota
+    NOT NULL DEFAULT 'FACTURA';   -- FACTURA | NOTA_CRED | NOTA_DEBI
+
+-- FKs reales (nullable): una fila de factura las deja en NULL;
+-- una de NC setea solo id_nota_cred; una de ND solo id_nota_debi.
+ALTER TABLE public.libro_iva_compra
+    ADD CONSTRAINT nota_credito_compra_cabecera_libro_iva_compra_fk
+    FOREIGN KEY (id_nota_cred_comp_cab)
+    REFERENCES public.nota_credito_compra_cabecera (id_nota_cred_comp_cab);
+ALTER TABLE public.libro_iva_compra
+    ADD CONSTRAINT nota_debito_compra_cabecera_libro_iva_compra_fk
+    FOREIGN KEY (id_nota_debi_comp_cab)
+    REFERENCES public.nota_debito_compra_cabecera (id_nota_debi_comp_cab);
 ```
+
+**Función de cada columna:**
+
+- `libro_iva_comp_origen` — discriminador del tipo de comprobante (`FACTURA` / `NOTA_CRED` /
+  `NOTA_DEBI`). Sirve para **reportar, filtrar y agrupar** el libro por tipo sin lógica adicional,
+  y deja el tipo declarado de forma explícita (no inferido del signo del monto). Es una
+  desnormalización por conveniencia: se podría derivar de cuál FK está seteado, pero se prefiere
+  tenerlo explícito para los informes.
+- `id_nota_cred_comp_cab` / `id_nota_debi_comp_cab` — **FKs reales** a la cabecera de la nota.
+  Son necesarias para el flujo de **anulación**: permiten encontrar las filas del libro generadas
+  por una nota concreta (`WHERE id_nota_cred_comp_cab = ?`). Como una factura puede tener varias
+  NC/ND, `id_fact_comp_cab` por sí solo no alcanza para identificar la nota.
+
+**`id_fact_comp_cab` se conserva en las filas de nota:** como la nota siempre referencia una
+factura, toda fila del libro (factura, NC o ND) sigue llevando el `id_fact_comp_cab` de esa
+factura. Esto permite agrupar **toda la historia fiscal de una factura** (factura + sus notas) por
+`id_fact_comp_cab`, y el `origen` distingue cada fila dentro de ese grupo.
+
+Comportamiento:
 
 - **NC:** inserta una fila con montos **negativos** (resta del total del período).
 - **ND:** inserta una fila con montos **positivos**.
@@ -219,6 +369,10 @@ ALTER TABLE public.libro_iva_compra ADD COLUMN libro_iva_comp_origen VARCHAR(10)
 > **Por qué montos con signo y filas separadas:** mantiene cada comprobante (factura, NC, ND) como
 > un registro independiente y trazable en el libro, que es como se presenta fiscalmente. Evita
 > "editar" la fila de la factura (que debe quedar como el comprobante original).
+
+> **Nota de diseño:** es una asociación polimórfica modelada con dos columnas FK nullable. La
+> alternativa de una sola columna genérica `id_comprobante` **no permitiría FK** (apuntaría a
+> tablas distintas) y perdería integridad referencial, por eso se descarta.
 
 ### 5.2 Cálculo del IVA de la nota
 
@@ -237,8 +391,8 @@ Por eso es **imprescindible** el cambio #2 (impuesto por línea en el detalle de
 
 | Caso | Comportamiento propuesto | Estado |
 |---|---|---|
-| **NC > saldo pendiente** (factura paga total/parcial) | Generaría un **saldo a favor** del comprador, que el modelo actual de `cuenta_pagar` no contempla. **Bloquear** la NC con mensaje claro. Implementar "crédito a favor" como mejora posterior (tabla/columna aparte). | A confirmar |
-| **NC sobre factura de contado** (saldo 0) | Cae en el caso anterior → bloquear por ahora. | A confirmar |
+| **NC > saldo pendiente** (factura paga total/parcial) | Genera un **saldo a favor** del comprador. Con el **Enfoque 1** (§4) hay que **bloquearla** (no tiene dónde vivir el negativo); con el **Enfoque 2** queda como línea de crédito y se consume en compras futuras. Depende del enfoque elegido en §4. | **Sin decidir** (ligado a §4) |
+| **NC sobre factura de contado** (saldo 0) | Igual que el caso anterior: bloquear (Enfoque 1) o registrar crédito a favor (Enfoque 2). | **Sin decidir** (ligado a §4) |
 | **ND sobre factura de contado** | Permitida: genera/aumenta saldo. Revisar si debe crear una nueva fecha de vencimiento. | A confirmar |
 | **Factura anulada** | No permitir emitir NC/ND. | Cerrado |
 | **Pagos ya aplicados** | No reducir saldo por debajo de lo pagado. | Cerrado |
@@ -285,6 +439,11 @@ Seguir el patrón de referencia de **Factura de Compra**:
 
 ## 8. Flujos
 
+> Los flujos de abajo están escritos para el **Enfoque 1** de §4 (mutar el saldo de la factura).
+> Si se adopta el **Enfoque 2** (mayor de cuenta corriente), el paso de `cuenta_pagar` cambia de
+> `UPDATE saldo` a **`INSERT` de una nueva línea** por la nota (con signo), y la anulación pasa a
+> anular esa línea en vez de revertir el saldo. Ajustar cuando se cierre la decisión.
+
 ### 8.1 Guardar NC/ND
 
 ```
@@ -321,11 +480,13 @@ Seguir el patrón de referencia de **Factura de Compra**:
 
 ## 9. Checklist de implementación
 
+- [ ] **Decidir el enfoque de `cuenta_pagar` (§4): Enfoque 1 vs 2, y si va Enfoque 2, Opción A vs B.**
 - [ ] Confirmar decisiones pendientes de §3 (#5, #6) y §6 (casos borde).
 - [ ] Aplicar `ALTER TABLE` de §3 y §5 al schema (`Base de datos Taller 3ro.sql`) y a la BD real.
+- [ ] Si Enfoque 2: aplicar cambios de esquema de `cuenta_pagar` (§4) y revisar FKs de pagos.
 - [ ] Ajustar entidades `NotaCreditoCompra(Detalle)` / `NotaDebitoCompra(Detalle)` (impuesto, número VARCHAR).
 - [ ] Volver transaccionales `NotaCreditoCompraDAO` / `NotaDebitoCompraDAO`.
-- [ ] Agregar ajuste de saldo + recálculo de estado en `CuentaPagarDAO`.
+- [ ] `CuentaPagarDAO`: ajuste de saldo (Enfoque 1) o inserción de línea por comprobante (Enfoque 2).
 - [ ] Reusar `LibroIvaCompraDAO` para filas origen NOTA (insert con signo + anulación).
 - [ ] Crear `NotaCreditoDebitoServlet` (Session+Token, enrutado NC/ND, validación de permisos).
 - [ ] Conectar `notaCreditoDebito.jsp`: buscar factura real, heredar líneas, calcular IVA, condicionar botones.
@@ -340,8 +501,12 @@ Seguir el patrón de referencia de **Factura de Compra**:
 |---|---|---|
 | `nota_*_compra_cabecera/detalle` | Documento en sí | INSERT al guardar; estado `Anulado` al anular (preservar) |
 | `factura_compra_cabecera` | Comprobante referenciado (inmutable) | Solo lectura; validar no anulada |
-| `cuenta_pagar` | Deuda con el proveedor | Ajustar `saldo` (∓) + recalcular estado; reversa al anular |
+| `cuenta_pagar` | Deuda con el proveedor | **Sin decidir (§4):** Enfoque 1 = ajustar `saldo` (∓); Enfoque 2 = línea propia por comprobante (mayor de cuenta corriente) |
 | `libro_iva_compra` | Registro fiscal | Fila nueva con montos con signo (origen NOTA); `Anulado` al anular |
 
 Con esto, **factura, cuenta a pagar, libro IVA y la nota** quedan sincronizados, reversibles y
 trazables, alineados con el patrón ya consolidado en Factura de Compra.
+
+> **Decisiones abiertas para el próximo chat:** (1) enfoque de `cuenta_pagar` — §4, Enfoque 1 vs 2;
+> (2) consumo del saldo a favor si va Enfoque 2 — Opción A vs B; (3) Sucursal/Condición de la nota
+> (heredar vs guardar) — §3 #5/#6. Preferencias actuales: Enfoque 2 + Opción B.
