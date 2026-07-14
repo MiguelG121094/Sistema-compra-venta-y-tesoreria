@@ -1,10 +1,12 @@
 # Plan de Implementación — Nota de Crédito y Débito de Compra
 
-> Documento de diseño previo a la implementación. Define los cambios de base de datos,
-> las reglas de negocio (efecto en **Cuenta a Pagar** y **Libro IVA Compra**) y el diseño
-> de la capa Java (servlet/DAO/service) siguiendo el patrón de **Factura de Compra**.
+> Documento de diseño. Define los cambios de base de datos, las reglas de negocio (efecto en
+> **Cuenta a Pagar** y **Libro IVA Compra**) y el diseño de la capa Java (servlet/DAO/service)
+> siguiendo el patrón de **Factura de Compra**.
 >
-> Estado: **propuesta** — pendiente de aprobación antes de tocar código.
+> **Estado (actualizado):** los cambios de esquema de §3 y §5.1 **ya están aplicados** en
+> `Base de datos Taller 3ro.sql`. Queda pendiente la decisión de **`cuenta_pagar` (§4)** y toda la
+> **capa Java/JSP** (§7–§9).
 
 ---
 
@@ -102,53 +104,25 @@ entre las notas y estas dos tablas: ese es el centro de este plan.
 
 ---
 
-## 3. Discrepancias vista ↔ BD y cambios de esquema propuestos
+## 3. Discrepancias vista ↔ BD y cambios de esquema
 
-| # | Problema | Cambio propuesto | Prioridad |
+> ✅ **Aplicado en `Base de datos Taller 3ro.sql`** (los puntos #1–#4 y #7). Los #5 y #6 se
+> resolvieron **no agregando columnas** (se heredan de la factura). Solo #8 deriva a §4/§5.
+
+| # | Problema | Cambio | Estado en el schema |
 |---|---|---|---|
-| 1 | `nota_*_comp_numero` es INTEGER, pero el comprobante es `000-000-0000000` | `ALTER ... TYPE VARCHAR(20)` | Alta |
-| 2 | El detalle no tiene `id_impuesto` → no se puede recalcular IVA al releer | Agregar `id_impuesto INTEGER` + FK a `impuesto` | Alta |
-| 3 | El detalle no tiene descripción (para ítems sin artículo o texto libre) | Agregar `nota_*_descripcion VARCHAR` y permitir `id_articulo` NULL | Media |
-| 4 | `id_articulo` NOT NULL y en PK → no admite gastos/servicios ni repetidos | Reemplazar PK por columna autoincremental `id_nota_*_det` (igual que factura) | Media |
-| 5 | La vista pide **Sucursal**, las notas no tienen `id_sucursal` | Agregar `id_sucursal INTEGER` + FK, **o** quitar el campo de la vista | A decidir |
-| 6 | La vista pide **Condición de compra**, las notas no la tienen | Agregar `nota_*_condicion` + `nota_*_plazo`, **o** quitar de la vista | A decidir |
-| 7 | `observacion` es NOT NULL pero la vista no lo expone (solo "Motivo") | Hacer `observacion` NULL, **o** agregar el campo a la vista | Media |
-| 8 | Las notas no impactan `cuenta_pagar` ni `libro_iva_compra` | Ver §4 y §5 | **Crítica** |
+| 1 | `nota_*_comp_numero` era INTEGER, pero el comprobante es `000-000-0000000` | `nota_*_comp_numero VARCHAR` | ✅ **Aplicado** |
+| 2 | El detalle no tenía `id_impuesto` → no se podía recalcular IVA al releer | `id_impuesto INTEGER NOT NULL` + FK a `impuesto` | ✅ **Aplicado** (FK incluida) |
+| 3 | El detalle no tenía descripción (ítems sin artículo o texto libre) | `nota_*_descripcion VARCHAR` + `id_articulo` nullable | ✅ **Aplicado** |
+| 4 | `id_articulo` NOT NULL y en PK → no admitía gastos/servicios ni repetidos | PK autoincremental `id_nota_*_det` (igual que factura) | ✅ **Aplicado** |
+| 5 | La vista pide **Sucursal**, las notas no tienen `id_sucursal` | **Decisión:** no se guarda → se hereda de la factura (solo-lectura) | ✅ **Resuelto** (no se agregó columna) |
+| 6 | La vista pide **Condición de compra**, las notas no la tienen | **Decisión:** no se guarda → se hereda de la factura (solo-lectura) | ✅ **Resuelto** (no se agregó columna) |
+| 7 | `observacion` era NOT NULL pero la vista no lo expone (solo "Motivo") | `observacion` nullable | ✅ **Aplicado** |
+| 8 | Las notas no impactan `cuenta_pagar` ni `libro_iva_compra` | Ver §4 (pendiente) y §5 (aplicado) | ⚠️ Parcial — `libro_iva` listo, `cuenta_pagar` en §4 |
 
-> **Recomendación sobre #5 y #6:** la sucursal y la condición se heredan de la factura
-> referenciada; sugiero **mostrarlas como solo-lectura** tomadas de la factura y **no**
-> guardarlas en la nota (evita duplicar datos). Si se decide guardarlas, agregar las columnas.
-
-### 3.1 Script de cambios (borrador, sujeto a las decisiones de arriba)
-
-```sql
--- #1 número como texto de comprobante
-ALTER TABLE public.nota_credito_compra_cabecera
-    ALTER COLUMN nota_cred_comp_numero TYPE VARCHAR(20);
-ALTER TABLE public.nota_debito_compra_cabecera
-    ALTER COLUMN nota_debi_comp_numero TYPE VARCHAR(20);
-
--- #2 impuesto por línea (para recalcular IVA 10/5/exenta)
-ALTER TABLE public.nota_credito_compra_detalle ADD COLUMN id_impuesto INTEGER;
-ALTER TABLE public.nota_debito_compra_detalle  ADD COLUMN id_impuesto INTEGER;
-ALTER TABLE public.nota_credito_compra_detalle
-    ADD CONSTRAINT impuesto_nota_credito_compra_detalle_fk
-    FOREIGN KEY (id_impuesto) REFERENCES public.impuesto (id_impuesto);
-ALTER TABLE public.nota_debito_compra_detalle
-    ADD CONSTRAINT impuesto_nota_debito_compra_detalle_fk
-    FOREIGN KEY (id_impuesto) REFERENCES public.impuesto (id_impuesto);
-
--- #3/#4 (opcional) descripción libre + PK autoincremental al estilo factura_compra_detalle
--- (requiere recrear la PK; evaluar impacto en datos existentes)
-
--- #7 observación opcional (si no se agrega a la vista)
-ALTER TABLE public.nota_credito_compra_cabecera
-    ALTER COLUMN nota_cred_comp_observacion DROP NOT NULL;
-ALTER TABLE public.nota_debito_compra_cabecera
-    ALTER COLUMN nota_debi_comp_observacion DROP NOT NULL;
-```
-
-> El manejo del Libro IVA (§5) puede requerir cambios adicionales de esquema según la opción elegida.
+> **Sobre #5 y #6:** confirmado que la sucursal y la condición se **heredan de la factura
+> referenciada** y se muestran como solo-lectura en la vista; **no** se guardan en la nota (se
+> evita duplicar datos). Por eso el schema no agregó esas columnas.
 
 ---
 
@@ -314,14 +288,24 @@ Dos puntos clave:
 
 ## 5. Efecto en Libro IVA Compra
 
-Hoy `libro_iva_compra` está atado 1:1 a la factura (`id_fact_comp_cab`). El IVA de las notas
-**no se registra**, lo que deja el libro fiscalmente incompleto: una NC debe **restar** IVA/gravadas
-y una ND debe **sumar**.
+> ✅ **Esquema aplicado en `Base de datos Taller 3ro.sql`.** `libro_iva_compra` ya tiene las
+> columnas `id_nota_cred_comp_cab`, `id_nota_debi_comp_cab` y `libro_iva_comp_origen`, con
+> `id_fact_comp_cab` nullable, PK simple (`id_libro_iva_compra`) y las **FKs reales** a ambas
+> cabeceras de nota. Falta solo la **lógica Java** que inserta/anula estas filas (§8).
+>
+> Nota: `libro_iva_comp_estado` quedó como `VARCHAR` **sin** `NOT NULL DEFAULT 'Activo'` (decisión
+> tomada) → el estado debe setearse **explícitamente desde el código** al insertar, para no dejarlo
+> en NULL.
 
-### 5.1 Opción recomendada — fila de Libro IVA por nota
+Originalmente `libro_iva_compra` estaba atado 1:1 a la factura (`id_fact_comp_cab`) y el IVA de las
+notas **no se registraba**, dejando el libro fiscalmente incompleto: una NC debe **restar**
+IVA/gravadas y una ND debe **sumar**. El cambio de esquema descrito abajo resuelve eso.
 
-Permitir que el libro registre también las notas, agregando a cada fila una referencia a la nota
-que la generó (vía **FK real**, no columna suelta) y un discriminador de origen:
+### 5.1 Solución aplicada — fila de Libro IVA por nota
+
+El libro registra también las notas: cada fila lleva una referencia a la nota que la generó (vía
+**FK real**, no columna suelta) y un discriminador de origen. **DDL ya aplicado** (se conserva como
+referencia):
 
 ```sql
 ALTER TABLE public.libro_iva_compra ADD COLUMN id_nota_cred_comp_cab INTEGER;
@@ -480,14 +464,15 @@ Seguir el patrón de referencia de **Factura de Compra**:
 
 ## 9. Checklist de implementación
 
-- [ ] **Decidir el enfoque de `cuenta_pagar` (§4): Enfoque 1 vs 2, y si va Enfoque 2, Opción A vs B.**
-- [ ] Confirmar decisiones pendientes de §3 (#5, #6) y §6 (casos borde).
-- [ ] Aplicar `ALTER TABLE` de §3 y §5 al schema (`Base de datos Taller 3ro.sql`) y a la BD real.
+- [x] ~~Cambios de esquema de §3 (#1–#4, #7) y §5.1 (libro IVA)~~ ✅ aplicados en `Base de datos Taller 3ro.sql`.
+- [x] ~~Decisiones §3 #5/#6~~ ✅ resueltas: sucursal y condición se heredan de la factura (no se guardan).
+- [ ] **Decidir el enfoque de `cuenta_pagar` (§4): Enfoque 1 vs 2, y si va Enfoque 2, Opción A vs B.** ← decisión grande pendiente
+- [ ] Confirmar casos borde de §6 (ligados a la decisión de §4).
 - [ ] Si Enfoque 2: aplicar cambios de esquema de `cuenta_pagar` (§4) y revisar FKs de pagos.
-- [ ] Ajustar entidades `NotaCreditoCompra(Detalle)` / `NotaDebitoCompra(Detalle)` (impuesto, número VARCHAR).
+- [ ] Ajustar entidades `NotaCreditoCompra(Detalle)` / `NotaDebitoCompra(Detalle)` al esquema nuevo (impuesto, descripción, número VARCHAR, PK del detalle).
 - [ ] Volver transaccionales `NotaCreditoCompraDAO` / `NotaDebitoCompraDAO`.
 - [ ] `CuentaPagarDAO`: ajuste de saldo (Enfoque 1) o inserción de línea por comprobante (Enfoque 2).
-- [ ] Reusar `LibroIvaCompraDAO` para filas origen NOTA (insert con signo + anulación).
+- [ ] Reusar `LibroIvaCompraDAO` para filas origen NOTA (insert con signo + anulación; setear `estado` explícito).
 - [ ] Crear `NotaCreditoDebitoServlet` (Session+Token, enrutado NC/ND, validación de permisos).
 - [ ] Conectar `notaCreditoDebito.jsp`: buscar factura real, heredar líneas, calcular IVA, condicionar botones.
 - [ ] Pruebas: NC parcial, NC total (saldo→0), ND sobre saldada, anulación con reversa, validación de tope, factura anulada.
@@ -502,11 +487,12 @@ Seguir el patrón de referencia de **Factura de Compra**:
 | `nota_*_compra_cabecera/detalle` | Documento en sí | INSERT al guardar; estado `Anulado` al anular (preservar) |
 | `factura_compra_cabecera` | Comprobante referenciado (inmutable) | Solo lectura; validar no anulada |
 | `cuenta_pagar` | Deuda con el proveedor | **Sin decidir (§4):** Enfoque 1 = ajustar `saldo` (∓); Enfoque 2 = línea propia por comprobante (mayor de cuenta corriente) |
-| `libro_iva_compra` | Registro fiscal | Fila nueva con montos con signo (origen NOTA); `Anulado` al anular |
+| `libro_iva_compra` | Registro fiscal | Esquema ✅ aplicado; falta lógica Java: fila nueva con montos con signo (origen NOTA); `Anulado` al anular |
 
 Con esto, **factura, cuenta a pagar, libro IVA y la nota** quedan sincronizados, reversibles y
 trazables, alineados con el patrón ya consolidado en Factura de Compra.
 
-> **Decisiones abiertas para el próximo chat:** (1) enfoque de `cuenta_pagar` — §4, Enfoque 1 vs 2;
-> (2) consumo del saldo a favor si va Enfoque 2 — Opción A vs B; (3) Sucursal/Condición de la nota
-> (heredar vs guardar) — §3 #5/#6. Preferencias actuales: Enfoque 2 + Opción B.
+> **Estado actual:** el esquema de §3 y §5.1 ya está aplicado en `Base de datos Taller 3ro.sql`;
+> Sucursal/Condición se heredan de la factura (resuelto). **Decisiones abiertas:** (1) enfoque de
+> `cuenta_pagar` — §4, Enfoque 1 vs 2; (2) consumo del saldo a favor si va Enfoque 2 — Opción A vs
+> B. Preferencias actuales: Enfoque 2 + Opción B. Lo siguiente es la **capa Java/JSP** (§7–§9).

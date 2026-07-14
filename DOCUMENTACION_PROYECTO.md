@@ -381,6 +381,28 @@ Todas las entidades siguen el patrón POJO:
 
 ## Historial de Cambios
 
+### 2026-06 — Refactor de esquema para Nota de Crédito/Débito (schema v2 unificado)
+
+Se actualiza `Base de datos Taller 3ro.sql` (se descarta el archivo intermedio "v2", queda un único
+schema canónico) con los cambios de esquema del plan [`NOTA_CREDITO_DEBITO_PLAN.md`](NOTA_CREDITO_DEBITO_PLAN.md):
+
+- **`nota_credito/debito_compra_cabecera`**: `numero` pasa de INTEGER a VARCHAR; `observacion` deja
+  de ser NOT NULL. Sucursal y condición **no** se agregan (se heredan de la factura referenciada).
+- **`nota_credito/debito_compra_detalle`**: PK autoincremental (`id_nota_*_det`); `id_articulo`
+  ahora nullable (admite gastos/servicios); nuevas columnas `id_impuesto` (NOT NULL, con FK) y
+  `nota_*_descripcion`.
+- **`libro_iva_compra`**: `id_fact_comp_cab` nullable, PK simple; nuevas columnas
+  `id_nota_cred_comp_cab`, `id_nota_debi_comp_cab` (FKs reales a las cabeceras de nota) y
+  `libro_iva_comp_origen` (discriminador FACTURA/NOTA_CRED/NOTA_DEBI). `libro_iva_comp_estado` queda
+  como VARCHAR sin default → debe setearse explícitamente desde el código.
+- **Correcciones de stock (fuera del plan de NC/ND):** `factura_compra_detalle` gana la columna
+  `id_deposito` + FK a `deposito` (el trigger de stock ya la referenciaba pero no existía en el
+  esquema anterior); en `stock`, `stk_cantidad_minima/maxima` pasan a `DEFAULT 0` y
+  `stk_stock_actual` a nullable, alineado con el UPSERT del trigger.
+
+Pendiente: la decisión de cómo `cuenta_pagar` refleja las notas (ver §4 del plan) y toda la capa
+Java/servlet/JSP de NC/ND.
+
 ### 2026-05 — Nota de Crédito / Débito Compra (vista inicial)
 
 Se crea `notaCreditoDebito.jsp`, una vista combinada para Nota de Crédito y Débito de Compra, con estilo unificado al de `facturaCompra.jsp` (form-floating, layout de cards) y adaptada su sección de artículos. Se agrega entrada en el menú principal y lateral para su acceso. **Aún no tiene servlet ni integración de backend**: es un esqueleto de vista para futura implementación (botón "Buscar Artículo" comentado por ahora).
