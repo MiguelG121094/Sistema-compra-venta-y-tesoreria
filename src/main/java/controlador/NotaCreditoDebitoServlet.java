@@ -70,6 +70,8 @@ public class NotaCreditoDebitoServlet extends HttpServlet {
         List<FacturaCompra> listaFacturas;
         List<TipoImpuesto> listaTipoImpuesto;
         List<Deposito> listaDepositos;
+        List<NotaCreditoCompra> listaNotasCredito;
+        List<NotaDebitoCompra> listaNotasDebito;
     }
 
     /** DTO de totales de IVA (no persistido). */
@@ -131,6 +133,8 @@ public class NotaCreditoDebitoServlet extends HttpServlet {
         request.setAttribute("listaFacturas", estado.listaFacturas);
         request.setAttribute("listaTipoImpuesto", estado.listaTipoImpuesto);
         request.setAttribute("listaDepositos", estado.listaDepositos);
+        request.setAttribute("listaNotasCredito", estado.listaNotasCredito);
+        request.setAttribute("listaNotasDebito", estado.listaNotasDebito);
         calcularImpuestos(request, estado.listaDetalle);
     }
 
@@ -282,6 +286,8 @@ public class NotaCreditoDebitoServlet extends HttpServlet {
         estado.listaFacturas = facturaCompraService.listarFacturasCompra();
         estado.listaTipoImpuesto = tipoImpuestoService.listarTipoImpuesto();
         estado.listaDepositos = depositoService.listarDepostio();
+        estado.listaNotasCredito = notaCreditoService.listarNotasCreditoCompra();
+        estado.listaNotasDebito = notaDebitoService.listarNotasDebitoCompra();
 
         guardarEstado(session, nuevoToken, estado);
         cargarDatosParaVista(request, estado, nuevoToken);
@@ -367,6 +373,8 @@ public class NotaCreditoDebitoServlet extends HttpServlet {
         estado.listaFacturas = facturaCompraService.listarFacturasCompra();
         estado.listaTipoImpuesto = tipoImpuestoService.listarTipoImpuesto();
         estado.listaDepositos = depositoService.listarDepostio();
+        estado.listaNotasCredito = notaCreditoService.listarNotasCreditoCompra();
+        estado.listaNotasDebito = notaDebitoService.listarNotasDebitoCompra();
 
         if ("debito".equals(tipo)) {
             NotaDebitoCompra nd = notaDebitoService.getNotaDebitoCompra(id);
@@ -532,6 +540,29 @@ public class NotaCreditoDebitoServlet extends HttpServlet {
             cargarDatosParaVista(request, estado, token);
             forward(request, response, JSP_NOTA);
             return;
+        }
+
+        // Validar fecha de vencimiento del timbrado estrictamente mayor a hoy (igual que Factura de Compra)
+        if (estado.nota.getFechaVenciTimbrado() != null) {
+            java.util.Calendar calVenc = java.util.Calendar.getInstance();
+            calVenc.setTime(estado.nota.getFechaVenciTimbrado());
+            calVenc.set(java.util.Calendar.HOUR_OF_DAY, 0);
+            calVenc.set(java.util.Calendar.MINUTE, 0);
+            calVenc.set(java.util.Calendar.SECOND, 0);
+            calVenc.set(java.util.Calendar.MILLISECOND, 0);
+
+            java.util.Calendar calActual = java.util.Calendar.getInstance();
+            calActual.set(java.util.Calendar.HOUR_OF_DAY, 0);
+            calActual.set(java.util.Calendar.MINUTE, 0);
+            calActual.set(java.util.Calendar.SECOND, 0);
+            calActual.set(java.util.Calendar.MILLISECOND, 0);
+
+            if (!calVenc.after(calActual)) {
+                mostrarMensaje(request, "La fecha de vencimiento del timbrado debe ser mayor a la fecha actual", "alert-warning");
+                cargarDatosParaVista(request, estado, token);
+                forward(request, response, JSP_NOTA);
+                return;
+            }
         }
 
         // Referencias de cabecera

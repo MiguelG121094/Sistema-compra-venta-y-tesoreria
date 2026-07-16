@@ -350,7 +350,7 @@
                                                             <c:if test="${not empty token and esNuevo and puedeInsertar}">
                                                                 <a href="NotaCreditoDebitoServlet?menu=NotaCreditoDebito&accion=EditarArticulo&token=${token}&index=${st.index}"
                                                                    class="btn btn-warning btn-sm">Editar</a>
-                                                                <button type="button" class="btn btn-danger btn-sm" onclick="eliminarLinea(${st.index});">Eliminar</button>
+                                                                <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#modalConfirmarEliminar" onclick="document.getElementById('indexArticulo').value=${st.index};">Eliminar</button>
                                                             </c:if>
                                                         </td>
                                                     </tr>
@@ -511,6 +511,25 @@
                             </div>
                         </div>
 
+                        <!-- Modal de confirmación para Eliminar línea del detalle -->
+                        <div class="modal fade" id="modalConfirmarEliminar" tabindex="-1" aria-hidden="true">
+                            <div class="modal-dialog modal-dialog-centered">
+                                <div class="modal-content">
+                                    <div class="modal-header bg-danger text-white">
+                                        <h5 class="modal-title">Confirmación</h5>
+                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <p>¿Está seguro que desea eliminar esta línea?</p>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">No</button>
+                                        <button type="button" class="btn btn-danger" onclick="confirmarEliminar();">Sí, Eliminar</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
                 </main>
                 <footer class="py-4 bg-light mt-auto">
@@ -549,12 +568,9 @@
                 setAccion('ActualizarArticulo');
                 document.getElementById('formPrincipal').submit();
             }
-            function eliminarLinea(index) {
-                if (confirm('¿Eliminar esta línea?')) {
-                    document.getElementById('indexArticulo').value = index;
-                    setAccion('EliminarArticulo');
-                    document.getElementById('formPrincipal').submit();
-                }
+            function confirmarEliminar() {
+                setAccion('EliminarArticulo');
+                document.getElementById('formPrincipal').submit();
             }
             function guardarNota() {
                 limpiarMascaras(document.getElementById('formPrincipal'));
