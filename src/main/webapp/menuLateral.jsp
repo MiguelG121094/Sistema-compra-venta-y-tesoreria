@@ -24,9 +24,9 @@ usuario inicio sesion, se debe agregar esta validaciÃ³n en cada una de las vis
                     <div class="sb-sidenav-menu-heading">Vista principal</div>
                     <a class="nav-link" href="base.jsp">
                         <div class="sb-nav-link-icon"><i class="fas fa-tachometer-alt"></i></div>
-                        MenÃº principal
+                        Menú principal
                     </a>
-                    <div class="sb-sidenav-menu-heading">MÃ³dulo Compras</div>
+                    <div class="sb-sidenav-menu-heading">Módulo Compras</div>
                     <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapsePaginasCompras" aria-expanded="false" aria-controls="collapsePaginasCompras">
                         <div class="sb-nav-link-icon"><i class="fas fa-book-open"></i></div>
                         Referenciales
@@ -41,9 +41,9 @@ usuario inicio sesion, se debe agregar esta validaciÃ³n en cada una de las vis
                             </a>
                             <div class="collapse" id="paginasCollapseReferencialesCompra" aria-labelledby="headingOne" data-bs-parent="#sidenavAccordeonPaginasCompra">
                                 <nav class="sb-sidenav-menu-nested nav">
-                                    <a class="nav-link" href="TipoArticuloServlet?menu=TipoArticulo&accion=Listar">Tipo de artÃ­culo</a>
+                                    <a class="nav-link" href="TipoArticuloServlet?menu=TipoArticulo&accion=Listar">Tipo de artículo</a>
                                     <a class="nav-link" href="marca.jsp">Marca</a>
-                                    <a class="nav-link" href="articulo.jsp">ArtÃ­culos</a>
+                                    <a class="nav-link" href="articulo.jsp">Artículos</a>
                                 </nav>
                             </div>
                             <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#pagesCollapseError" aria-expanded="false" aria-controls="pagesCollapseError">
@@ -75,7 +75,7 @@ usuario inicio sesion, se debe agregar esta validaciÃ³n en cada una de las vis
                         </nav>
                     </div>
 
-                    <div class="sb-sidenav-menu-heading">MÃ³dulo TesorerÃ­a</div>
+                    <div class="sb-sidenav-menu-heading">Módulo Tesorería</div>
                     <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapsePages" aria-expanded="false" aria-controls="collapsePages">
                         <div class="sb-nav-link-icon"><i class="fas fa-book-open"></i></div>
                         Referenciales
