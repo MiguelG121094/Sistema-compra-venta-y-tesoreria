@@ -269,3 +269,67 @@ VALUES(3, 'Adolfo Gustavo', '123', 'activo', 4);
 
 
 
+
+-- =====================================================================================
+-- DATOS TRANSACCIONALES PARA PROBAR NOTA DE CREDITO / DEBITO DE COMPRA
+-- Orden de ejecucion: esquema -> triggers -> este archivo (los factura_compra_detalle
+-- disparan el trigger de stock, que puebla 'stock' solo).
+-- =====================================================================================
+
+-- INSERT TIPO COMPROBANTE
+INSERT INTO public.tipo_comprobante (tipo_comprob_descripcion) VALUES('Factura');
+INSERT INTO public.tipo_comprobante (tipo_comprob_descripcion) VALUES('Nota de Credito');
+INSERT INTO public.tipo_comprobante (tipo_comprob_descripcion) VALUES('Nota de Debito');
+
+-- INSERT TIMBRADO (vigente, para el tipo comprobante Factura)
+INSERT INTO public.timbrado
+(tim_numero, tim_fecha_autorizacion, tim_fecha_vencimineto, tim_estado, id_tipo_comprob)
+VALUES(12345678, '2026-01-01', '2027-12-31', 'activo', 1);
+
+-- ARTICULO ADICIONAL CON IVA 10% (los existentes son todos 5%) -> id 8
+INSERT INTO public.articulo
+(id_tipo_articulo, id_marca, id_impuesto, id_presentacion, art_descripcion, art_precio_compra, art_precio_venta, art_estado)
+VALUES(2, 2, 2, 4, 'Pilsen lata 473ml', 5000, 7000, 'activo');
+
+-- FACTURA DE COMPRA 1 (Credito, mercaderia) -> id 1. Proveedor 4 (Paresa), Sucursal 1, Usuario 1. Total 180000
+INSERT INTO public.factura_compra_cabecera
+(fact_comp_numero, fact_comp_timbrado, fact_comp_fecha_venci_timb, fact_comp_fecha_emision,
+ fact_comp_fecha_carga, fact_comp_condicion, fact_comp_plazo, fact_comp_fecha_venci,
+ fact_comp_observacion, fact_comp_estado, fact_comp_tipo_factura, id_proveedor, id_sucursal,
+ id_usuario, id_orden_compra_cab)
+VALUES('001-001-0000001', 12345678, '2027-12-31', '2026-07-01', '2026-07-01', 'Credito', 30,
+       '2026-07-31', NULL, 'Pendiente', 'compraArt', 4, 1, 1, NULL);
+INSERT INTO public.factura_compra_detalle
+(id_fact_comp_cab, id_articulo, id_impuesto, id_deposito, fact_comp_cantidad, fact_comp_precio_compra, fact_det_descripcion)
+VALUES(1, 1, 1, 1, 10, 8000, NULL);
+INSERT INTO public.factura_compra_detalle
+(id_fact_comp_cab, id_articulo, id_impuesto, id_deposito, fact_comp_cantidad, fact_comp_precio_compra, fact_det_descripcion)
+VALUES(1, 8, 2, 1, 20, 5000, NULL);
+INSERT INTO public.cuenta_pagar
+(id_fact_comp_cab, cta_pag_monto, cta_pag_estado, cta_pag_fecha_venci, cta_pag_saldo, cta_pag_plazo)
+VALUES(1, 180000, 'Pendiente', '2026-07-31', 180000, 30);
+INSERT INTO public.libro_iva_compra
+(id_fact_comp_cab, id_nota_cred_comp_cab, id_nota_debi_comp_cab, libro_iva_comp_fecha,
+ libro_iva_comp_5, libro_iva_comp_10, libro_iva_comp_gravada_10, libro_iva_comp_gravada_5,
+ libro_iva_comp_exenta, libro_iva_comp_total, libro_iva_comp_estado, libro_iva_comp_origen)
+VALUES(1, NULL, NULL, '2026-07-01', 3809, 9090, 90910, 76191, 0, 180000, 'Activo', 'FACTURA');
+
+-- FACTURA DE COMPRA 2 (Contado, mercaderia) -> id 2. Proveedor 8 (Palermo), Sucursal 1, Usuario 1. Total 125000
+INSERT INTO public.factura_compra_cabecera
+(fact_comp_numero, fact_comp_timbrado, fact_comp_fecha_venci_timb, fact_comp_fecha_emision,
+ fact_comp_fecha_carga, fact_comp_condicion, fact_comp_plazo, fact_comp_fecha_venci,
+ fact_comp_observacion, fact_comp_estado, fact_comp_tipo_factura, id_proveedor, id_sucursal,
+ id_usuario, id_orden_compra_cab)
+VALUES('001-001-0000002', 12345678, '2027-12-31', '2026-07-02', '2026-07-02', 'Contado', NULL,
+       '2026-07-02', NULL, 'Pendiente', 'compraArt', 8, 1, 1, NULL);
+INSERT INTO public.factura_compra_detalle
+(id_fact_comp_cab, id_articulo, id_impuesto, id_deposito, fact_comp_cantidad, fact_comp_precio_compra, fact_det_descripcion)
+VALUES(2, 6, 1, 2, 50, 2500, NULL);
+INSERT INTO public.cuenta_pagar
+(id_fact_comp_cab, cta_pag_monto, cta_pag_estado, cta_pag_fecha_venci, cta_pag_saldo, cta_pag_plazo)
+VALUES(2, 125000, 'Pendiente', '2026-07-02', 125000, NULL);
+INSERT INTO public.libro_iva_compra
+(id_fact_comp_cab, id_nota_cred_comp_cab, id_nota_debi_comp_cab, libro_iva_comp_fecha,
+ libro_iva_comp_5, libro_iva_comp_10, libro_iva_comp_gravada_10, libro_iva_comp_gravada_5,
+ libro_iva_comp_exenta, libro_iva_comp_total, libro_iva_comp_estado, libro_iva_comp_origen)
+VALUES(2, NULL, NULL, '2026-07-02', 5952, 0, 0, 119048, 0, 125000, 'Activo', 'FACTURA');
