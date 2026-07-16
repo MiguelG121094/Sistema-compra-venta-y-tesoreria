@@ -927,7 +927,7 @@ public class FacturaCompraServlet extends HttpServlet {
             return;
         }
 
-        // Validar fecha de vencimiento del timbrado sea mayor o igual a la fecha actual
+        // Validar fecha de vencimiento del timbrado sea estrictamente mayor a la fecha actual
         if (estado.facturaCompra.getFechaVenciTimbrado() != null) {
             Date fechaActual = new Date();
             // Comparar solo las fechas (sin hora)
@@ -945,8 +945,8 @@ public class FacturaCompraServlet extends HttpServlet {
             calActual.set(java.util.Calendar.SECOND, 0);
             calActual.set(java.util.Calendar.MILLISECOND, 0);
 
-            if (calVenc.before(calActual)) {
-                mostrarMensaje(request, "La fecha de vencimiento del timbrado debe ser mayor o igual a la fecha actual", "alert-warning");
+            if (!calVenc.after(calActual)) {
+                mostrarMensaje(request, "La fecha de vencimiento del timbrado debe ser mayor a la fecha actual", "alert-warning");
                 cargarDatosParaVista(request, estado, token);
                 forward(request, response, JSP_FACTURA);
                 return;
