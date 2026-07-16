@@ -165,6 +165,9 @@ public class PedidoCompraServlet extends HttpServlet {
                             sucursal = sucursalService.getSucursal(idSucursal); //obtenemos la sucursal
                             pedidoCompra.setSucursal(sucursal); //cargamos la sucursal al pedido
                             depositos = depositoService.listarDepostioPorSucursal(idSucursal); //cargamos los depositos de la sucursal
+                            if (depositos == null || depositos.isEmpty()) {
+                                mostrarMensaje(request, "La sucursal seleccionada no tiene depósitos asignados", "alert-warning");
+                            }
                             request.setAttribute("listaAticulos", articulos); //mantener articulos
                             request.setAttribute("listaDepositos", depositos);
                         } else{
