@@ -118,4 +118,15 @@ public class CuentaPagarService {
             }
         }
     }
+
+    /**
+     * Indica si la factura tiene pagos aplicados (provision/orden de pago).
+     * Propaga la excepcion a proposito: un error de BD NO debe permitir editar/anular.
+     */
+    public boolean tienePagosAplicados(Long idFacturaCompra) throws SQLException {
+        try (Connection conn = Conexion.getConnection()) {
+            CuentaPagarDAO dao = new CuentaPagarDAO(conn);
+            return dao.tienePagosAplicados(idFacturaCompra);
+        }
+    }
 }

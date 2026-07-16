@@ -113,6 +113,14 @@ public class NotaCreditoCompraService {
         }
     }
 
+    /** Indica si la factura tiene una nota de credito NO anulada (propaga la excepcion). */
+    public boolean tieneNotaActivaPorFactura(Long idFacturaCompra) throws SQLException {
+        try (Connection conn = Conexion.getConnection()) {
+            NotaCreditoCompraDAO dao = new NotaCreditoCompraDAO(conn);
+            return dao.tieneNotaActivaPorFactura(idFacturaCompra);
+        }
+    }
+
     // ==================== MÉTODOS TRANSACCIONALES ====================
 
     /**

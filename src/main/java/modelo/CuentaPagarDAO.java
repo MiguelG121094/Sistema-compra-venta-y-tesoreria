@@ -333,4 +333,25 @@ public class CuentaPagarDAO {
             }
         }
     }
+
+    /**
+     * Indica si la factura tiene pagos en curso/aplicados: existe al menos una linea de
+     * provision u orden de pago que la referencia. Reemplaza la heuristica saldo < monto
+     * (que con Notas de Credito ya no implica pago). Ver NOTA_CREDITO_DEBITO_PLAN.md §8.4.
+     */
+    public boolean tienePagosAplicados(Long idFacturaCompra) throws SQLException {
+        if (idFacturaCompra == null) {
+            return false;
+        }
+        String sql =
+            "SELECT (EXISTS (SELECT 1 FROM orden_pago_detalle WHERE id_fact_comp_cab = ?) " +
+            "     OR EXISTS (SELECT 1 FROM provision_cuenta_pagar_detalle WHERE id_fact_comp_cab = ?))";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, idFacturaCompra);
+            stmt.setLong(2, idFacturaCompra);
+            try (ResultSet rs = stmt.executeQuery()) {
+                return rs.next() && rs.getBoolean(1);
+            }
+        }
+    }
 }

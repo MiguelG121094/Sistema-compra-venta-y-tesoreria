@@ -289,4 +289,23 @@ public class NotaDebitoCompraDAO {
             stmt.executeUpdate();
         }
     }
+
+    /**
+     * Indica si la factura tiene al menos una nota de debito NO anulada. Se usa para
+     * bloquear editar/anular la factura mientras existan notas activas (primero se deben
+     * anular las notas). Ver NOTA_CREDITO_DEBITO_PLAN.md §8.4.
+     */
+    public boolean tieneNotaActivaPorFactura(Long idFacturaCompra) throws SQLException {
+        if (idFacturaCompra == null) {
+            return false;
+        }
+        String sql = "SELECT EXISTS (SELECT 1 FROM nota_debito_compra_cabecera "
+                   + "WHERE id_fact_comp_cab = ? AND nota_debi_comp_estado <> 'Anulado')";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, idFacturaCompra);
+            try (ResultSet rs = stmt.executeQuery()) {
+                return rs.next() && rs.getBoolean(1);
+            }
+        }
+    }
 }

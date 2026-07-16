@@ -656,10 +656,20 @@ Hoy `saldo < monto` se interpreta como *"hay pagos aplicados"*. Con este enfoque
 deja `saldo < monto` **sin** pago alguno → esa condición pasaría a **bloquear por error** la edición
 o anulación de una factura que solo tiene una nota de crédito.
 
-**Acción requerida al implementar:** reemplazar esa heurística por una señal explícita de pago
-(p. ej. consultar `orden_pago_detalle` / `provision_cuenta_pagar_detalle` de la factura, o llevar un
-campo de "monto pagado" aparte del ajuste por notas). Sin esto, NC + edición/anulación de factura
-entran en conflicto.
+**✅ Implementado:**
+- `CuentaPagarDAO.tienePagosAplicados(idFactura)` — `EXISTS` en `orden_pago_detalle` y
+  `provision_cuenta_pagar_detalle`. Reemplaza la heurística `saldo < monto` en las **dos** ramas de
+  `FacturaCompraServlet` (editar dentro de `accionGuardar`, y `accionAnular`).
+- **Política "anular las notas antes que la factura":** `NotaCreditoCompraDAO` /
+  `NotaDebitoCompraDAO.tieneNotaActivaPorFactura(idFactura)` (`EXISTS ... estado <> 'Anulado'`).
+  Si la factura tiene **notas activas**, se **bloquea editar y anular** la factura con el mensaje
+  *"Anule primero las notas"*. Motivo: editar la factura reconstruye su `cuenta_pagar` (borraría el
+  ajuste de la nota) y anularla dejaría la nota **huérfana** (su libro IVA / stock no se revierten).
+- Los métodos de guard en los Services **propagan** la `SQLException` a propósito: un error de BD no
+  debe habilitar por descuido una operación destructiva sobre la factura.
+
+> **Orden correcto para deshacer:** anular primero la(s) nota(s) de la factura (revierte saldo, libro
+> IVA y stock), y recién entonces se puede editar o anular la factura.
 
 ### 8.5 Ajuste confirmado en `CuentaPagarDAO`
 
@@ -682,7 +692,7 @@ entran en conflicto.
 - [x] ~~Volver transaccionales `NotaCreditoCompraDAO` / `NotaDebitoCompraDAO`~~ ✅ (detalle + `guardar/anular...Completa` en el Service, dueño de la tx, propaga excepción).
 - [x] ~~`CuentaPagarDAO`: ajuste de saldo (∓ monto_nota, admite negativo) + recálculo de estado~~ ✅ `ajustarSaldoPorNota(...)`.
 - [ ] Provisión: relajar `CuentaPagarDAO.listarCuentasPagarPendientes()` (hoy `WHERE cta_pag_saldo > 0`) para **incluir saldos negativos** (`<> 0`, sin `Anulado`); validar **neto ≥ 0**; permitir `prov_cta_pag_monto` negativo en el detalle.
-- [ ] **Corregir la heurística de "pagos aplicados" en `FacturaCompraServlet`** (`saldo < monto`, ~líneas 995 y 1039): con NC eso ya no implica pago → cambiar por señal explícita (consultar `orden_pago_detalle`/`provision_cuenta_pagar_detalle` o un "monto pagado" separado). Ver §8.4.
+- [x] ~~**Corregir la heurística de "pagos aplicados" en `FacturaCompraServlet`** (`saldo < monto`)~~ ✅ `CuentaPagarDAO.tienePagosAplicados` (EXISTS en pagos) + guard **"anular notas antes que la factura"** (`tieneNotaActivaPorFactura` en ambos DAOs de nota), aplicado en editar y anular. Ver §8.4.
 - [x] ~~Reusar `LibroIvaCompraDAO` para filas origen NOTA (insert con signo + anulación)~~ ✅ `insertarLibroIvaNota` + `anularPorNotaCredito`/`anularPorNotaDebito` (filtran por FK de la nota, no por factura).
 - [x] ~~**Stock (NC devolución, §5.3):** `id_deposito` + FK en `nota_credito_compra_detalle`; triggers `trg_nota_credito_compra_detalle_stock_ins` (resta) y `trg_nota_credito_compra_estado_anular` (repone), espejo de factura~~ ✅ escritos en `Base de datos Taller 3ro.sql` y `Procedimientos y Triggers para BD.sql` (falta correrlos contra la BD).
 - [ ] Validar **cantidad devuelta ≤ comprada** (acumulando NC previas) al guardar la NC.

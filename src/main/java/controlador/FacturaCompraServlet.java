@@ -48,6 +48,8 @@ public class FacturaCompraServlet extends HttpServlet {
     private final TipoImpuestoService tipoImpuestoService = new TipoImpuestoService();
     private final CuentaPagarService cuentaPagarService = new CuentaPagarService();
     private final PedidoCompraDetalleService pedidoCompraDetalleService = new PedidoCompraDetalleService();
+    private final NotaCreditoCompraService notaCreditoCompraService = new NotaCreditoCompraService();
+    private final NotaDebitoCompraService notaDebitoCompraService = new NotaDebitoCompraService();
 
     // ==================== CLASE DE ESTADO ====================
 
@@ -992,12 +994,22 @@ public class FacturaCompraServlet extends HttpServlet {
                 forward(request, response, JSP_FACTURA);
                 return;
             }
-            if (cuentaPagarActual != null && cuentaPagarActual.getSaldo() != null
-                    && cuentaPagarActual.getMonto() != null
-                    && cuentaPagarActual.getSaldo() < cuentaPagarActual.getMonto()) {
+            if (cuentaPagarService.tienePagosAplicados(estado.facturaCompra.getIdFacturaCompra())) {
                 mostrarMensaje(request,
                     "No se puede editar: la factura tiene pagos aplicados. "
                     + "Reverse los pagos desde Orden de Pago antes de editar.",
+                    "alert-warning");
+                cargarDatosParaVista(request, estado, token);
+                forward(request, response, JSP_FACTURA);
+                return;
+            }
+            // Con NC/ND, editar la factura desincronizaria/borraria el ajuste de la nota:
+            // exigir que primero se anulen las notas activas. Ver NOTA_CREDITO_DEBITO_PLAN.md §8.4.
+            if (notaCreditoCompraService.tieneNotaActivaPorFactura(estado.facturaCompra.getIdFacturaCompra())
+                    || notaDebitoCompraService.tieneNotaActivaPorFactura(estado.facturaCompra.getIdFacturaCompra())) {
+                mostrarMensaje(request,
+                    "No se puede editar: la factura tiene notas de crédito/débito activas. "
+                    + "Anule primero las notas.",
                     "alert-warning");
                 cargarDatosParaVista(request, estado, token);
                 forward(request, response, JSP_FACTURA);
@@ -1033,15 +1045,23 @@ public class FacturaCompraServlet extends HttpServlet {
         if (estado == null) return;
 
         if (estado.facturaCompra.getIdFacturaCompra() != null) {
-            // Validar que la cuenta a pagar no tenga pagos aplicados (saldo < monto).
-            // Si los tiene, bloquear la anulación: primero se deben reversar los pagos
-            // desde el módulo de Orden de Pago.
-            CuentaPagar cuentaPagar = cuentaPagarService.getByFactura(estado.facturaCompra.getIdFacturaCompra());
-            if (cuentaPagar != null && cuentaPagar.getSaldo() != null && cuentaPagar.getMonto() != null
-                    && cuentaPagar.getSaldo() < cuentaPagar.getMonto()) {
+            // Bloquear la anulación si la factura tiene pagos aplicados (provision/orden de pago).
+            // Reemplaza la heuristica saldo < monto, que con NC ya no implica pago (§8.4).
+            if (cuentaPagarService.tienePagosAplicados(estado.facturaCompra.getIdFacturaCompra())) {
                 mostrarMensaje(request,
                     "No se puede anular: la factura tiene pagos aplicados. "
                     + "Reverse los pagos desde Orden de Pago antes de anular.",
+                    "alert-warning");
+                cargarDatosParaVista(request, estado, token);
+                forward(request, response, JSP_FACTURA);
+                return;
+            }
+            // Anular la factura dejaria huerfanas sus notas: exigir anularlas primero.
+            if (notaCreditoCompraService.tieneNotaActivaPorFactura(estado.facturaCompra.getIdFacturaCompra())
+                    || notaDebitoCompraService.tieneNotaActivaPorFactura(estado.facturaCompra.getIdFacturaCompra())) {
+                mostrarMensaje(request,
+                    "No se puede anular: la factura tiene notas de crédito/débito activas. "
+                    + "Anule primero las notas.",
                     "alert-warning");
                 cargarDatosParaVista(request, estado, token);
                 forward(request, response, JSP_FACTURA);
