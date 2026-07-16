@@ -1,3 +1,9 @@
+--Regenerá la BD desde Power Architect, y corré en este orden:
+--esquema (Power Architect)  →  Procedimientos y Triggers para BD.sql  →  Inserts inciales.sql
+--El orden importa: al insertar los factura_compra_detalle, el trigger de stock ya 
+--debe existir para que stock se popule solo (art 1 y art 8 en depósito 1; art 6 en depósito 2).
+
+
 -- Trigger: sumar al stock cuando se inserta un detalle con articulo + deposito
   CREATE OR REPLACE FUNCTION public.fn_factura_compra_detalle_stock_insert()
   RETURNS TRIGGER AS $$
@@ -21,7 +27,7 @@
   CREATE TRIGGER trg_factura_compra_detalle_stock_ins
   AFTER INSERT ON public.factura_compra_detalle
   FOR EACH ROW
-  EXECUTE FUNCTION public.fn_factura_compra_detalle_stock_insert();
+  EXECUTE PROCEDURE public.fn_factura_compra_detalle_stock_insert();
 
   -- Trigger: revertir stock cuando la factura pasa a 'Anulado'
   CREATE OR REPLACE FUNCTION public.fn_factura_compra_estado_anular_stock()
@@ -54,7 +60,7 @@
   AFTER UPDATE OF fact_comp_estado ON public.factura_compra_cabecera
   FOR EACH ROW
   WHEN (NEW.fact_comp_estado IS DISTINCT FROM OLD.fact_comp_estado)
-  EXECUTE FUNCTION public.fn_factura_compra_estado_anular_stock();
+  EXECUTE PROCEDURE public.fn_factura_compra_estado_anular_stock();
 
   -- =====================================================================================
   -- NOTA DE CRÉDITO DE COMPRA (DEVOLUCIÓN) — espejo del de factura, pero RESTA stock.
@@ -88,7 +94,7 @@
   CREATE TRIGGER trg_nota_credito_compra_detalle_stock_ins
   AFTER INSERT ON public.nota_credito_compra_detalle
   FOR EACH ROW
-  EXECUTE FUNCTION public.fn_nota_credito_compra_detalle_stock_insert();
+  EXECUTE PROCEDURE public.fn_nota_credito_compra_detalle_stock_insert();
 
   -- Trigger: REPONER stock cuando la NC pasa a 'Anulado' (reversa idempotente)
   CREATE OR REPLACE FUNCTION public.fn_nota_credito_compra_estado_anular_stock()
@@ -122,4 +128,4 @@
   AFTER UPDATE OF nota_cred_comp_estado ON public.nota_credito_compra_cabecera
   FOR EACH ROW
   WHEN (NEW.nota_cred_comp_estado IS DISTINCT FROM OLD.nota_cred_comp_estado)
-  EXECUTE FUNCTION public.fn_nota_credito_compra_estado_anular_stock();
+  EXECUTE PROCEDURE public.fn_nota_credito_compra_estado_anular_stock();

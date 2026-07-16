@@ -1060,6 +1060,7 @@ CREATE TABLE public.factura_compra_detalle (
 );
 COMMENT ON TABLE public.factura_compra_detalle IS 'Para factura_compra_detalle no se puede usar clave compuesta con id_articulo porque puede ser NULL (para gastos).  Se necesita agregar una columna autoincremental.';
 COMMENT ON COLUMN public.factura_compra_detalle.id_impuesto IS 'se agrega el impuesto (IVA 5, 10 o exentas) para cada articulo ya que se debe agregar el impuesto de manera manual si el tipo de factura es por compra de algun mueble o por compra de fondo fijo';
+COMMENT ON COLUMN public.factura_compra_detalle.fact_comp_precio_compra IS 'para calculo del iva';
 COMMENT ON COLUMN public.factura_compra_detalle.fact_det_descripcion IS 'Para items sin artículo (compra por gasto, mantenimineto,servicio, etc)';
 
 
@@ -1209,20 +1210,15 @@ CREATE SEQUENCE public.nota_credito_compra_detalle_id_nota_credito_det_seq;
 CREATE TABLE public.nota_credito_compra_detalle (
                 id_nota_credito_det INTEGER NOT NULL DEFAULT nextval('public.nota_credito_compra_detalle_id_nota_credito_det_seq'),
                 id_articulo INTEGER,
+                id_deposito INTEGER,
                 nota_cred_comp_cantidad INTEGER NOT NULL,
-                nota_cred_monto INTEGER NOT NULL,
+                nota_cred_monto INTEGER,
                 id_impuesto INTEGER,
                 nota_credito_descripcion VARCHAR,
-                id_deposito INTEGER,
                 id_nota_cred_comp_cab INTEGER NOT NULL,
                 CONSTRAINT id_nota_cred_comp_det PRIMARY KEY (id_nota_credito_det)
 );
-
--- Devolución de mercadería (NC de compra): depósito de la línea. Nullable: NULL = línea
--- financiera (descuento/bonificación) que NO mueve stock. Ver NOTA_CREDITO_DEBITO_PLAN.md §5.3.
-ALTER TABLE public.nota_credito_compra_detalle
-    ADD CONSTRAINT deposito_nota_credito_compra_detalle_fk
-    FOREIGN KEY (id_deposito) REFERENCES public.deposito (id_deposito);
+COMMENT ON COLUMN public.nota_credito_compra_detalle.id_deposito IS 'campo para hacer el descuento automatico del stock';
 
 
 ALTER SEQUENCE public.nota_credito_compra_detalle_id_nota_credito_det_seq OWNED BY public.nota_credito_compra_detalle.id_nota_credito_det;
@@ -1669,6 +1665,13 @@ ON UPDATE NO ACTION
 NOT DEFERRABLE;
 
 ALTER TABLE public.factura_compra_detalle ADD CONSTRAINT deposito_factura_compra_detalle_fk
+FOREIGN KEY (id_deposito)
+REFERENCES public.deposito (id_deposito)
+ON DELETE NO ACTION
+ON UPDATE NO ACTION
+NOT DEFERRABLE;
+
+ALTER TABLE public.nota_credito_compra_detalle ADD CONSTRAINT deposito_nota_credito_compra_detalle_fk
 FOREIGN KEY (id_deposito)
 REFERENCES public.deposito (id_deposito)
 ON DELETE NO ACTION

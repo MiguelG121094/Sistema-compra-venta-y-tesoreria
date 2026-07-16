@@ -1,3 +1,8 @@
+--Regenerá la BD desde Power Architect, y corré en este orden:
+--esquema (Power Architect)  →  Procedimientos y Triggers para BD.sql  →  Inserts inciales.sql
+--El orden importa: al insertar los factura_compra_detalle, el trigger de stock ya 
+--debe existir para que stock se popule solo (art 1 y art 8 en depósito 1; art 6 en depósito 2).
+
 -- INSERT TIPO ARTICULO
 INSERT INTO public.tipo_articulo
 (tipo_art_descripcion)
@@ -153,13 +158,13 @@ INSERT INTO public.grupo
 VALUES('Administradores');
 INSERT INTO public.grupo
 (gru_descripcion)
-VALUES('Compras');
+VALUES('Tesoreria');
 INSERT INTO public.grupo
 (gru_descripcion)
 VALUES('Ventas');
 INSERT INTO public.grupo
 (gru_descripcion)
-VALUES('Tesoreria');
+VALUES('Compras');
 
 
 -- INSERT MODULO
@@ -175,7 +180,6 @@ VALUES('tesoreria');
 
 
 -- INSERT PERMISO
--- Grupo 1 (Administradores): acceso total a todos los modulos
 INSERT INTO public.permiso
 (id_grupo, id_modulo, permi_leer, permi_insertar, permi_borrar, permi_editar)
 VALUES(1, 1, true, true, true, true);
@@ -185,7 +189,6 @@ VALUES(1, 2, true, true, true, true);
 INSERT INTO public.permiso
 (id_grupo, id_modulo, permi_leer, permi_insertar, permi_borrar, permi_editar)
 VALUES(1, 3, true, true, true, true);
--- Grupo 2 (Compras): acceso total a compra, solo lectura en venta y tesoreria
 INSERT INTO public.permiso
 (id_grupo, id_modulo, permi_leer, permi_insertar, permi_borrar, permi_editar)
 VALUES(2, 1, true, true, true, true);
@@ -195,26 +198,6 @@ VALUES(2, 2, true, false, false, false);
 INSERT INTO public.permiso
 (id_grupo, id_modulo, permi_leer, permi_insertar, permi_borrar, permi_editar)
 VALUES(2, 3, true, false, false, false);
--- Grupo 3 (Ventas): acceso total a venta, solo lectura en compra y tesoreria
-INSERT INTO public.permiso
-(id_grupo, id_modulo, permi_leer, permi_insertar, permi_borrar, permi_editar)
-VALUES(3, 1, true, false, false, false);
-INSERT INTO public.permiso
-(id_grupo, id_modulo, permi_leer, permi_insertar, permi_borrar, permi_editar)
-VALUES(3, 2, true, true, true, true);
-INSERT INTO public.permiso
-(id_grupo, id_modulo, permi_leer, permi_insertar, permi_borrar, permi_editar)
-VALUES(3, 3, true, false, false, false);
--- Grupo 4 (Tesoreria): acceso total a tesoreria, solo lectura en compra y venta
-INSERT INTO public.permiso
-(id_grupo, id_modulo, permi_leer, permi_insertar, permi_borrar, permi_editar)
-VALUES(4, 1, true, false, false, false);
-INSERT INTO public.permiso
-(id_grupo, id_modulo, permi_leer, permi_insertar, permi_borrar, permi_editar)
-VALUES(4, 2, true, false, false, false);
-INSERT INTO public.permiso
-(id_grupo, id_modulo, permi_leer, permi_insertar, permi_borrar, permi_editar)
-VALUES(4, 3, true, true, true, true);
 
 
 --INSERT PERSONA
@@ -281,96 +264,6 @@ VALUES(2, 'Gustavo', '123', 'activo', 2);
 INSERT INTO public.usuario
 (id_persona, usu_user, usu_pass, usu_estado, id_grupo)
 VALUES(3, 'Adolfo Gustavo', '123', 'activo', 4);
-
-
--- =====================================================================================
--- DATOS TRANSACCIONALES PARA PROBAR NOTA DE CREDITO / DEBITO DE COMPRA
--- Orden de ejecucion recomendado:  esquema  ->  triggers  ->  este archivo de inserts.
--- (Al insertar los factura_compra_detalle, el trigger de stock puebla 'stock' solo.)
--- =====================================================================================
-
--- INSERT TIPO COMPROBANTE
-INSERT INTO public.tipo_comprobante (tipo_comprob_descripcion) VALUES('Factura');            -- id 1
-INSERT INTO public.tipo_comprobante (tipo_comprob_descripcion) VALUES('Nota de Credito');    -- id 2
-INSERT INTO public.tipo_comprobante (tipo_comprob_descripcion) VALUES('Nota de Debito');     -- id 3
-
-
--- INSERT TIMBRADO (vigente, para el tipo comprobante Factura)
-INSERT INTO public.timbrado
-(tim_numero, tim_fecha_autorizacion, tim_fecha_vencimineto, tim_estado, id_tipo_comprob)
-VALUES(12345678, '2026-01-01', '2027-12-31', 'activo', 1);
-
-
--- ARTICULO ADICIONAL CON IVA 10% (los existentes son todos 5%; asi se prueban ambas tasas)
--- tipo_articulo 2 (Cerveza), marca 2 (Pilsen), impuesto 2 ('10'), presentacion 4 (Lata)
-INSERT INTO public.articulo
-(id_tipo_articulo, id_marca, id_impuesto, id_presentacion, art_descripcion, art_precio_compra, art_precio_venta, art_estado)
-VALUES(2, 2, 2, 4, 'Pilsen lata 473ml', 5000, 7000, 'activo');                                -- id 8
-
-
--- =====================================================================================
--- FACTURA DE COMPRA 1  (Credito, mercaderia)  -> id_fact_comp_cab = 1
--- Proveedor 4 (Paresa), Sucursal 1, Usuario 1 (admin). Total 180.000.
--- =====================================================================================
-INSERT INTO public.factura_compra_cabecera
-(fact_comp_numero, fact_comp_timbrado, fact_comp_fecha_venci_timb, fact_comp_fecha_emision,
- fact_comp_fecha_carga, fact_comp_condicion, fact_comp_plazo, fact_comp_fecha_venci,
- fact_comp_observacion, fact_comp_estado, fact_comp_tipo_factura, id_proveedor, id_sucursal,
- id_usuario, id_orden_compra_cab)
-VALUES('001-001-0000001', 12345678, '2027-12-31', '2026-07-01', '2026-07-01', 'Credito', 30,
-       '2026-07-31', NULL, 'Pendiente', 'compraArt', 4, 1, 1, NULL);
-
--- Detalle F1 (dispara el trigger de stock: deposito 1)
--- Linea A: articulo 1 (Coca Cola 2L, 5%), cant 10 x 8000 = 80.000
-INSERT INTO public.factura_compra_detalle
-(id_fact_comp_cab, id_articulo, id_impuesto, id_deposito, fact_comp_cantidad, fact_comp_precio_compra, fact_det_descripcion)
-VALUES(1, 1, 1, 1, 10, 8000, NULL);
--- Linea B: articulo 8 (Pilsen lata, 10%), cant 20 x 5000 = 100.000
-INSERT INTO public.factura_compra_detalle
-(id_fact_comp_cab, id_articulo, id_impuesto, id_deposito, fact_comp_cantidad, fact_comp_precio_compra, fact_det_descripcion)
-VALUES(1, 8, 2, 1, 20, 5000, NULL);
-
--- Cuenta a pagar F1 (saldo = monto). Base para probar la NC (resta al saldo)
-INSERT INTO public.cuenta_pagar
-(id_fact_comp_cab, cta_pag_monto, cta_pag_estado, cta_pag_fecha_venci, cta_pag_saldo, cta_pag_plazo)
-VALUES(1, 180000, 'Pendiente', '2026-07-31', 180000, 30);
-
--- Libro IVA F1 (origen FACTURA). iva5=80000/21=3809 ; iva10=100000/11=9090
-INSERT INTO public.libro_iva_compra
-(id_fact_comp_cab, id_nota_cred_comp_cab, id_nota_debi_comp_cab, libro_iva_comp_fecha,
- libro_iva_comp_5, libro_iva_comp_10, libro_iva_comp_gravada_10, libro_iva_comp_gravada_5,
- libro_iva_comp_exenta, libro_iva_comp_total, libro_iva_comp_estado, libro_iva_comp_origen)
-VALUES(1, NULL, NULL, '2026-07-01', 3809, 9090, 90910, 76191, 0, 180000, 'Activo', 'FACTURA');
-
-
--- =====================================================================================
--- FACTURA DE COMPRA 2  (Contado, mercaderia)  -> id_fact_comp_cab = 2
--- Proveedor 8 (Palermo), Sucursal 1, Usuario 1. Total 125.000.
--- =====================================================================================
-INSERT INTO public.factura_compra_cabecera
-(fact_comp_numero, fact_comp_timbrado, fact_comp_fecha_venci_timb, fact_comp_fecha_emision,
- fact_comp_fecha_carga, fact_comp_condicion, fact_comp_plazo, fact_comp_fecha_venci,
- fact_comp_observacion, fact_comp_estado, fact_comp_tipo_factura, id_proveedor, id_sucursal,
- id_usuario, id_orden_compra_cab)
-VALUES('001-001-0000002', 12345678, '2027-12-31', '2026-07-02', '2026-07-02', 'Contado', NULL,
-       '2026-07-02', NULL, 'Pendiente', 'compraArt', 8, 1, 1, NULL);
-
--- Detalle F2: articulo 6 (Palermo Duo, 5%), cant 50 x 2500 = 125.000 (deposito 2)
-INSERT INTO public.factura_compra_detalle
-(id_fact_comp_cab, id_articulo, id_impuesto, id_deposito, fact_comp_cantidad, fact_comp_precio_compra, fact_det_descripcion)
-VALUES(2, 6, 1, 2, 50, 2500, NULL);
-
--- Cuenta a pagar F2
-INSERT INTO public.cuenta_pagar
-(id_fact_comp_cab, cta_pag_monto, cta_pag_estado, cta_pag_fecha_venci, cta_pag_saldo, cta_pag_plazo)
-VALUES(2, 125000, 'Pendiente', '2026-07-02', 125000, NULL);
-
--- Libro IVA F2. iva5 = 125000/21 = 5952
-INSERT INTO public.libro_iva_compra
-(id_fact_comp_cab, id_nota_cred_comp_cab, id_nota_debi_comp_cab, libro_iva_comp_fecha,
- libro_iva_comp_5, libro_iva_comp_10, libro_iva_comp_gravada_10, libro_iva_comp_gravada_5,
- libro_iva_comp_exenta, libro_iva_comp_total, libro_iva_comp_estado, libro_iva_comp_origen)
-VALUES(2, NULL, NULL, '2026-07-02', 5952, 0, 0, 119048, 0, 125000, 'Activo', 'FACTURA');
 
 
 
