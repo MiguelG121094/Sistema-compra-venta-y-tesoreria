@@ -4,6 +4,12 @@
          xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/javaee http://xmlns.jcp.org/xml/ns/javaee/web-app_4_0.xsd"
          version="4.0">
 
+    <!-- Codificación UTF-8 por defecto en request y response (Servlet 4.0).
+         Sin esto, GlassFish lee el body de los POST como ISO-8859-1 y los acentos
+         se persisten corruptos (mojibake). -->
+    <request-character-encoding>UTF-8</request-character-encoding>
+    <response-character-encoding>UTF-8</response-character-encoding>
+
     <!-- Configuración de codificación UTF-8 para JSP -->
     <jsp-config>
         <jsp-property-group>
