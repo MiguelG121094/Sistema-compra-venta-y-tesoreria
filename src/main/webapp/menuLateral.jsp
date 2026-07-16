@@ -91,7 +91,7 @@ usuario inicio sesion, se debe agregar esta validaciÃ³n en cada una de las vis
                             <div class="collapse" id="pagesCollapseAuth" aria-labelledby="headingOne" data-bs-parent="#sidenavAccordionPages">
                                 <nav class="sb-sidenav-menu-nested nav">
                                     <a class="nav-link" href="tipoArticulo.jsp">Agregar Banco</a>
-                                    <a class="nav-link" href="register.html">Agregar Cuenta</a>
+                                    <a class="nav-link" href="CuentaServlet?menu=Cuenta&accion=Listar">Cuentas Bancarias</a>
                                 </nav>
                             </div>
                             <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#pagesCollapseError2" aria-expanded="false" aria-controls="pagesCollapseError2">

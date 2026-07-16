@@ -333,3 +333,29 @@ INSERT INTO public.libro_iva_compra
  libro_iva_comp_5, libro_iva_comp_10, libro_iva_comp_gravada_10, libro_iva_comp_gravada_5,
  libro_iva_comp_exenta, libro_iva_comp_total, libro_iva_comp_estado, libro_iva_comp_origen)
 VALUES(2, NULL, NULL, '2026-07-02', 5952, 0, 0, 119048, 0, 125000, 'Activo', 'FACTURA');
+
+-- =====================================================================================
+-- REFERENCIALES BANCARIOS (TESORERIA)
+-- =====================================================================================
+
+-- MONEDA
+INSERT INTO public.moneda (moneda_descipcion) VALUES('Guaranies');   -- id 1
+INSERT INTO public.moneda (moneda_descipcion) VALUES('Dolares');     -- id 2
+
+-- TIPO ENTIDAD FINANCIERA
+INSERT INTO public.tipo_entidad_financiera (tipo_enti_finan_descripcion) VALUES('Banco');       -- id 1
+INSERT INTO public.tipo_entidad_financiera (tipo_enti_finan_descripcion) VALUES('Financiera');  -- id 2
+INSERT INTO public.tipo_entidad_financiera (tipo_enti_finan_descripcion) VALUES('Cooperativa'); -- id 3
+
+-- ENTIDAD FINANCIERA (enti_finan_nombre, id_tipo_enti_finan)
+INSERT INTO public.entidad_financiera (enti_finan_nombre, id_tipo_enti_finan) VALUES('Itau', 1);
+INSERT INTO public.entidad_financiera (enti_finan_nombre, id_tipo_enti_finan) VALUES('Ueno', 1);
+INSERT INTO public.entidad_financiera (enti_finan_nombre, id_tipo_enti_finan) VALUES('Atlas', 1);
+INSERT INTO public.entidad_financiera (enti_finan_nombre, id_tipo_enti_finan) VALUES('Paraguayo Japonesa', 3);
+INSERT INTO public.entidad_financiera (enti_finan_nombre, id_tipo_enti_finan) VALUES('Tu Financiera', 2);
+INSERT INTO public.entidad_financiera (enti_finan_nombre, id_tipo_enti_finan) VALUES('Medalla', 3);
+INSERT INTO public.entidad_financiera (enti_finan_nombre, id_tipo_enti_finan) VALUES('San Cristobal', 3);
+
+-- TIPO CUENTA
+INSERT INTO public.tipo_cuenta (tipo_cuenta_descripcion) VALUES('Cuenta Corriente');  -- id 1
+INSERT INTO public.tipo_cuenta (tipo_cuenta_descripcion) VALUES('Cuenta de Ahorro');  -- id 2
