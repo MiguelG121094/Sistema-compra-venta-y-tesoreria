@@ -9,6 +9,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
@@ -51,7 +52,7 @@ public class NotaDebitoCompraDAO {
                 if (rs.next()) {
                     notaDebito = new NotaDebitoCompra(
                         rs.getLong("id_nota_debi_comp_cab"),
-                        rs.getInt("nota_debi_comp_numero"),
+                        rs.getString("nota_debi_comp_numero"),
                         rs.getInt("nota_debi_comp_timbrado"),
                         rs.getDate("nota_debi_comp_fecha_venci_timb"),
                         rs.getDate("nota_debi_comp_fecha_emision"),
@@ -115,7 +116,7 @@ public class NotaDebitoCompraDAO {
                     "id_fact_comp_cab, nota_debito_motivo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         try (PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-            stmt.setInt(1, notaDebito.getNumero());
+            stmt.setString(1, notaDebito.getNumero());
             stmt.setInt(2, notaDebito.getTimbrado());
             stmt.setDate(3, new java.sql.Date(notaDebito.getFechaVenciTimbrado().getTime()));
             stmt.setDate(4, new java.sql.Date(notaDebito.getFechaEmision().getTime()));
@@ -156,7 +157,7 @@ public class NotaDebitoCompraDAO {
                     "id_fact_comp_cab = ?, nota_debito_motivo = ? WHERE id_nota_debi_comp_cab = ?";
 
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setInt(1, notaDebito.getNumero());
+            stmt.setString(1, notaDebito.getNumero());
             stmt.setInt(2, notaDebito.getTimbrado());
             stmt.setDate(3, new java.sql.Date(notaDebito.getFechaVenciTimbrado().getTime()));
             stmt.setDate(4, new java.sql.Date(notaDebito.getFechaEmision().getTime()));
@@ -183,6 +184,108 @@ public class NotaDebitoCompraDAO {
 
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setLong(1, idNotaDebitoCompra);
+            stmt.executeUpdate();
+        }
+    }
+
+    // ==================== DETALLE ====================
+
+    /**
+     * Inserta una línea de la nota de débito. La ND es financiera (recargo/tarifa) y NO mueve stock,
+     * por eso el detalle no lleva depósito ni dispara ningún trigger.
+     *
+     * @param detalle      la línea a insertar
+     * @param idNotaDebito id de la cabecera a la que pertenece
+     * @return true si insertó
+     * @throws SQLException si ocurre un error de base de datos
+     */
+    public boolean insertarDetalle(NotaDebitoCompraDetalle detalle, Long idNotaDebito) throws SQLException {
+        if (detalle == null || idNotaDebito == null) {
+            LOGGER.log(Level.SEVERE, "Error: detalle o idNotaDebito nulo en insertarDetalle");
+            return false;
+        }
+
+        String sql = "INSERT INTO nota_debito_compra_detalle (id_articulo, nota_debi_comp_cantidad, " +
+                    "nota_debi_monto, id_impuesto, nota_debito_descripcion, id_nota_debi_comp_cab) " +
+                    "VALUES (?, ?, ?, ?, ?, ?)";
+
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            if (detalle.getArticulo() != null) {
+                stmt.setLong(1, detalle.getArticulo().getIdArticulo());
+            } else {
+                stmt.setNull(1, Types.INTEGER);
+            }
+            if (detalle.getCantidad() != null) {
+                stmt.setLong(2, detalle.getCantidad());
+            } else {
+                stmt.setNull(2, Types.INTEGER);
+            }
+            if (detalle.getMonto() != null) {
+                stmt.setLong(3, detalle.getMonto());
+            } else {
+                stmt.setNull(3, Types.INTEGER);
+            }
+            if (detalle.getTipoImpuesto() != null) {
+                stmt.setLong(4, detalle.getTipoImpuesto().getIdTipoImpuesto());
+            } else {
+                stmt.setNull(4, Types.INTEGER);
+            }
+            stmt.setString(5, detalle.getDescripcion());
+            stmt.setLong(6, idNotaDebito);
+
+            int filasAfectadas = stmt.executeUpdate();
+            return filasAfectadas > 0;
+        }
+    }
+
+    public List<NotaDebitoCompraDetalle> listarDetallesPorNota(Long idNotaDebito) throws SQLException {
+        if (idNotaDebito == null) {
+            LOGGER.log(Level.WARNING, "Error: idNotaDebito es nulo en listarDetallesPorNota");
+            return null;
+        }
+        List<NotaDebitoCompraDetalle> detalles = new ArrayList<>();
+        String sql = "SELECT * FROM nota_debito_compra_detalle WHERE id_nota_debi_comp_cab = ?";
+
+        ArticuloDAO articuloDAO = new ArticuloDAO(conn);
+        TipoImpuestoDAO tipoImpuestoDAO = new TipoImpuestoDAO(conn);
+
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, idNotaDebito);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    NotaDebitoCompraDetalle detalle = new NotaDebitoCompraDetalle();
+                    detalle.setId(rs.getLong("id_nota_debito_det"));
+
+                    Long idArticulo = rs.getLong("id_articulo");
+                    detalle.setArticulo(!rs.wasNull() && idArticulo != 0 ? articuloDAO.getArticulo(idArticulo) : null);
+
+                    detalle.setCantidad(rs.getLong("nota_debi_comp_cantidad"));
+                    detalle.setMonto(rs.getLong("nota_debi_monto"));
+                    detalle.setDescripcion(rs.getString("nota_debito_descripcion"));
+
+                    Long idImpuesto = rs.getLong("id_impuesto");
+                    detalle.setTipoImpuesto(!rs.wasNull() && idImpuesto != 0 ? tipoImpuestoDAO.getTipoImpuesto(idImpuesto) : null);
+
+                    detalles.add(detalle);
+                }
+            }
+        }
+        return detalles;
+    }
+
+    /**
+     * Cambia el estado de la nota a 'Anulado'. Preserva la fila para trazabilidad.
+     * (La ND no tiene trigger de stock; solo se revierte el saldo desde el Service.)
+     */
+    public void anularNotaDebito(Long idNotaDebito) throws SQLException {
+        if (idNotaDebito == null) {
+            LOGGER.log(Level.WARNING, "Error: idNotaDebito es nulo");
+            return;
+        }
+        String sql = "UPDATE nota_debito_compra_cabecera SET nota_debi_comp_estado = 'Anulado' "
+                   + "WHERE id_nota_debi_comp_cab = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, idNotaDebito);
             stmt.executeUpdate();
         }
     }

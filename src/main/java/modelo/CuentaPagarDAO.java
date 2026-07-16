@@ -246,4 +246,91 @@ public class CuentaPagarDAO {
             stmt.executeUpdate();
         }
     }
+
+    // ==================== AJUSTE POR NOTA DE CRÉDITO / DÉBITO ====================
+    // Enfoque 1 con neteo en la provisión — ver NOTA_CREDITO_DEBITO_PLAN.md §4/§8.
+
+    private static final String ESTADO_PENDIENTE   = "Pendiente";
+    private static final String ESTADO_CANCELADO   = "Cancelado";
+    private static final String ESTADO_SALDO_FAVOR = "Saldo a favor";
+    private static final String ESTADO_ANULADO     = "Anulado";
+
+    public enum TipoNota { CREDITO, DEBITO }
+
+    /**
+     * Aplica (o reversa) el efecto de una Nota de Crédito/Débito sobre el saldo de la
+     * cuenta a pagar de una factura.
+     * Enfoque 1 con neteo en la provisión — ver NOTA_CREDITO_DEBITO_PLAN.md §4/§8.
+     *
+     * El saldo PUEDE quedar negativo (= saldo a favor); NO se bloquea NC &gt; saldo:
+     * ese negativo se netea después en la provisión del proveedor.
+     * Estado recalculado: saldo &gt; 0 -&gt; Pendiente | = 0 -&gt; Cancelado | &lt; 0 -&gt; Saldo a favor.
+     *
+     * Corre sobre la Connection compartida; NO hace commit/rollback (lo controla el
+     * Service/Servlet que abrió la transacción, igual que la sincronización de Factura de Compra).
+     *
+     * @param idFacturaCompra factura referenciada por la nota (1 cuenta a pagar por factura)
+     * @param montoNota       monto de la nota, SIEMPRE positivo
+     * @param tipo            CREDITO (resta al saldo) o DEBITO (suma al saldo)
+     * @param reversa         false = aplicar la nota | true = revertir (anulación de la nota)
+     * @return nuevo saldo de la cuenta a pagar tras el ajuste
+     * @throws SQLException si la factura no tiene cuenta a pagar gestionable o hay error de BD
+     */
+    public long ajustarSaldoPorNota(Long idFacturaCompra, long montoNota,
+                                    TipoNota tipo, boolean reversa) throws SQLException {
+
+        if (idFacturaCompra == null) {
+            throw new SQLException("ajustarSaldoPorNota: idFacturaCompra es nulo");
+        }
+        if (montoNota <= 0) {
+            throw new SQLException("ajustarSaldoPorNota: el monto de la nota debe ser > 0 "
+                    + "(recibido: " + montoNota + ")");
+        }
+
+        // Signo: NC resta, ND suma. La reversa (anulación) invierte el signo.
+        long delta = (tipo == TipoNota.CREDITO) ? -montoNota : montoNota;
+        if (reversa) {
+            delta = -delta;
+        }
+
+        // UPDATE atómico + recálculo de estado en un solo statement (sin read-modify-write).
+        // En SQL, la cláusula SET y el CASE leen el valor VIEJO de la columna -> correcto.
+        // WHERE excluye cuentas anuladas: una factura anulada no ajusta saldo.
+        // RETURNING (PostgreSQL) devuelve el saldo ya actualizado en el mismo round-trip.
+        String sql =
+            "UPDATE cuenta_pagar " +
+            "   SET cta_pag_saldo  = cta_pag_saldo + ?, " +
+            "       cta_pag_estado = CASE " +
+            "                           WHEN cta_pag_saldo + ? > 0 THEN ? " +
+            "                           WHEN cta_pag_saldo + ? = 0 THEN ? " +
+            "                           ELSE ? " +
+            "                        END " +
+            " WHERE id_fact_comp_cab = ? " +
+            "   AND cta_pag_estado <> ? " +
+            "RETURNING cta_pag_saldo";
+
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, delta);
+            stmt.setLong(2, delta);
+            stmt.setString(3, ESTADO_PENDIENTE);
+            stmt.setLong(4, delta);
+            stmt.setString(5, ESTADO_CANCELADO);
+            stmt.setString(6, ESTADO_SALDO_FAVOR);
+            stmt.setLong(7, idFacturaCompra);
+            stmt.setString(8, ESTADO_ANULADO);
+
+            try (ResultSet rs = stmt.executeQuery()) {   // RETURNING -> executeQuery()
+                if (rs.next()) {
+                    long nuevoSaldo = rs.getLong("cta_pag_saldo");
+                    LOGGER.log(Level.INFO,
+                        "Cuenta a pagar de factura {0} ajustada por nota (delta={1}) -> saldo={2}",
+                        new Object[]{idFacturaCompra, delta, nuevoSaldo});
+                    return nuevoSaldo;
+                }
+                // 0 filas: la factura no tiene cuenta a pagar, o está Anulada.
+                throw new SQLException("No se pudo ajustar: la factura " + idFacturaCompra
+                        + " no tiene cuenta a pagar gestionable (inexistente o anulada).");
+            }
+        }
+    }
 }

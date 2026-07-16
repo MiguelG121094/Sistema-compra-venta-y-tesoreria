@@ -1,67 +1,31 @@
 <%--
     Document   : notaCreditoDebito
-    Created on : 15/03/2025
-    Author     : Miguel
+    Vista de Nota de Crédito / Débito de Compra, cableada a NotaCreditoDebitoServlet.
+    Patrón: formulario único + JS (Session+Token). Ver NOTA_CREDITO_DEBITO_PLAN.md §7.
 --%>
-
 <%@ page import="modelo.Usuario" %>
 <%
     HttpSession sessionObj = request.getSession(false);
     if (sessionObj == null || sessionObj.getAttribute("usuario") == null) {
         response.sendRedirect("login.jsp");
+        return;
     }
-
     Usuario usuario = (Usuario) sessionObj.getAttribute("usuario");
 %>
-
 <!DOCTYPE html>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
-<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt"%>
+<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <%@ page contentType="text/html;charset=UTF-8" language="java" pageEncoding="UTF-8" %>
 <html>
     <jsp:include page="header.jsp" />
     <head>
         <title>Nota de Crédito y Débito</title>
         <style>
-            .custom-card {
-                border: 1px solid #ddd;
-                border-radius: 8px;
-                padding: 16px;
-                margin-bottom: 16px;
-            }
-            .custom-table {
-                width: 100%;
-                border-collapse: collapse;
-            }
-            .custom-table th, .custom-table td {
-                border: 1px solid #ddd;
-                padding: 8px;
-                text-align: left;
-            }
-            .custom-table th {
-                background-color: #e9ecef;
-                font-weight: bold;
-            }
-            .section-title {
-                background-color: #e9ecef;
-                padding: 8px 12px;
-                margin: 0;
-                border-radius: 4px;
-                font-weight: bold;
-            }
-            .form-group-compact {
-                margin-bottom: 8px;
-            }
-            .border-section {
-                border-top: 2px solid #dee2e6;
-                margin: 16px 0;
-                padding-top: 16px;
-            }
-            .btn-responsive {
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-            }
+            .custom-card { border: 1px solid #ddd; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+            .custom-table { width: 100%; border-collapse: collapse; }
+            .custom-table th, .custom-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            .custom-table th { background-color: #e9ecef; font-weight: bold; }
+            .border-section { border-top: 2px solid #dee2e6; margin: 16px 0; padding-top: 16px; }
         </style>
     </head>
     <body class="sb-nav-fixed">
@@ -71,377 +35,363 @@
             <div id="layoutSidenav_content">
                 <main>
                     <div class="container-fluid px-4">
-                        <!-- Título y botones -->
-                        <div class="row mb-4">
+
+                        <!-- Título -->
+                        <div class="row mb-2">
                             <div style="text-align: center; background-color: #dadada; border-radius: 10px; border: 2px solid black; margin-top: 20px;">
-                                <span style="height: 100%; width: 100%;">
-                                    <h1 style="text-align: center">
-                                        <strong>NOTA DE CRÉDITO Y DÉBITO</strong></h1></span>
+                                <h1 style="text-align: center"><strong>NOTA DE CRÉDITO Y DÉBITO</strong></h1>
                             </div>
+                            <div style="border-bottom: 1px solid black; width: 100%; margin: 15px 0;"></div>
+                        </div>
 
-                            <!-- línea debajo del titulo -->
-                            <div style="border-bottom: 1px solid black; width: 100%; margin: 20px 0;"></div>
-
-                            <!-- Botones principales -->
+                        <!-- Botones principales -->
+                        <div class="row mb-3">
                             <div class="col-auto">
-                                <button type="button" class="btn btn-success">Nuevo</button>
-                                <button type="button" data-bs-toggle="modal" data-bs-target="#modalBuscarNota"
-                                        class="btn btn-info text-white">Buscar Nota de Crédito o Débito</button>
-                                <button type="button" data-bs-toggle="modal" data-bs-target="#modalBuscarFactura"
-                                        class="btn btn-info text-white">Buscar Factura Compra</button>
-                                <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#modalConfirmarAnular">Anular</button>
+                                <c:choose>
+                                    <c:when test="${puedeInsertar}">
+                                        <a href="NotaCreditoDebitoServlet?menu=NotaCreditoDebito&accion=Nuevo&tipoNota=credito"
+                                           class="btn btn-success">Nueva Nota de Crédito</a>
+                                        <a href="NotaCreditoDebitoServlet?menu=NotaCreditoDebito&accion=Nuevo&tipoNota=debito"
+                                           class="btn btn-success">Nueva Nota de Débito</a>
+                                    </c:when>
+                                    <c:otherwise>
+                                        <button class="btn btn-success" disabled title="No tiene permisos">Nueva Nota de Crédito</button>
+                                        <button class="btn btn-success" disabled title="No tiene permisos">Nueva Nota de Débito</button>
+                                    </c:otherwise>
+                                </c:choose>
+                                <button type="button" class="btn btn-info text-white"
+                                        data-bs-toggle="modal" data-bs-target="#modalBuscarNota">Buscar Nota</button>
+                                <c:if test="${not empty idNotaExistente and nota.estado ne 'Anulado' and puedeBorrar}">
+                                    <button type="button" class="btn btn-danger"
+                                            data-bs-toggle="modal" data-bs-target="#modalConfirmarAnular">Anular</button>
+                                </c:if>
                             </div>
                         </div>
 
                         <!-- Formulario principal -->
-                        <form id="formPrincipal" method="post" action="notaCreditoDebito.jsp">
+                        <form id="formPrincipal" method="post" action="NotaCreditoDebitoServlet">
+                            <input type="hidden" name="menu" value="NotaCreditoDebito">
+                            <input type="hidden" name="token" value="${token}">
+                            <input type="hidden" name="accion" id="accionPrincipal" value="Guardar">
+                            <input type="hidden" name="index" id="indexArticulo" value="${indexSeleccionado}">
+                            <input type="hidden" name="idFactura" id="idFacturaHidden" value="">
 
                             <!-- Cabecera -->
-                            <div class="row mb-4">
+                            <div class="row mb-3">
                                 <div class="col custom-card">
-                                    <h3>Cabecera</h3>
-
-                                    <!-- Datos básicos -->
-                                    <div class="card-body">
-                                        <div class="card-body">
-                                            <div class="row mb-3">
-                                                <div class="col-md-2">
-                                                    <div class="form-floating mb-3 mb-md-0">
-                                                        <input class="form-control" id="usuario" type="text" placeholder="Usuario"
-                                                               value="<%= usuario != null ? usuario.getUsername() : "" %>" readonly />
-                                                        <label for="usuario">Usuario</label>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-2">
-                                                    <div class="form-floating mb-3 mb-md-0">
-                                                        <input class="form-control" id="fecha" name="fecha" type="date" placeholder="Fecha" />
-                                                        <label for="fecha">Fecha</label>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-2">
-                                                    <div class="form-floating mb-3 mb-md-0">
-                                                        <input class="form-control" id="estado" type="text" placeholder="Estado"
-                                                               value="Pendiente" readonly />
-                                                        <label for="estado">Estado</label>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-2">
-                                                    <div class="form-floating mb-3 mb-md-0">
-                                                        <select class="form-control" id="sucursal" name="sucursal">
-                                                            <option value="">Seleccionar Sucursal</option>
-                                                            <option>Asunción - Sajonia</option>
-                                                            <option>Asunción - Mercado 4</option>
-                                                            <option>Central - Lambaré</option>
-                                                        </select>
-                                                        <label for="sucursal">Sucursal</label>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-2">
-                                                    <div class="form-floating mb-3 mb-md-0">
-                                                        <input class="form-control" id="idFactura" name="idFactura" type="text" placeholder="ID Factura" />
-                                                        <label for="idFactura">ID Factura N°</label>
-                                                    </div>
-                                                </div>
+                                    <h4>Cabecera</h4>
+                                    <div class="row mb-3">
+                                        <div class="col-md-2">
+                                            <div class="form-floating">
+                                                <input class="form-control" id="usuario" type="text"
+                                                       value="<%= usuario.getUsername() %>" readonly />
+                                                <label for="usuario">Usuario</label>
                                             </div>
                                         </div>
-                                    </div>
-
-                                    <!-- Información del Proveedor / Factura asociada -->
-                                    <div class="card-body">
-                                        <div class="card-body">
-                                            <div class="row mb-3">
-                                                <div class="col-md-3">
-                                                    <div class="form-floating mb-3 mb-md-0">
-                                                        <input class="form-control" id="razonSocial" name="razonSocial" type="text" placeholder="Razón Social" />
-                                                        <label for="razonSocial">Razón Social</label>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-2">
-                                                    <div class="form-floating mb-3 mb-md-0">
-                                                        <input class="form-control" id="ruc" name="ruc" type="text" placeholder="RUC" />
-                                                        <label for="ruc">RUC</label>
-                                                    </div>
-                                                </div>
-                                                <style>
-                                                    .form-floating #comprobanteN::placeholder {
-                                                        opacity: 0;
-                                                    }
-                                                    .form-floating #comprobanteN:focus::placeholder,
-                                                    .form-floating #comprobanteN:not(:placeholder-shown)::placeholder {
-                                                        opacity: 0.8;
-                                                        color: #6c757d;
-                                                    }
-                                                </style>
-                                                <script>
-                                                    $(document).ready(function(){
-                                                        $('#comprobanteN').mask('000-000-0000000');
-                                                    });
-                                                </script>
-                                                <div class="col-md-2">
-                                                    <div class="form-floating mb-3 mb-md-0">
-                                                        <input class="form-control" id="comprobanteN" name="numeroComprobante" type="text"
-                                                               placeholder="000-000-0000000" />
-                                                        <label for="comprobanteN">Comprobante N°</label>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-2">
-                                                    <div class="form-floating mb-3 mb-md-0">
-                                                        <input class="form-control" id="fechaEmision" name="fechaEmision" type="date" placeholder="Fecha de emisión" />
-                                                        <label for="fechaEmision">Fecha de emisión</label>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-3">
-                                                    <div class="form-floating mb-3 mb-md-0">
-                                                        <input class="form-control" id="motivo" name="motivo" type="text" placeholder="Motivo" />
-                                                        <label for="motivo">Motivo</label>
-                                                    </div>
-                                                </div>
+                                        <div class="col-md-2">
+                                            <div class="form-floating">
+                                                <input class="form-control" id="estado" type="text"
+                                                       value="${empty nota.estado ? 'Pendiente' : nota.estado}" readonly />
+                                                <label for="estado">Estado</label>
                                             </div>
                                         </div>
-                                    </div>
-
-                                    <!-- Timbrado, condición y tipo de nota -->
-                                    <div class="card-body">
-                                        <div class="card-body">
-                                            <div class="row mb-3">
-                                                <div class="col-md-2">
-                                                    <div class="form-floating mb-3 mb-md-0">
-                                                        <input class="form-control" id="timbrado" name="timbrado" type="number" placeholder="Timbrado"
-                                                               min="0" max="99999999"
-                                                               oninput="if(this.value.length>8)this.value=this.value.slice(0,8)" />
-                                                        <label for="timbrado">Timbrado</label>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-2">
-                                                    <div class="form-floating mb-3 mb-md-0">
-                                                        <input class="form-control" id="fechaVencimiento" name="fechaVencimiento" type="date" placeholder="Fecha de vencimiento" />
-                                                        <label for="fechaVencimiento">Fecha de vencimiento</label>
-                                                    </div>
-                                                </div>
-                                                <c:set var="esCredito" value="${param.condicionCompra == 'credito'}" />
-                                                <div class="col-md-2">
-                                                    <div class="form-floating mb-3 mb-md-0">
-                                                        <select class="form-control" id="condicionCompra" name="condicionCompra">
-                                                            <option value="contado" <c:if test="${!esCredito}">selected</c:if>>Contado</option>
-                                                            <option value="credito" <c:if test="${esCredito}">selected</c:if>>Crédito</option>
-                                                        </select>
-                                                        <label for="condicionCompra" class="me-2">Condición de compra</label>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-3">
-                                                    <div class="form-floating mb-3 mb-md-0">
-                                                        <select class="form-control" id="tipoNota" name="tipoNota">
-                                                            <option value="">Seleccionar tipo de nota</option>
-                                                            <option value="credito">Nota de Crédito</option>
-                                                            <option value="debito">Nota de Débito</option>
-                                                        </select>
-                                                        <label for="tipoNota" class="me-2">Tipo de nota</label>
-                                                    </div>
-                                                </div>
+                                        <div class="col-md-2">
+                                            <div class="form-floating">
+                                                <select class="form-control" id="tipoNota" name="tipoNota"
+                                                        onchange="cambiarTipoNota();"
+                                                        <c:if test="${empty token or not esNuevo}">disabled</c:if>>
+                                                    <option value="credito" ${tipoNota eq 'credito' ? 'selected' : ''}>Nota de Crédito</option>
+                                                    <option value="debito" ${tipoNota eq 'debito' ? 'selected' : ''}>Nota de Débito</option>
+                                                </select>
+                                                <label for="tipoNota">Tipo de nota</label>
                                             </div>
                                         </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Línea separadora -->
-                            <div class="border-section"></div>
-
-                            <%-- Botón Buscar Artículo comentado por ahora — la NC/ND no agrega artículos nuevos,
-                                 solo modifica los que vienen de la factura referenciada.
-                            <button type="button" data-bs-toggle="modal" data-bs-target="#modalArticulos"
-                                    class="btn btn-outline-primary w-100 btn-responsive"
-                                    style="overflow: hidden; text-overflow: ellipsis;"
-                                    title="Buscar Artículo">Buscar Artículo</button>
-                            --%>
-
-                            <!-- Modificación de artículos (estilo fondo fijo de facturaCompra) -->
-                            <input type="hidden" name="index" id="indexArticulo" value="${indexSeleccionado}">
-                            <div class="row mb-4">
-                                <div class="col custom-card">
-                                    <div class="row" style="margin-top: 10px">
                                         <div class="col-md-3">
-                                            <input type="text" name="descripcion" placeholder="Descripción" class="form-control"
-                                                   value="${detalleSeleccionado.descripcion}">
+                                            <button type="button" class="btn btn-info text-white w-100 h-100"
+                                                    data-bs-toggle="modal" data-bs-target="#modalBuscarFactura"
+                                                    <c:if test="${empty token or not esNuevo or not puedeInsertar}">disabled</c:if>>
+                                                Buscar Factura de Compra
+                                            </button>
                                         </div>
-                                        <div class="col-md-1">
-                                            <input type="text" inputmode="numeric" name="cantidad" placeholder="Cantidad" class="form-control mask-miles"
-                                                   value="${not empty detalleSeleccionado ? detalleSeleccionado.cantidad : 1}">
+                                        <div class="col-md-3">
+                                            <div class="form-floating">
+                                                <input class="form-control" id="idFactura" type="text" readonly
+                                                       value="${facturaReferenciada.numero}" />
+                                                <label for="idFactura">Factura referenciada</label>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="row mb-3">
+                                        <div class="col-md-4">
+                                            <div class="form-floating">
+                                                <input class="form-control" id="razonSocial" type="text" readonly
+                                                       value="${proveedorSeleccionado.razonSocial}" />
+                                                <label for="razonSocial">Razón Social</label>
+                                            </div>
                                         </div>
                                         <div class="col-md-2">
-                                            <input type="text" inputmode="numeric" name="precioCompra" placeholder="Precio de compra" class="form-control mask-miles"
-                                                   value="${detalleSeleccionado.precioCompra}">
+                                            <div class="form-floating">
+                                                <input class="form-control" id="ruc" type="text" readonly
+                                                       value="${proveedorSeleccionado.ruc}" />
+                                                <label for="ruc">RUC</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="form-floating">
+                                                <input class="form-control" id="sucursal" type="text" readonly
+                                                       value="${sucursalHeredada.descripcion}" />
+                                                <label for="sucursal">Sucursal (de la factura)</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="form-floating">
+                                                <input class="form-control" id="condicion" type="text" readonly
+                                                       value="${condicionHeredada}" />
+                                                <label for="condicion">Condición (de la factura)</label>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="row mb-3">
+                                        <div class="col-md-3">
+                                            <div class="form-floating">
+                                                <input class="form-control" id="comprobanteN" name="numeroComprobante" type="text"
+                                                       placeholder="000-000-0000000" value="${nota.numero}"
+                                                       <c:if test="${empty token}">disabled</c:if> />
+                                                <label for="comprobanteN">Comprobante N°</label>
+                                            </div>
                                         </div>
                                         <div class="col-md-2">
-                                            <select name="idTipoImpuesto" class="form-control">
-                                                <option value="">Seleccionar Impuesto</option>
-                                                <c:forEach var="imp" items="${listaTipoImpuesto}">
-                                                    <option value="${imp.idTipoImpuesto}"
-                                                        ${detalleSeleccionado.tipoImpuesto.idTipoImpuesto == imp.idTipoImpuesto ? 'selected' : ''}>
-                                                        ${imp.descripcion}
-                                                    </option>
-                                                </c:forEach>
-                                            </select>
+                                            <div class="form-floating">
+                                                <input class="form-control" id="fechaEmision" name="fechaEmision" type="date"
+                                                       value="<fmt:formatDate value='${nota.fechaEmision}' pattern='yyyy-MM-dd'/>"
+                                                       <c:if test="${empty token}">disabled</c:if> />
+                                                <label for="fechaEmision">Fecha de emisión</label>
+                                            </div>
                                         </div>
                                         <div class="col-md-2">
-                                            <button type="button" class="btn btn-warning">Modificar</button>
+                                            <div class="form-floating">
+                                                <input class="form-control" id="timbrado" name="timbrado" type="number"
+                                                       min="0" max="99999999" value="${nota.timbrado}"
+                                                       oninput="if(this.value.length>8)this.value=this.value.slice(0,8)"
+                                                       <c:if test="${empty token}">disabled</c:if> />
+                                                <label for="timbrado">Timbrado</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <div class="form-floating">
+                                                <input class="form-control" id="fechaVencTimbrado" name="fechaVencTimbrado" type="date"
+                                                       value="<fmt:formatDate value='${nota.fechaVenciTimbrado}' pattern='yyyy-MM-dd'/>"
+                                                       <c:if test="${empty token}">disabled</c:if> />
+                                                <label for="fechaVencTimbrado">Venc. Timbrado</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="form-floating">
+                                                <input class="form-control" id="motivo" name="motivo" type="text"
+                                                       value="${nota.motivo}" <c:if test="${empty token}">disabled</c:if> />
+                                                <label for="motivo">Motivo</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <div class="form-floating">
+                                                <input class="form-control" id="observacion" name="observacion" type="text"
+                                                       value="${nota.observacion}" <c:if test="${empty token}">disabled</c:if> />
+                                                <label for="observacion">Observación</label>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- Tabla de Artículos (Detalle de la nota) -->
-                            <div class="row mb-4">
+                            <!-- Editor de línea -->
+                            <c:if test="${not empty token and esNuevo}">
+                                <div class="border-section"></div>
+                                <input type="hidden" name="idArticulo" id="idArticuloHidden" value="${detalleSeleccionado.articulo.idArticulo}">
+                                <div class="row mb-3">
+                                    <div class="col custom-card">
+                                        <div class="row">
+                                            <div class="col-md-3">
+                                                <input type="text" name="descripcion" placeholder="Descripción" class="form-control"
+                                                       value="${detalleSeleccionado.descripcion}">
+                                            </div>
+                                            <div class="col-md-1">
+                                                <input type="text" inputmode="numeric" name="cantidad" placeholder="Cantidad"
+                                                       class="form-control mask-miles"
+                                                       value="${not empty detalleSeleccionado ? detalleSeleccionado.cantidad : 1}">
+                                            </div>
+                                            <div class="col-md-2">
+                                                <input type="text" inputmode="numeric" name="monto" placeholder="Monto (unit.)"
+                                                       class="form-control mask-miles" value="${detalleSeleccionado.monto}">
+                                            </div>
+                                            <div class="col-md-2">
+                                                <select name="idTipoImpuesto" class="form-control">
+                                                    <option value="">Impuesto</option>
+                                                    <c:forEach var="imp" items="${listaTipoImpuesto}">
+                                                        <option value="${imp.idTipoImpuesto}"
+                                                            ${detalleSeleccionado.tipoImpuesto.idTipoImpuesto == imp.idTipoImpuesto ? 'selected' : ''}>
+                                                            ${imp.descripcion}
+                                                        </option>
+                                                    </c:forEach>
+                                                </select>
+                                            </div>
+                                            <c:if test="${tipoNota eq 'credito'}">
+                                                <div class="col-md-2">
+                                                    <select name="idDeposito" class="form-control" title="Depósito (solo devolución de mercadería)">
+                                                        <option value="">Depósito</option>
+                                                        <c:forEach var="dep" items="${listaDepositos}">
+                                                            <option value="${dep.idDeposito}"
+                                                                ${detalleSeleccionado.deposito.idDeposito == dep.idDeposito ? 'selected' : ''}>
+                                                                ${dep.descripcion}
+                                                            </option>
+                                                        </c:forEach>
+                                                    </select>
+                                                </div>
+                                            </c:if>
+                                            <div class="col-md-2">
+                                                <c:choose>
+                                                    <c:when test="${not empty detalleSeleccionado}">
+                                                        <button type="button" class="btn btn-warning w-100" onclick="actualizarLinea();"
+                                                                <c:if test="${not puedeInsertar}">disabled</c:if>>Actualizar</button>
+                                                    </c:when>
+                                                    <c:otherwise>
+                                                        <button type="button" class="btn btn-primary w-100" onclick="agregarLinea();"
+                                                                <c:if test="${not puedeInsertar}">disabled</c:if>>Agregar</button>
+                                                    </c:otherwise>
+                                                </c:choose>
+                                            </div>
+                                        </div>
+                                        <small class="text-muted">
+                                            Línea con artículo + depósito = devolución (mueve stock). Sin artículo = ajuste financiero (descuento/recargo).
+                                        </small>
+                                    </div>
+                                </div>
+                            </c:if>
+
+                            <!-- Detalle -->
+                            <div class="row mb-3">
                                 <div class="col custom-card">
                                     <div class="table-responsive">
-                                        <table id="tablaArticulosNota" class="table table-bordered table-sm custom-table">
+                                        <table class="table table-bordered table-sm custom-table">
                                             <thead>
                                                 <tr>
-                                                    <th class="text-bg-dark text-center">Id. Artículo</th>
+                                                    <th class="text-bg-dark text-center">Artículo</th>
                                                     <th class="text-bg-dark text-center">Descripción</th>
+                                                    <th class="text-bg-dark text-center">Depósito</th>
                                                     <th class="text-bg-dark text-center">Cantidad</th>
-                                                    <th class="text-bg-dark text-center">Precio de compra</th>
+                                                    <th class="text-bg-dark text-center">Monto</th>
                                                     <th class="text-bg-dark text-center">Sub. Total</th>
-                                                    <th class="text-bg-dark text-center">Gravada 10%</th>
+                                                    <th class="text-bg-dark text-center">Grav. 10%</th>
                                                     <th class="text-bg-dark text-center">IVA 10%</th>
-                                                    <th class="text-bg-dark text-center">Gravada 5%</th>
+                                                    <th class="text-bg-dark text-center">Grav. 5%</th>
                                                     <th class="text-bg-dark text-center">IVA 5%</th>
                                                     <th class="text-bg-dark text-center">Exenta</th>
-                                                    <th class="text-bg-dark text-center no-search">Acciones</th>
+                                                    <c:if test="${not empty token and esNuevo}">
+                                                        <th class="text-bg-dark text-center">Acciones</th>
+                                                    </c:if>
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                <tr>
-                                                    <td class="text-center">2</td>
-                                                    <td class="text-center">Jugo de Naranja</td>
-                                                    <td class="text-center">24</td>
-                                                    <td class="text-center">5,000</td>
-                                                    <td class="text-center">120,000</td>
-                                                    <td class="text-center">109,091</td>
-                                                    <td class="text-center">10,909</td>
-                                                    <td class="text-center">0</td>
-                                                    <td class="text-center">0</td>
-                                                    <td class="text-center">0</td>
-                                                    <td class="text-center">
-                                                        <button type="button" class="btn btn-warning btn-sm">Editar</button>
-                                                        <button type="button" class="btn btn-danger btn-sm">Eliminar</button>
-                                                    </td>
-                                                </tr>
-                                                <tr>
-                                                    <td class="text-center">3</td>
-                                                    <td class="text-center">Licor de Coco</td>
-                                                    <td class="text-center">10</td>
-                                                    <td class="text-center">8,000</td>
-                                                    <td class="text-center">80,000</td>
-                                                    <td class="text-center">72,727</td>
-                                                    <td class="text-center">7,273</td>
-                                                    <td class="text-center">0</td>
-                                                    <td class="text-center">0</td>
-                                                    <td class="text-center">0</td>
-                                                    <td class="text-center">
-                                                        <button type="button" class="btn btn-warning btn-sm">Editar</button>
-                                                        <button type="button" class="btn btn-danger btn-sm">Eliminar</button>
-                                                    </td>
-                                                </tr>
+                                                <c:forEach var="detalle" items="${listaDetalle}" varStatus="st">
+                                                    <tr>
+                                                        <td class="text-center">${detalle.articulo.idArticulo}</td>
+                                                        <td>${detalle.descripcionDisplay}</td>
+                                                        <td>${detalle.deposito.descripcion}</td>
+                                                        <td class="text-center"><fmt:formatNumber value="${detalle.cantidad}" pattern="#,##0"/></td>
+                                                        <td class="text-end"><fmt:formatNumber value="${detalle.monto}" pattern="#,##0"/></td>
+                                                        <td class="text-end"><fmt:formatNumber value="${detalle.subtotal}" pattern="#,##0"/></td>
+                                                        <td class="text-end"><fmt:formatNumber value="${detalle.gravada10}" pattern="#,##0"/></td>
+                                                        <td class="text-end"><fmt:formatNumber value="${detalle.iva10}" pattern="#,##0"/></td>
+                                                        <td class="text-end"><fmt:formatNumber value="${detalle.gravada5}" pattern="#,##0"/></td>
+                                                        <td class="text-end"><fmt:formatNumber value="${detalle.iva5}" pattern="#,##0"/></td>
+                                                        <td class="text-end"><fmt:formatNumber value="${detalle.exenta}" pattern="#,##0"/></td>
+                                                        <c:if test="${not empty token and esNuevo}">
+                                                            <td class="text-center">
+                                                                <c:if test="${puedeInsertar}">
+                                                                    <a href="NotaCreditoDebitoServlet?menu=NotaCreditoDebito&accion=EditarArticulo&token=${token}&index=${st.index}"
+                                                                       class="btn btn-warning btn-sm">Editar</a>
+                                                                    <button type="button" class="btn btn-danger btn-sm"
+                                                                            onclick="eliminarLinea(${st.index});">Eliminar</button>
+                                                                </c:if>
+                                                            </td>
+                                                        </c:if>
+                                                    </tr>
+                                                </c:forEach>
+                                                <c:if test="${empty listaDetalle}">
+                                                    <tr><td colspan="12" class="text-center text-muted">Sin líneas</td></tr>
+                                                </c:if>
                                             </tbody>
                                         </table>
                                     </div>
 
-                                    <!-- Botones finales -->
-                                    <div class="row mt-3">
+                                    <div class="row mt-2">
                                         <div class="col-md-6">
-                                            <button type="button" class="btn btn-success">Guardar</button>
-                                            <button type="button" class="btn btn-danger">Cancelar</button>
+                                            <c:if test="${not empty token and esNuevo}">
+                                                <c:choose>
+                                                    <c:when test="${puedeInsertar}">
+                                                        <button type="button" class="btn btn-success" onclick="guardarNota();">Guardar</button>
+                                                    </c:when>
+                                                    <c:otherwise>
+                                                        <button class="btn btn-success" disabled title="No tiene permisos">Guardar</button>
+                                                    </c:otherwise>
+                                                </c:choose>
+                                            </c:if>
+                                            <c:if test="${not empty token}">
+                                                <a href="NotaCreditoDebitoServlet?menu=NotaCreditoDebito&accion=Cancelar&token=${token}"
+                                                   class="btn btn-secondary">Cancelar</a>
+                                            </c:if>
                                         </div>
                                         <div class="col-md-6 text-end">
-                                            <h5>Total: 200,000</h5>
-                                            <small>IVA 10%: 18,182 | IVA 5%: 0 | Exenta: 0</small>
+                                            <h5>Total: <fmt:formatNumber value="${totalGeneral}" pattern="#,##0"/></h5>
+                                            <small>IVA 10%: <fmt:formatNumber value="${totalIva10}" pattern="#,##0"/> |
+                                                   IVA 5%: <fmt:formatNumber value="${totalIva5}" pattern="#,##0"/> |
+                                                   Exenta: <fmt:formatNumber value="${totalExenta}" pattern="#,##0"/></small>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </form>
 
-                        <!-- Modal Buscar Nota de Crédito o Débito -->
-                        <div class="modal fade" id="modalBuscarNota" tabindex="-1" aria-labelledby="modalBuscarNotaLabel" aria-hidden="true">
-                            <div class="modal-dialog modal-lg">
-                                <div class="modal-content">
-                                    <div class="modal-header">
-                                        <h5 class="modal-title">Buscar Nota de Crédito o Débito</h5>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                    </div>
-                                    <div class="modal-body">
-                                        <div class="table-responsive">
-                                            <table id="tablaModalBuscarNota" class="table table-bordered table-striped">
-                                                <thead>
-                                                    <tr>
-                                                        <th class="text-bg-dark text-center">N° Nota</th>
-                                                        <th class="text-bg-dark text-center">Tipo</th>
-                                                        <th class="text-bg-dark text-center">Proveedor</th>
-                                                        <th class="text-bg-dark text-center">RUC</th>
-                                                        <th class="text-bg-dark text-center">Total</th>
-                                                        <th class="text-bg-dark text-center">Fecha</th>
-                                                        <th class="text-bg-dark text-center no-search">Acciones</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    <tr>
-                                                        <td class="text-center">NC-001</td>
-                                                        <td class="text-center">Nota de Crédito</td>
-                                                        <td class="text-center">Distribuidora ABC</td>
-                                                        <td class="text-center">80012345-1</td>
-                                                        <td class="text-center">200,000</td>
-                                                        <td class="text-center">15/03/2025</td>
-                                                        <td class="text-center">
-                                                            <button type="button" class="btn btn-primary btn-sm">Seleccionar</button>
-                                                        </td>
-                                                    </tr>
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </div>
-                                    <div class="modal-footer">
-                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Modal Buscar Factura Compra -->
-                        <div class="modal fade" id="modalBuscarFactura" tabindex="-1" aria-labelledby="modalBuscarFacturaLabel" aria-hidden="true">
+                        <!-- Modal Buscar Factura -->
+                        <div class="modal fade" id="modalBuscarFactura" tabindex="-1" aria-hidden="true">
                             <div class="modal-dialog modal-lg">
                                 <div class="modal-content">
                                     <div class="modal-header">
                                         <h5 class="modal-title">Buscar Factura de Compra</h5>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                     </div>
-                                    <div class="modal-body">
-                                        <div class="table-responsive">
-                                            <table id="tablaModalBuscarFactura" class="table table-bordered table-striped">
-                                                <thead>
-                                                    <tr>
-                                                        <th class="text-bg-dark text-center">N° Factura</th>
-                                                        <th class="text-bg-dark text-center">Proveedor</th>
-                                                        <th class="text-bg-dark text-center">RUC</th>
-                                                        <th class="text-bg-dark text-center">Total</th>
-                                                        <th class="text-bg-dark text-center">Fecha</th>
-                                                        <th class="text-bg-dark text-center no-search">Acciones</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    <tr>
-                                                        <td class="text-center">001-001-0000001</td>
-                                                        <td class="text-center">Distribuidora ABC</td>
-                                                        <td class="text-center">80012345-1</td>
-                                                        <td class="text-center">200,000</td>
-                                                        <td class="text-center">07/03/2025</td>
+                                    <div class="modal-body table-responsive">
+                                        <table id="tablaFacturas" class="table table-bordered table-striped">
+                                            <thead>
+                                                <tr>
+                                                    <th class="text-bg-dark text-center">N° Factura</th>
+                                                    <th class="text-bg-dark text-center">Estado</th>
+                                                    <th class="text-bg-dark text-center no-search">Acción</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <c:forEach var="f" items="${listaFacturas}">
+                                                    <tr class="${f.estado eq 'Anulado' ? 'table-danger' : ''}">
+                                                        <td class="text-center">${f.numero}</td>
+                                                        <td class="text-center">${f.estado}</td>
                                                         <td class="text-center">
-                                                            <button type="button" class="btn btn-primary btn-sm">Seleccionar</button>
+                                                            <c:choose>
+                                                                <c:when test="${f.estado eq 'Anulado'}">
+                                                                    <button class="btn btn-secondary btn-sm" disabled>Anulada</button>
+                                                                </c:when>
+                                                                <c:otherwise>
+                                                                    <button type="button" class="btn btn-primary btn-sm" data-bs-dismiss="modal"
+                                                                            onclick="seleccionarFactura(${f.idFacturaCompra});">Seleccionar</button>
+                                                                </c:otherwise>
+                                                            </c:choose>
                                                         </td>
                                                     </tr>
-                                                </tbody>
-                                            </table>
-                                        </div>
+                                                </c:forEach>
+                                            </tbody>
+                                        </table>
                                     </div>
                                     <div class="modal-footer">
                                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
@@ -450,48 +400,52 @@
                             </div>
                         </div>
 
-                        <!-- Modal Buscar Artículos -->
-                        <div class="modal fade" id="modalArticulos" tabindex="-1" aria-labelledby="modalArticulosLabel" aria-hidden="true">
+                        <!-- Modal Buscar Nota -->
+                        <div class="modal fade" id="modalBuscarNota" tabindex="-1" aria-hidden="true">
                             <div class="modal-dialog modal-lg">
                                 <div class="modal-content">
                                     <div class="modal-header">
-                                        <h5 class="modal-title">Buscar Artículos</h5>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        <h5 class="modal-title">Buscar Nota de Crédito o Débito</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                     </div>
-                                    <div class="modal-body">
-                                        <div class="table-responsive">
-                                            <table id="tablaModalArticulos" class="table table-bordered table-striped">
-                                                <thead>
-                                                    <tr>
-                                                        <th class="text-bg-dark text-center">Id. Artículo</th>
-                                                        <th class="text-bg-dark text-center">Descripción</th>
-                                                        <th class="text-bg-dark text-center">Precio</th>
-                                                        <th class="text-bg-dark text-center">Stock</th>
-                                                        <th class="text-bg-dark text-center no-search">Acciones</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    <tr>
-                                                        <td class="text-center">2</td>
-                                                        <td class="text-center">Jugo de Naranja</td>
-                                                        <td class="text-center">5,000</td>
-                                                        <td class="text-center">100</td>
+                                    <div class="modal-body table-responsive">
+                                        <table id="tablaNotas" class="table table-bordered table-striped">
+                                            <thead>
+                                                <tr>
+                                                    <th class="text-bg-dark text-center">N° Nota</th>
+                                                    <th class="text-bg-dark text-center">Tipo</th>
+                                                    <th class="text-bg-dark text-center">Proveedor</th>
+                                                    <th class="text-bg-dark text-center">Estado</th>
+                                                    <th class="text-bg-dark text-center no-search">Acción</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <c:forEach var="n" items="${listaNotasCredito}">
+                                                    <tr class="${n.estado eq 'Anulado' ? 'table-danger' : ''}">
+                                                        <td class="text-center">${n.numero}</td>
+                                                        <td class="text-center">Crédito</td>
+                                                        <td>${n.proveedor.razonSocial}</td>
+                                                        <td class="text-center">${n.estado}</td>
                                                         <td class="text-center">
-                                                            <button type="button" class="btn btn-primary btn-sm" data-bs-dismiss="modal">Seleccionar</button>
+                                                            <a href="NotaCreditoDebitoServlet?menu=NotaCreditoDebito&accion=CargarNota&idNota=${n.idNotaCreditoCompra}&tipoNotaCargar=credito"
+                                                               class="btn btn-primary btn-sm">Seleccionar</a>
                                                         </td>
                                                     </tr>
-                                                    <tr>
-                                                        <td class="text-center">3</td>
-                                                        <td class="text-center">Licor de Coco</td>
-                                                        <td class="text-center">8,000</td>
-                                                        <td class="text-center">50</td>
+                                                </c:forEach>
+                                                <c:forEach var="n" items="${listaNotasDebito}">
+                                                    <tr class="${n.estado eq 'Anulado' ? 'table-danger' : ''}">
+                                                        <td class="text-center">${n.numero}</td>
+                                                        <td class="text-center">Débito</td>
+                                                        <td>${n.proveedor.razonSocial}</td>
+                                                        <td class="text-center">${n.estado}</td>
                                                         <td class="text-center">
-                                                            <button type="button" class="btn btn-primary btn-sm" data-bs-dismiss="modal">Seleccionar</button>
+                                                            <a href="NotaCreditoDebitoServlet?menu=NotaCreditoDebito&accion=CargarNota&idNota=${n.idNotaDebitoCompra}&tipoNotaCargar=debito"
+                                                               class="btn btn-primary btn-sm">Seleccionar</a>
                                                         </td>
                                                     </tr>
-                                                </tbody>
-                                            </table>
-                                        </div>
+                                                </c:forEach>
+                                            </tbody>
+                                        </table>
                                     </div>
                                     <div class="modal-footer">
                                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
@@ -500,20 +454,18 @@
                             </div>
                         </div>
 
-                        <!-- Modal de confirmación para Anular -->
-                        <div class="modal fade" id="modalConfirmarAnular" tabindex="-1" aria-labelledby="modalConfirmarAnularLabel" aria-hidden="true">
+                        <!-- Modal Confirmar Anular -->
+                        <div class="modal fade" id="modalConfirmarAnular" tabindex="-1" aria-hidden="true">
                             <div class="modal-dialog modal-dialog-centered">
                                 <div class="modal-content">
                                     <div class="modal-header bg-danger text-white">
-                                        <h5 class="modal-title" id="modalConfirmarAnularLabel">Confirmación</h5>
-                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        <h5 class="modal-title">Confirmación</h5>
+                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                                     </div>
-                                    <div class="modal-body">
-                                        <p>¿Está seguro que desea anular esta nota?</p>
-                                    </div>
+                                    <div class="modal-body"><p>¿Está seguro que desea anular esta nota?</p></div>
                                     <div class="modal-footer">
                                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">No</button>
-                                        <button type="button" class="btn btn-danger">Sí, Anular</button>
+                                        <button type="button" class="btn btn-danger" onclick="anularNota();">Sí, Anular</button>
                                     </div>
                                 </div>
                             </div>
@@ -521,76 +473,65 @@
 
                     </div>
                 </main>
-                <footer class="py-4 bg-light mt-auto">
-                    <div class="container-fluid px-4">
-                        <div class="d-flex align-items-center justify-content-between small">
-                            <div class="text-muted">Copyright &copy; Your Website 2025</div>
-                            <div>
-                                <a href="#">Privacy Policy</a>
-                                &middot;
-                                <a href="#">Terms &amp; Conditions</a>
-                            </div>
-                        </div>
-                    </div>
-                </footer>
             </div>
         </div>
 
         <script>
+            function setAccion(a) { document.getElementById('accionPrincipal').value = a; }
+
+            function cambiarTipoNota() {
+                setAccion('CambiarTipoNota');
+                document.getElementById('formPrincipal').submit();
+            }
+            function seleccionarFactura(idFactura) {
+                document.getElementById('idFacturaHidden').value = idFactura;
+                setAccion('CargarFactura');
+                document.getElementById('formPrincipal').submit();
+            }
+            function agregarLinea() {
+                limpiarMascaras(document.getElementById('formPrincipal'));
+                setAccion('AgregarLinea');
+                document.getElementById('formPrincipal').submit();
+            }
+            function actualizarLinea() {
+                limpiarMascaras(document.getElementById('formPrincipal'));
+                setAccion('ActualizarArticulo');
+                document.getElementById('formPrincipal').submit();
+            }
+            function eliminarLinea(index) {
+                if (confirm('¿Eliminar esta línea?')) {
+                    document.getElementById('indexArticulo').value = index;
+                    setAccion('EliminarArticulo');
+                    document.getElementById('formPrincipal').submit();
+                }
+            }
+            function guardarNota() {
+                limpiarMascaras(document.getElementById('formPrincipal'));
+                setAccion('Guardar');
+                document.getElementById('formPrincipal').submit();
+            }
+            function anularNota() {
+                setAccion('Anular');
+                document.getElementById('formPrincipal').submit();
+            }
+            function limpiarMascaras(form) {
+                $(form).find('.mask-miles').each(function () {
+                    $(this).val($(this).cleanVal());
+                });
+            }
+
             $(document).ready(function () {
-                // Máscara de puntos de miles para campos numéricos
-                $('.mask-miles').mask('#.##0', {reverse: true});
-
-                // Tabla principal de artículos de la nota
-                $('#tablaArticulosNota').DataTable({
-                    initComplete: function () {
-                        this.api().columns().every(function () {
-                            var column = this;
-                            var title = column.footer() ? column.footer().textContent : '';
-                            if (title !== "Acciones" && !$(column.header()).hasClass('no-search') && (!column.footer() || !$(column.footer()).hasClass('no-search'))) {
-                                if (column.footer()) {
-                                    $('<input style="width: 100%" type="text" placeholder="Buscar ' + title + '" />')
-                                        .appendTo($(column.footer()).empty())
-                                        .on('keyup change clear', function () {
-                                            if (column.search() !== this.value) {
-                                                column.search(this.value).draw();
-                                            }
-                                        });
-                                }
-                            } else if (column.footer()) {
-                                $(column.footer()).empty();
-                            }
-                        });
-                    },
-                    language: { url: "DataTables 2/es-ES.json" }
-                });
-
-                // Tabla modal buscar nota
-                $('#tablaModalBuscarNota').DataTable({
-                    language: { url: "DataTables 2/es-ES.json" }
-                });
-
-                // Tabla modal buscar factura
-                $('#tablaModalBuscarFactura').DataTable({
-                    language: { url: "DataTables 2/es-ES.json" }
-                });
-
-                // Tabla modal buscar artículos
-                $('#tablaModalArticulos').DataTable({
-                    language: { url: "DataTables 2/es-ES.json" }
-                });
+                $('.mask-miles').mask('#.##0', { reverse: true });
+                $('#comprobanteN').mask('000-000-0000000');
+                $('#tablaFacturas').DataTable({ language: { url: "DataTables 2/es-ES.json" } });
+                $('#tablaNotas').DataTable({ language: { url: "DataTables 2/es-ES.json" } });
             });
         </script>
 
-        <!-- Mensajes con Toastr -->
+        <!-- Mensajes Toastr -->
         <c:if test="${not empty Message}">
             <script>
-                toastr.options = {
-                    positionClass: "toast-top-right",
-                    closeButton: true,
-                    timeOut: 5000,
-                    progressBar: true
-                };
+                toastr.options = { positionClass: "toast-top-right", closeButton: true, timeOut: 5000, progressBar: true };
                 <c:choose>
                     <c:when test="${tipoAlert == 'alert-success'}">toastr.success('${Message}');</c:when>
                     <c:when test="${tipoAlert == 'alert-danger'}">toastr.error('${Message}');</c:when>

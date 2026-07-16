@@ -16,7 +16,7 @@ public class NotaCreditoCompra implements java.io.Serializable {
     private static final long serialVersionUID = 1L;
 
     private Long idNotaCreditoCompra;
-    private Integer numero;
+    private String numero;
     private Integer timbrado;
     private Date fechaVenciTimbrado;
     private Date fechaEmision;
@@ -36,7 +36,7 @@ public class NotaCreditoCompra implements java.io.Serializable {
         this.idNotaCreditoCompra = idNotaCreditoCompra;
     }
 
-    public NotaCreditoCompra(Long idNotaCreditoCompra, Integer numero, Integer timbrado, Date fechaVenciTimbrado,
+    public NotaCreditoCompra(Long idNotaCreditoCompra, String numero, Integer timbrado, Date fechaVenciTimbrado,
             Date fechaEmision, Date fechaCarga, String estado, String observacion, Usuario usuario,
             Proveedor proveedor, FacturaCompra facturaCompra, String motivo) {
         this.idNotaCreditoCompra = idNotaCreditoCompra;
@@ -61,11 +61,11 @@ public class NotaCreditoCompra implements java.io.Serializable {
         this.idNotaCreditoCompra = idNotaCreditoCompra;
     }
 
-    public Integer getNumero() {
+    public String getNumero() {
         return numero;
     }
 
-    public void setNumero(Integer numero) {
+    public void setNumero(String numero) {
         this.numero = numero;
     }
 

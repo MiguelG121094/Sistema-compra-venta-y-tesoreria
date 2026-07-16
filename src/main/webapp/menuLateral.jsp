@@ -69,7 +69,7 @@ usuario inicio sesion, se debe agregar esta validaciÃ³n en cada una de las vis
                             <a class="nav-link" href="PresupuestoServlet?menu=Presupuesto&accion=ListarModal">Presupuesto del proveedor</a>
                             <a class="nav-link" href="OrdenCompraServlet?menu=OrdenCompra&accion=ListarModal">Orden de compra</a>
                             <a class="nav-link" href="FacturaCompraServlet?menu=FacturaCompra&accion=ListarModal">Factura compra</a>
-                            <a class="nav-link" href="notaCreditoDebito.jsp">Nota de Crédito - Débito</a>
+                            <a class="nav-link" href="NotaCreditoDebitoServlet?menu=NotaCreditoDebito&accion=ListarModal">Nota de Crédito - Débito</a>
                             <a class="nav-link" href="notaRemision.jsp">Nota de Remisión</a>
                             <a class="nav-link" href="layout-sidenav-light.html">Ajuste de Stock</a>
                         </nav>

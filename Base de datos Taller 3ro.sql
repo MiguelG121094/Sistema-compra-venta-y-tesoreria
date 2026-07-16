@@ -1213,9 +1213,16 @@ CREATE TABLE public.nota_credito_compra_detalle (
                 nota_cred_monto INTEGER NOT NULL,
                 id_impuesto INTEGER,
                 nota_credito_descripcion VARCHAR,
+                id_deposito INTEGER,
                 id_nota_cred_comp_cab INTEGER NOT NULL,
                 CONSTRAINT id_nota_cred_comp_det PRIMARY KEY (id_nota_credito_det)
 );
+
+-- Devolución de mercadería (NC de compra): depósito de la línea. Nullable: NULL = línea
+-- financiera (descuento/bonificación) que NO mueve stock. Ver NOTA_CREDITO_DEBITO_PLAN.md §5.3.
+ALTER TABLE public.nota_credito_compra_detalle
+    ADD CONSTRAINT deposito_nota_credito_compra_detalle_fk
+    FOREIGN KEY (id_deposito) REFERENCES public.deposito (id_deposito);
 
 
 ALTER SEQUENCE public.nota_credito_compra_detalle_id_nota_credito_det_seq OWNED BY public.nota_credito_compra_detalle.id_nota_credito_det;
