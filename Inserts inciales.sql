@@ -143,13 +143,13 @@ VALUES('Villa Elisa - Tres Bocas', 'Americo Picco', 'activo');
 -- INSERT DEPOSITOS
 INSERT INTO public.deposito
 (dep_descripcion, dep_estado, id_sucursal)
-VALUES('Deposito1-Asu/Sajonia', 'activo', 1);
+VALUES('Deposito1-Asu/Sajonia', 'activo', 2);
 INSERT INTO public.deposito
 (dep_descripcion, dep_estado, id_sucursal)
-VALUES('Deposito2-Asu/Sajonia', 'activo', 1);
+VALUES('Deposito2-Asu/Sajonia', 'activo', 2);
 INSERT INTO public.deposito
 (dep_descripcion, dep_estado, id_sucursal)
-VALUES('Deposito1-CDE/DonBosco', 'activo', 3);
+VALUES('Deposito1-CDE/DonBosco', 'activo', 1);
 
 
 -- INSERT GRUPO
@@ -298,7 +298,7 @@ INSERT INTO public.factura_compra_cabecera
  fact_comp_observacion, fact_comp_estado, fact_comp_tipo_factura, id_proveedor, id_sucursal,
  id_usuario, id_orden_compra_cab)
 VALUES('001-001-0000001', 12345678, '2027-12-31', '2026-07-01', '2026-07-01', 'Credito', 30,
-       '2026-07-31', NULL, 'Pendiente', 'compraArt', 4, 1, 1, NULL);
+       '2026-07-31', NULL, 'Pendiente', 'compraArt', 4, 2, 1, NULL);
 INSERT INTO public.factura_compra_detalle
 (id_fact_comp_cab, id_articulo, id_impuesto, id_deposito, fact_comp_cantidad, fact_comp_precio_compra, fact_det_descripcion)
 VALUES(1, 1, 1, 1, 10, 8000, NULL);
@@ -321,7 +321,7 @@ INSERT INTO public.factura_compra_cabecera
  fact_comp_observacion, fact_comp_estado, fact_comp_tipo_factura, id_proveedor, id_sucursal,
  id_usuario, id_orden_compra_cab)
 VALUES('001-001-0000002', 12345678, '2027-12-31', '2026-07-02', '2026-07-02', 'Contado', NULL,
-       '2026-07-02', NULL, 'Pendiente', 'compraArt', 8, 1, 1, NULL);
+       '2026-07-02', NULL, 'Pendiente', 'compraArt', 8, 2, 1, NULL);
 INSERT INTO public.factura_compra_detalle
 (id_fact_comp_cab, id_articulo, id_impuesto, id_deposito, fact_comp_cantidad, fact_comp_precio_compra, fact_det_descripcion)
 VALUES(2, 6, 1, 2, 50, 2500, NULL);
