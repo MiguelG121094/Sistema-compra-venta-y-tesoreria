@@ -86,7 +86,7 @@ public class NotaCreditoCompraDAO {
             while (rs.next()) {
                 NotaCreditoCompra notaCredito = new NotaCreditoCompra(
                     rs.getLong("id_nota_cred_comp_cab"),
-                    rs.getInt("nota_cred_comp_numero"),
+                    rs.getString("nota_cred_comp_numero"),
                     rs.getInt("nota_cred_comp_timbrado"),
                     rs.getDate("nota_cred_comp_fecha_venci_timb"),
                     rs.getDate("nota_cred_comp_fecha_emision"),
