@@ -100,7 +100,7 @@ public class CuentaServlet extends HttpServlet {
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "Error en CuentaServlet", e);
             mostrarMensaje(request, "Error de base de datos: " + e.getMessage(), "alert-danger");
-            listar(request, response);
+            request.getRequestDispatcher(JSP_CUENTA).forward(request, response);
         }
     }
 
