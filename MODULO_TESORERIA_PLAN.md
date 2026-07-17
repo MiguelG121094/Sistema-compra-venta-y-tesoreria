@@ -52,19 +52,21 @@ factura_compra ─► cuenta_pagar ─► PROVISIÓN ─► ORDEN DE PAGO ─►
 tesorería). Ver §4 el detalle por sub-módulo.
 
 ### 2.2 Capa Java
-El modelo (POJOs) está completo, pero **la lógica está casi toda por hacer**:
 
-| Componente | Estado |
+**✅ Ya implementado (Tesorería):**
+
+| Sub-módulo | Estado |
 |---|---|
-| **POJOs (modelo)** | ✅ 100% (todas las entidades existen) |
-| **DAO con lógica** | Solo `CuentaPagarDAO` (`ajustarSaldoPorNota`, `tienePagosAplicados`, `getByFactura`, `listarCuentasPagarPendientes`) |
-| **DAO CRUD** | `CuentaCobrarDAO`, `OrdenPagoDAO` (solo CRUD), `CobroDAO` (CRUD), `CajaDAO`, `AperturaCierreCajaDAO`, `DepositoDAO` |
-| **Sin DAO/Service** | Provisión, OrdenPagoDetalle, FormaPago(Cab/Det), Moneda, TipoEntidadFinanciera, EntidadFinanciera, TipoCuenta, Cuenta, Débito, Crédito, Cheque, Chequera, TipoCheque, ChequeRecibido, Titular, FondoFijo, Rendición(+Detalle), Conciliación(+Detalle), Tarjeta, ArqueoCaja, RecaudacionDepositar |
-| **Servlets de tesorería** | ❌ **Ninguno** |
-| **JSPs de tesorería** | ❌ **Ninguno** (el menú "Módulo Tesorería" apunta a placeholders `.html` de la plantilla: `layout-static.html`, `layout-sidenav-light.html`, `register.html`) |
+| **Referenciales → Cuenta bancaria** (ABM) | ✅ `CuentaDAO`/`CuentaService`/`CuentaServlet`/`cuenta.jsp`, más `MonedaDAO`/`Service`, `TipoCuentaDAO`/`Service`, `EntidadFinancieraDAO`/`Service` (para los combos). Seed cargado (moneda, tipo_entidad_financiera, entidad_financiera, tipo_cuenta). Servlet limpio (sin el bug de variables de instancia). |
+| **Provisión de cuenta a pagar** | ✅ **Completo**: `ProvisionCuentaPagarDAO` + `ProvisionCuentaPagarService` (transaccional), `ProvisionCuentaPagarServlet` (Session+Token), `provision.jsp` (calcado del prototipo). Reserva las cuentas (`En provision`, sin tocar el saldo) y netea el saldo a favor de NC (valida **neto ≥ 0**). |
+| **`CuentaPagarDAO`** (ampliado) | `ajustarSaldoPorNota` (lógica de estado en Java, `SELECT ... FOR UPDATE`), `tienePagosAplicados`, `listarCuentasPagarPorProveedor` (saldo ≠ 0, incluye negativos + N° factura + plazo + fecha emisión), `marcarEnProvision`, `revertirProvision`, helper `calcularEstadoPorSaldo`. Además: **persistencia de `cta_pag_plazo`** corregida (antes no se guardaba) y campo `plazo` en la entidad `CuentaPagar`. |
 
-**Conclusión:** salvo `cuenta_pagar` (compartida con Compras/NC), **todo Tesorería está en cero de
-capa web**. Es un módulo a construir prácticamente desde los POJOs.
+**Servlets de tesorería existentes:** `CuentaServlet`, `ProvisionCuentaPagarServlet` — ambos
+registrados en `AuthorizationFilter` (módulo `tesoreria`); links del menú "Módulo Tesorería"
+actualizados (Cuentas Bancarias, Provisión de Cta. Pagar).
+
+**Pendiente:** **Orden de Pago (§C — próximo paso)**, Débitos/Créditos (§D), Fondo Fijo (§E),
+Conciliación (§F), y el resto de referenciales/entidades. El modelo (POJOs) sigue 100% completo.
 
 ---
 
@@ -101,6 +103,13 @@ vistas de "Referenciales de Tesorería".
 **Jerarquía:** `moneda`, `tipo_entidad_financiera`, `tipo_cuenta` (catálogos planos) →
 `entidad_financiera` (banco) → `cuenta` (cuenta bancaria = tipo_cuenta + entidad + moneda + número).
 
+> ✅ **HECHO — Cuenta bancaria.** ABM completo (`CuentaServlet` + `cuenta.jsp`, visual de referencial,
+> servlet estilo FacturaCompra). Combos poblados por `MonedaService` / `TipoCuentaService` /
+> `EntidadFinancieraService`. Seed de moneda (Guaraníes, Dólares), tipo_entidad_financiera
+> (Banco/Financiera/Cooperativa), entidad_financiera (Itaú, Ueno, Atlas, Paraguayo Japonesa, Tu
+> Financiera, Medalla, San Cristóbal) y tipo_cuenta (Corriente, Ahorro). Los demás referenciales
+> (tipo_cheque, tipo_tarjeta) quedan para cuando se necesiten.
+
 ---
 
 ### B. Provisión de cuenta a pagar *(primer paso del flujo — prioridad)*
@@ -123,41 +132,107 @@ Acá se **consume el "saldo a favor"** de las NC (Enfoque 1 con neteo). Por eso 
 **Componentes a crear:** `ProvisionCuentaPagarDAO` + `...DetalleDAO` (o detalle dentro del mismo),
 `ProvisionCuentaPagarService` (transaccional), `ProvisionCuentaPagarServlet` (Session+Token), JSP.
 
-> **Decisión abierta:** ¿la provisión **descuenta** el `cta_pag_saldo`, o solo lo **reserva** y el
-> descuento ocurre en la Orden de Pago? Propuesta: la provisión **agrupa/reserva** (cambia estado de
-> la `cuenta_pagar` a "En provisión") y el **descuento real del saldo ocurre en la Orden de Pago**
-> (donde efectivamente sale el dinero). Confirmar.
+> ✅ **DECIDIDO:** la provisión **solo agrupa/reserva** (cambia el estado de la `cuenta_pagar` a
+> `En provision`, **sin tocar el saldo**); el **descuento del saldo ocurre en la Orden de Pago**.
+>
+> ✅ **HECHO — Provisión completa.** `ProvisionCuentaPagarDAO` (insert cabecera/detalle, listar,
+> getById + detalle, anular) + `ProvisionCuentaPagarService` transaccional (`guardarProvisionCompleta`
+> reserva las cuentas; `anularProvisionCompleta` revierte con `revertirProvision`) +
+> `ProvisionCuentaPagarServlet` (Session+Token: Nuevo, Buscar Proveedor, Lista de Cuentas a Pagar,
+> editor de importe a pagar, Generar, Buscar/Anular) + `provision.jsp` (prototipo replicado, detalle
+> como DataTable, importe con separador de miles que preserva el negativo del saldo a favor).
+> El **neteo de NC** funciona: el listado incluye saldos negativos y valida neto ≥ 0.
+> Botón "Buscar rendición Fondo Fijo" = placeholder deshabilitado (se hace con §E).
 
 ---
 
-### C. Orden de pago + formas de pago *(donde sale el dinero)*
+### C. Orden de pago *(donde sale el dinero — ⏳ PRÓXIMO PASO, EN DISEÑO)*
 
 **Tablas:** `orden_pago_cabecera`, `orden_pago_detalle`, `forma_pago_cabecera`, `forma_pago_detalle`,
 `cuenta`, `cheque`.
 
+**Prototipo** (`webapp/Images/Prototipo Orden de pago.png`). Es como Factura/Provisión pero para la OP:
+- **Botones:** Nuevo · Buscar Orden de pago · Buscar Provisión · Anular.
+- **Cabecera:** Nro OP · Recibo Nro (`ord_pag_nro_recibo`) · Fecha · Estado · Sucursal ·
+  **Banco** + **Nro. de cuenta** + **Moneda** (la `cuenta` bancaria de donde sale la plata) ·
+  **Tipo de cambio** · **Cheque Nro** · **Provisión Nro** · **Detalle de Pago** (la forma de pago) ·
+  Razón Social.
+- **Detalle** = las facturas de la provisión, **SOLO LECTURA** (Item, Nro factura, Importe total,
+  Saldo pendiente, Importe a pagar, Plazo). Sin Editar/Eliminar (vienen fijas de la provisión).
+- **Importe Total a Pagar** + Generar / Cancelar.
+
 **Flujo:**
-1. Partir de una **provisión** existente (regla: no hay OP sin provisión).
-2. Generar la **orden de pago** (monto = neto de la provisión; referencia `id_cuenta`, `id_moneda`,
-   `id_proveedor`, `id_sucursal`).
-3. Elegir **una o varias formas de pago** (`forma_pago_detalle`): **cheque** y/o **transferencia**
-   (nunca efectivo). Cada forma referencia la `cuenta` (banco) y una `forma_pag_referencia`
-   (nro de cheque / transferencia).
-4. Si la forma es **cheque**: emitir el `cheque` (contra una `chequera` de la cuenta) y enlazarlo
-   (`orden_pago_cabecera.id_cheque`).
-5. **Descontar el `cta_pag_saldo`** de las cuentas a pagar incluidas (transaccional). ⚠️ Esta es la
-   **lógica greenfield del descuento de saldo** — hoy no existe (nada descuenta el saldo al pagar).
-6. Insertar el/los ítems en **`conciliacion_bancaria_detalle`** (ver §F): el pago resta del banco.
+1. Nuevo → Buscar Provisión → carga sus facturas (detalle) + proveedor (Razón Social) + Provisión Nro.
+2. Completar cabecera: Recibo, Sucursal, **Cuenta bancaria** (Banco+Nro cuenta), Moneda, Tipo de cambio,
+   forma de pago (Detalle de Pago) y Cheque Nro (si aplica).
+3. **Generar** → crea la OP + su detalle + la forma de pago, y **descuenta el `cta_pag_saldo`** de cada
+   factura de la provisión (transaccional). `ord_pag_tipo_pago` = reposición FF vs otros gastos.
 
-**`ord_pag_tipo_pago`** distingue **reposición de fondo fijo** vs **otros gastos** (viene del
-`fact_comp_tipo_factura`).
+**Decisiones (sesión 2026-07-17):**
 
-**Componentes:** `OrdenPagoDAO` (hoy solo CRUD → volver **transaccional** con descuento de saldo),
-`OrdenPagoDetalleDAO`, `FormaPagoCabeceraDAO` + `FormaPagoDetalleDAO`, `ChequeDAO`/`ChequeraDAO`,
-`OrdenPagoService` (orquesta la transacción), `OrdenPagoServlet` (Session+Token), JSP.
+| # | Decisión | Resultado |
+|---|---|---|
+| C1 | ¿Una OP paga toda la provisión o una factura? | ✅ **Toda la provisión** (varias facturas). ⚠️ Implica ajustar `orden_pago_detalle` (ver abajo). |
+| C2 | ¿La OP inserta el movimiento en la conciliación? | ✅ **NO.** La OP solo queda como movimiento; la **conciliación es un módulo periódico posterior** que jala las OPs del período (no hay cabecera de conciliación al momento de la OP). Ver ejemplo abajo. |
+| C3 | Formas de pago | Por el prototipo, **una forma de pago por OP** (Detalle de Pago), no mixtas. |
+| C4 | Cheque | **Solo referencia** (Cheque Nro en `forma_pag_referencia`), sin gestionar chequera/emisión. La emisión real de cheques se hace en su módulo aparte. Ver ejemplo abajo. |
 
-> Al implementar esto, **`tienePagosAplicados` empieza a funcionar de verdad**: al poblar
-> `orden_pago_detalle`, el guard de "no editar/anular factura con pagos aplicados" ya detecta pagos
-> reales (ver `NOTA_CREDITO_DEBITO_PLAN.md` §8.4).
+> **Estado:** las 4 decisiones fueron acordadas verbalmente; **falta que el usuario confirme y
+> elija la PK de `orden_pago_detalle`** (ver ⚠️) antes de construir.
+
+**⚠️ Ajuste de esquema requerido — `orden_pago_detalle`:** como una OP paga **varias** facturas,
+necesita **varias filas**. Hoy su **PK es solo `id_orden_pago`** (1 fila por OP). Hay que ajustarla en
+Power Architect, opción **recomendada**: agregar un serial **`id_orden_pago_det`** como PK (consistente
+con `provision_cuenta_pagar_detalle`); alternativa: PK compuesta `(id_orden_pago, id_cta_pagar,
+id_fact_comp_cab)`. **Pendiente de confirmar con el usuario.**
+
+**Ejemplo — Conciliación (por qué la OP NO la inserta):**
+```
+1. Generás OP #10: pagás 150.000 con transferencia desde la cuenta Itaú (01/07).
+   → queda como orden_pago_cabecera (un egreso del banco). El saldo de las facturas se descuenta acá.
+2. A fin de mes armás la CONCILIACIÓN de Itaú (período 01/07–31/07): creás conciliacion_bancaria
+   (cabecera, con saldo inicial/final y saldo del extracto). Ese módulo trae los movimientos:
+       conciliacion_bancaria_detalle:
+         item 1 | id_orden_pago=10 | tipo='Deb'  | 150.000 | conciliado=false
+         item 2 | id_debitos=5     | tipo='Deb'  | 20.000  | conciliado=false  (comisión banco)
+         item 3 | id_creditos=8    | tipo='Cred' | 500.000 | conciliado=true   (depósito)
+   → marcás cada ítem contra el extracto.
+```
+`conciliacion_bancaria_detalle` depende de una `conciliacion_bancaria` (cabecera) que **no existe** al
+guardar la OP → por eso la OP no inserta ahí; el módulo de Conciliación (§F) levanta las OPs del período.
+
+**Ejemplo — Cheque:**
+```
+Opción A (elegida) — Solo referencia:
+   OP #10, forma=Cheque, Cheque Nro=1234567
+   → forma_pago_detalle: forma_pag_cheque=150.000, forma_pag_referencia='1234567', id_cuenta=Itaú
+   → NO se crea registro en la tabla 'cheque'.
+
+Opción B (descartada por ahora) — Emitir cheque real:
+   → toma una chequera de Itaú, saca el próximo nro, crea registro en 'cheque'
+     (chq_a_la_orden='Paresa', chq_estado='Emitido'...), enlaza orden_pago_cabecera.id_cheque.
+   → requiere el ABM de Chequera/Cheque primero.
+```
+
+**Componentes a crear:** `OrdenPagoDAO` (hoy solo CRUD → **transaccional** con descuento de saldo +
+inserción de detalle N filas), `OrdenPagoDetalleDAO`, `FormaPagoCabeceraDAO`/`FormaPagoDetalleDAO`,
+`OrdenPagoService` (orquesta OP + detalle + forma de pago + descuento del saldo de cada factura),
+`OrdenPagoServlet` (Session+Token, calcado de Provisión/Factura), `ordenPago.jsp` (el prototipo).
+Reusar `CuentaService`/`MonedaService`/`EntidadFinancieraService` para los combos, `ProvisionCuentaPagarService`
+para Buscar Provisión.
+
+**Descuento del saldo:** al Generar, por cada factura de la provisión hacer
+`cta_pag_saldo -= importe_a_pagar` (usar/agregar un método en `CuentaPagarDAO`, recalculando estado con
+`calcularEstadoPorSaldo`, en la misma transacción). La cuenta que estaba `En provision` pasa a
+`Pendiente`/`Cancelado` según el saldo resultante.
+
+> Al poblar `orden_pago_detalle`, **`tienePagosAplicados` empieza a funcionar de verdad**: el guard de
+> "no editar/anular factura con pagos aplicados" (ver `NOTA_CREDITO_DEBITO_PLAN.md` §8.4) detecta el pago.
+
+> **📍 DÓNDE NOS QUEDAMOS (para retomar):** Provisión terminada y probada. Orden de Pago **en diseño**:
+> prototipo analizado, decisiones C1–C4 acordadas. **Antes de codear falta:** (1) que el usuario
+> **confirme las 4 decisiones**, (2) que **elija la PK de `orden_pago_detalle`** y la ajuste en Power
+> Architect. Con eso se construye el DAO/Service/Servlet/JSP de la OP como está descrito arriba.
 
 ---
 
@@ -207,45 +282,50 @@ existan OP, débitos y créditos (por eso va al final).
 
 | # | Decisión | Propuesta | Estado |
 |---|---|---|---|
-| 1 | Patrón de servlets | Session + Token + Service transaccional (calcar Factura de Compra) | Propuesta |
-| 2 | ¿Dónde se descuenta `cta_pag_saldo`? | En la **Orden de Pago** (no en la provisión); la provisión solo reserva/agrupa | **A confirmar** |
-| 3 | Neteo del saldo a favor de NC | En la **provisión** (filtro `saldo ≠ 0`, líneas negativas, neto ≥ 0) — ver NC plan §4 | ✅ Decidido (NC plan) |
-| 4 | Estados de `cuenta_pagar` en el flujo | `Pendiente` → `En provisión` → `Cancelado`/`Pagado` (+ `Saldo a favor` de NC) | A confirmar |
-| 5 | Conciliación: ¿la OP inserta el ítem, o se concilia manual? | La OP **inserta** el ítem en `conciliacion_bancaria_detalle` al guardarse (según el comment de BD) | A confirmar |
-| 6 | Fondo Fijo: flujo | 2ª opción del comment: `FACTURA FF → RENDICIÓN → PROVISIÓN → OP` | A confirmar |
-| 7 | Montos `INTEGER` | Riesgo de overflow (~2.147 mill.) — preexistente, se mantiene | Aceptado |
+| 1 | Patrón de servlets | Session + Token + Service transaccional (calcar Factura de Compra) | ✅ Decidido (aplicado en Cuenta y Provisión) |
+| 2 | ¿Dónde se descuenta `cta_pag_saldo`? | En la **Orden de Pago** (no en la provisión); la provisión solo reserva/agrupa | ✅ Decidido — se implementa en la OP (§C) |
+| 3 | Neteo del saldo a favor de NC | En la **provisión** (filtro `saldo ≠ 0`, líneas negativas, neto ≥ 0) — ver NC plan §4 | ✅ Decidido e implementado (Provisión) |
+| 4 | Estados de `cuenta_pagar` en el flujo | `Pendiente` → `En provision` → `Cancelado`/`Saldo a favor` (recalculado por `calcularEstadoPorSaldo`) | ✅ Decidido e implementado |
+| 5 | Conciliación: ¿la OP inserta el ítem, o se concilia después? | La OP **NO** inserta en `conciliacion_bancaria_detalle`; el **módulo de Conciliación** (§F) jala las OPs del período (no existe cabecera de conciliación al guardar la OP) | ✅ Decidido (revierte el comment de BD) — ver §C |
+| 6 | Formas de pago por OP | **Una** forma de pago por OP (según prototipo), cheque **solo referencia** | ⏳ A confirmar con el usuario (§C, C3/C4) |
+| 7 | PK de `orden_pago_detalle` | Agregar serial `id_orden_pago_det` (una OP → N facturas de la provisión) | ⏳ A confirmar + ajustar en Power Architect (§C ⚠️) |
+| 8 | Fondo Fijo: flujo | 2ª opción del comment: `FACTURA FF → RENDICIÓN → PROVISIÓN → OP` | A confirmar |
+| 9 | Montos `INTEGER` | Riesgo de overflow (~2.147 mill.) — preexistente, se mantiene | Aceptado |
 
 ---
 
 ## 6. Orden de implementación recomendado
 
-1. **Referenciales bancarios** (A) — moneda, tipo entidad, entidad financiera, tipo cuenta, **cuenta**. *(Prerrequisito.)*
-2. **Provisión de cuenta a pagar** (B) — con **neteo del saldo a favor** de NC. *(Cierra el circuito de NC/ND.)*
-3. **Orden de pago + formas de pago** (C) — descuento de saldo + cheque/transferencia + ítem de conciliación.
+1. ✅ **Referenciales bancarios** (A) — moneda, tipo entidad, entidad financiera, tipo cuenta, **cuenta**. *(HECHO.)*
+2. ✅ **Provisión de cuenta a pagar** (B) — con **neteo del saldo a favor** de NC. *(HECHO — cierra el circuito de NC/ND.)*
+3. ⏳ **Orden de pago** (C) — descuento de saldo + una forma de pago (cheque solo referencia). *(PRÓXIMO — bloqueado hasta confirmar C3/C4 y ajustar PK de `orden_pago_detalle`.)*
 4. **Débitos / Créditos** (D) — ABM de movimientos bancarios.
 5. **Fondo Fijo + rendición** (E) — reutiliza B y C.
-6. **Conciliación bancaria** (F) — el objetivo.
+6. **Conciliación bancaria** (F) — el objetivo (jala OPs + débitos + créditos del período).
 7. *(Fase posterior)* **Lado cobros/caja** (§9).
 
 ---
 
 ## 7. Checklist de implementación (alto nivel)
 
-**A. Referenciales bancarios**
-- [ ] DAO+Service+Servlet+JSP: `Moneda`, `TipoEntidadFinanciera`, `EntidadFinanciera`, `TipoCuenta`, `Cuenta`
+**A. Referenciales bancarios** — ✅ HECHO
+- [x] DAO+Service (`Cuenta` + `Moneda`, `TipoCuenta`, `EntidadFinanciera` para combos) + `CuentaServlet` + `cuenta.jsp`
+- [x] Seed cargado (moneda, tipo_entidad_financiera, entidad_financiera, tipo_cuenta)
 
-**B. Provisión**
-- [ ] `CuentaPagarDAO`: método `listarCuentasPagarPorProveedor(idProveedor)` con **saldo ≠ 0** (incluye negativos)
-- [ ] `ProvisionCuentaPagarDAO` (+ detalle) transaccional
-- [ ] `ProvisionCuentaPagarService` (dueño de la tx)
-- [ ] `ProvisionCuentaPagarServlet` (Session+Token) + JSP; validar **neto ≥ 0**
-- [ ] Registrar `/ProvisionCuentaPagarServlet` en `AuthorizationFilter` (módulo `tesoreria`)
+**B. Provisión** — ✅ HECHO
+- [x] `CuentaPagarDAO`: `listarCuentasPagarPorProveedor(idProveedor)` con **saldo ≠ 0** (incluye negativos), + `marcarEnProvision`/`revertirProvision`/`calcularEstadoPorSaldo`
+- [x] `ProvisionCuentaPagarDAO` (+ detalle) transaccional
+- [x] `ProvisionCuentaPagarService` (dueño de la tx)
+- [x] `ProvisionCuentaPagarServlet` (Session+Token) + `provision.jsp`; valida **neto ≥ 0**
+- [x] Registrar `/ProvisionCuentaPagarServlet` en `AuthorizationFilter` (módulo `tesoreria`)
 
-**C. Orden de pago**
-- [ ] `OrdenPagoDAO` → transaccional con **descuento de `cta_pag_saldo`** + recálculo de estado
-- [ ] `OrdenPagoDetalleDAO`, `FormaPagoCabeceraDAO`, `FormaPagoDetalleDAO`, `ChequeDAO`, `ChequeraDAO`
-- [ ] `OrdenPagoService` (orquesta OP + formas + cheque + descuento + ítem conciliación)
-- [ ] `OrdenPagoServlet` + JSP; validar **sin efectivo**, **provisión previa obligatoria**
+**C. Orden de pago** — ⏳ PRÓXIMO (ver §C; bloqueado hasta confirmar C3/C4 + PK de `orden_pago_detalle`)
+- [ ] ⚠️ **Ajustar PK de `orden_pago_detalle`** en Power Architect (serial `id_orden_pago_det`) — N facturas por OP
+- [ ] `OrdenPagoDAO` → transaccional con **descuento de `cta_pag_saldo`** + recálculo de estado (método en `CuentaPagarDAO`)
+- [ ] `OrdenPagoDetalleDAO`, `FormaPagoCabeceraDAO`, `FormaPagoDetalleDAO`
+- [ ] `OrdenPagoService` (orquesta OP + detalle N filas + forma de pago + descuento de saldo). **NO** inserta conciliación
+- [ ] `OrdenPagoServlet` (Session+Token) + `ordenPago.jsp` (prototipo); validar **sin efectivo**, **provisión previa obligatoria**
+- [ ] Registrar `/OrdenPagoServlet` en `AuthorizationFilter` (módulo `tesoreria`) + link en `menuLateral.jsp`
 
 **D. Débitos / Créditos**
 - [ ] `DebitoDAO`/`CreditoDAO` + Services + Servlets + JSPs (ABM)
