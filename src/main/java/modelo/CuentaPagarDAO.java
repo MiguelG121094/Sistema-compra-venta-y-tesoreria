@@ -381,7 +381,8 @@ public class CuentaPagarDAO {
             return cuentas;
         }
         String sql = "SELECT cp.id_cta_pagar, cp.id_fact_comp_cab, cp.cta_pag_monto, cp.cta_pag_estado, "
-                   + "cp.cta_pag_fecha_venci, cp.cta_pag_saldo, cp.cta_pag_plazo, f.fact_comp_numero "
+                   + "cp.cta_pag_fecha_venci, cp.cta_pag_saldo, cp.cta_pag_plazo, "
+                   + "f.fact_comp_numero, f.fact_comp_fecha_emision "
                    + "FROM cuenta_pagar cp "
                    + "JOIN factura_compra_cabecera f ON cp.id_fact_comp_cab = f.id_fact_comp_cab "
                    + "WHERE f.id_proveedor = ? AND cp.cta_pag_saldo <> 0 "
@@ -393,6 +394,7 @@ public class CuentaPagarDAO {
                 while (rs.next()) {
                     FacturaCompra fc = new FacturaCompra(rs.getLong("id_fact_comp_cab"));
                     fc.setNumero(rs.getString("fact_comp_numero"));
+                    fc.setFechaEmision(rs.getDate("fact_comp_fecha_emision"));
 
                     CuentaPagar cp = new CuentaPagar();
                     cp.setIdCuentaPagar(rs.getLong("id_cta_pagar"));

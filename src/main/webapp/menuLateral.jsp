@@ -114,7 +114,7 @@ usuario inicio sesion, se debe agregar esta validacon en cada una de las vistas 
                     </a>
                     <div class="collapse" id="collapseLayouts" aria-labelledby="headingOne" data-bs-parent="#sidenavAccordion">
                         <nav class="sb-sidenav-menu-nested nav">
-                            <a class="nav-link" href="layout-static.html">Provisión de Cta. Pagar</a>
+                            <a class="nav-link" href="ProvisionCuentaPagarServlet?menu=ProvisionCuentaPagar&accion=ListarModal">Provisión de Cta. Pagar</a>
                             <a class="nav-link" href="layout-sidenav-light.html">Orden de Pago</a>
                         </nav>
                     </div>

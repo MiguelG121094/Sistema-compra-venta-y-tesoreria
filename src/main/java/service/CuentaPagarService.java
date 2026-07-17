@@ -57,6 +57,20 @@ public class CuentaPagarService {
         }
     }
 
+    /**
+     * Cuentas a pagar de un proveedor disponibles para provisionar (saldo != 0, incluye
+     * saldos a favor; excluye 'En provision'/'Anulado').
+     */
+    public List<CuentaPagar> listarCuentasPagarPorProveedor(Long idProveedor) throws SQLException {
+        try (Connection conn = Conexion.getConnection()) {
+            CuentaPagarDAO dao = new CuentaPagarDAO(conn);
+            return dao.listarCuentasPagarPorProveedor(idProveedor);
+        } catch (SQLException e) {
+            System.out.println("Error en CuentaPagarService: " + e);
+            return null;
+        }
+    }
+
     public Long insertarCuentaPagar(CuentaPagar cuentaPagar) throws SQLException {
         Connection conn = null;
         Long idInserted = null;
