@@ -137,8 +137,8 @@
                                                        value="<fmt:formatDate value='${cuentaEnEditor.facturaCompra.fechaEmision}' pattern='dd/MM/yyyy'/>">
                                             </div>
                                             <div class="col-md-3">
-                                                <input type="text" inputmode="numeric" name="importe" class="form-control"
-                                                       placeholder="Importe a pagar" value="${importeEditor}"
+                                                <input type="text" inputmode="numeric" name="importe" id="importeInput" class="form-control"
+                                                       placeholder="Importe a pagar" value="${importeEditor}" oninput="formatMiles(this);"
                                                        title="Para saldo a favor (NC) el importe es negativo">
                                             </div>
                                             <div class="col-md-2">
@@ -356,6 +356,13 @@
             function limpiarMascaras(form) {
                 $(form).find('.mask-miles').each(function () { $(this).val($(this).cleanVal()); });
             }
+            // Separador de miles/millones que preserva el signo (para el saldo a favor negativo)
+            function formatMiles(el) {
+                var v = el.value.replace(/[^\d-]/g, '');
+                var neg = v.charAt(0) === '-';
+                v = v.replace(/-/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+                el.value = (neg ? '-' : '') + v;
+            }
             function seleccionarProveedor(id) {
                 document.getElementById('idProveedorHidden').value = id;
                 setAccion('CargarProveedor');
@@ -368,7 +375,8 @@
                 document.getElementById('formPrincipal').submit();
             }
             function agregarLinea() {
-                limpiarMascaras(document.getElementById('formPrincipal'));
+                var imp = document.getElementById('importeInput');
+                if (imp) { imp.value = imp.value.replace(/\./g, ''); }  // quitar puntos de miles antes de enviar
                 setAccion('AgregarLinea');
                 document.getElementById('formPrincipal').submit();
             }
@@ -386,7 +394,8 @@
             }
 
             $(document).ready(function () {
-                $('.mask-miles').mask('#.##0', { reverse: true });
+                var imp = document.getElementById('importeInput');
+                if (imp) { formatMiles(imp); }   // formatear el importe precargado (incluye negativos)
                 $('#tablaDetalleProvision').DataTable({ language: { url: "DataTables 2/es-ES.json" } });
                 $('#tablaProveedores').DataTable({ language: { url: "DataTables 2/es-ES.json" } });
                 $('#tablaCuentas').DataTable({ language: { url: "DataTables 2/es-ES.json" } });
