@@ -23,6 +23,10 @@
         <style>
             .custom-card { border: 1px solid #ddd; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
             .border-section { border-top: 2px solid #dee2e6; margin: 16px 0; padding-top: 16px; }
+            .custom-table { width: 100%; border-collapse: collapse; }
+            .custom-table th, .custom-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            .custom-table th { background-color: #e9ecef; font-weight: bold; }
+            .btn-responsive { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         </style>
     </head>
     <body class="sb-nav-fixed">
@@ -80,33 +84,37 @@
                             <div class="row mb-3">
                                 <div class="col custom-card">
                                     <div class="row mb-3">
-                                        <div class="col-md-2">
-                                            <button type="button" class="btn btn-primary w-100 h-100" data-bs-toggle="modal" data-bs-target="#modalBuscarProveedor"
-                                                    <c:if test="${empty token or not esNuevo}">disabled</c:if>>Buscar Proveedor</button>
+                                        <div class="col-md-1">
+                                            <div class="mb-3 mb-md-0">
+                                                <button type="button" data-bs-toggle="modal" data-bs-target="#modalBuscarProveedor"
+                                                        style="overflow: hidden; text-overflow: ellipsis;" title="Buscar Proveedor"
+                                                        class="btn btn-outline-primary w-100 btn-responsive"
+                                                        <c:if test="${empty token or not esNuevo}">disabled</c:if>>Buscar Proveedor</button>
+                                            </div>
                                         </div>
                                         <div class="col-md-4">
-                                            <div class="form-floating">
-                                                <input class="form-control" id="razonSocial" type="text" readonly value="${proveedorSeleccionado.razonSocial}" />
+                                            <div class="form-floating mb-3 mb-md-0">
+                                                <input class="form-control" id="razonSocial" type="text" placeholder="Razón Social" readonly value="${proveedorSeleccionado.razonSocial}" />
                                                 <label for="razonSocial">Razón Social</label>
                                             </div>
                                         </div>
                                         <div class="col-md-2">
-                                            <div class="form-floating">
-                                                <input class="form-control" id="fecha" type="text" readonly
+                                            <div class="form-floating mb-3 mb-md-0">
+                                                <input class="form-control" id="fecha" type="text" placeholder="Fecha" readonly
                                                        value="<fmt:formatDate value='${provision.fecha}' pattern='dd/MM/yyyy'/>" />
                                                 <label for="fecha">Fecha</label>
                                             </div>
                                         </div>
                                         <div class="col-md-2">
-                                            <div class="form-floating">
-                                                <input class="form-control" id="estado" type="text" readonly
+                                            <div class="form-floating mb-3 mb-md-0">
+                                                <input class="form-control" id="estado" type="text" placeholder="Estado" readonly
                                                        value="${empty provision.estado ? 'Pendiente' : provision.estado}" />
                                                 <label for="estado">Estado</label>
                                             </div>
                                         </div>
-                                        <div class="col-md-2">
-                                            <div class="form-floating">
-                                                <input class="form-control" id="fondoFijo" type="text" readonly value="No" />
+                                        <div class="col-md-3">
+                                            <div class="form-floating mb-3 mb-md-0">
+                                                <input class="form-control" id="fondoFijo" type="text" placeholder="Fondo Fijo" readonly value="No" />
                                                 <label for="fondoFijo">Fondo Fijo</label>
                                             </div>
                                         </div>
@@ -148,7 +156,7 @@
                                 <div class="col custom-card">
                                     <p class="mb-2"><strong>Detalle de provisión</strong></p>
                                     <div class="table-responsive">
-                                        <table class="table table-bordered table-sm">
+                                        <table class="table table-bordered table-sm custom-table">
                                             <thead>
                                                 <tr>
                                                     <th class="text-bg-dark text-center">Item</th>
