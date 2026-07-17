@@ -5,8 +5,8 @@
 --%>
 <%@ page contentType="text/html;charset=UTF-8" language="java" pageEncoding="UTF-8" %>
 
-<!--bloque de codigo que hace que las pÃ¡ginas JSP solo sean accesibles si el
-usuario inicio sesion, se debe agregar esta validaciÃ³n en cada una de las vistas JSP-->
+<!--bloque de codigo que hace que las paginas JSP solo sean accesibles si el
+usuario inicio sesion, se debe agregar esta validacon en cada una de las vistas JSP-->
 <%@ page import="modelo.Usuario" %>
 <%
     HttpSession sessionObj = request.getSession(false);
@@ -85,7 +85,7 @@ usuario inicio sesion, se debe agregar esta validaciÃ³n en cada una de las vis
                         <nav class="sb-sidenav-menu-nested nav accordion" id="sidenavAccordionPages">
                             <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#pagesCollapseAuth" aria-expanded="false" aria-controls="pagesCollapseAuth">
                                 Referenciales
-                                TesorerÃ­a
+                                Tesorería
                                 <div class="sb-sidenav-collapse-arrow"><i class="fas fa-angle-down"></i></div>
                             </a>
                             <div class="collapse" id="pagesCollapseAuth" aria-labelledby="headingOne" data-bs-parent="#sidenavAccordionPages">
@@ -114,7 +114,7 @@ usuario inicio sesion, se debe agregar esta validaciÃ³n en cada una de las vis
                     </a>
                     <div class="collapse" id="collapseLayouts" aria-labelledby="headingOne" data-bs-parent="#sidenavAccordion">
                         <nav class="sb-sidenav-menu-nested nav">
-                            <a class="nav-link" href="layout-static.html">ProvisiÃ³n de Cta. Pagar</a>
+                            <a class="nav-link" href="layout-static.html">Provisión de Cta. Pagar</a>
                             <a class="nav-link" href="layout-sidenav-light.html">Orden de Pago</a>
                         </nav>
                     </div>
