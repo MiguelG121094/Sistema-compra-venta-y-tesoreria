@@ -85,10 +85,10 @@
                                 <div class="col custom-card">
                                     <div class="row mb-3">
                                         <div class="col-md-1">
-                                            <div class="mb-3 mb-md-0">
+                                            <div class="mb-3 mb-md-0 h-100">
                                                 <button type="button" data-bs-toggle="modal" data-bs-target="#modalBuscarProveedor"
                                                         style="overflow: hidden; text-overflow: ellipsis;" title="Buscar Proveedor"
-                                                        class="btn btn-outline-primary w-100 btn-responsive"
+                                                        class="btn btn-outline-primary w-100 h-100 btn-responsive"
                                                         <c:if test="${empty token or not esNuevo}">disabled</c:if>>Buscar Proveedor</button>
                                             </div>
                                         </div>
@@ -154,9 +154,8 @@
                             <!-- Detalle -->
                             <div class="row mb-3">
                                 <div class="col custom-card">
-                                    <p class="mb-2"><strong>Detalle de provisión</strong></p>
                                     <div class="table-responsive">
-                                        <table class="table table-bordered table-sm custom-table">
+                                        <table id="tablaDetalleProvision" class="table table-bordered table-sm custom-table">
                                             <thead>
                                                 <tr>
                                                     <th class="text-bg-dark text-center">Item</th>
@@ -191,9 +190,6 @@
                                                         </c:if>
                                                     </tr>
                                                 </c:forEach>
-                                                <c:if test="${empty listaDetalle}">
-                                                    <tr><td colspan="7" class="text-center text-muted">Sin líneas</td></tr>
-                                                </c:if>
                                             </tbody>
                                         </table>
                                     </div>
@@ -391,6 +387,7 @@
 
             $(document).ready(function () {
                 $('.mask-miles').mask('#.##0', { reverse: true });
+                $('#tablaDetalleProvision').DataTable({ language: { url: "DataTables 2/es-ES.json" } });
                 $('#tablaProveedores').DataTable({ language: { url: "DataTables 2/es-ES.json" } });
                 $('#tablaCuentas').DataTable({ language: { url: "DataTables 2/es-ES.json" } });
                 $('#tablaProvisiones').DataTable({ language: { url: "DataTables 2/es-ES.json" } });
