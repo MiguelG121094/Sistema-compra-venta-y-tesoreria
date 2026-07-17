@@ -1124,6 +1124,8 @@ public class FacturaCompraServlet extends HttpServlet {
         cuentaPagar.setEstado("Pendiente");
         cuentaPagar.setFechaVencimiento(fechaVencimiento);
         cuentaPagar.setSaldo(montoTotal);
+        cuentaPagar.setPlazo(estado.facturaCompra.getPlazo() != null
+                ? estado.facturaCompra.getPlazo().longValue() : null);
         return cuentaPagar;
     }
 

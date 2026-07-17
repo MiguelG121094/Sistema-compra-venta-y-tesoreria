@@ -114,7 +114,7 @@ public class CuentaPagarDAO {
         }
 
         String sql = "INSERT INTO cuenta_pagar (id_fact_comp_cab, cta_pag_monto, cta_pag_estado, " +
-                    "cta_pag_fecha_venci, cta_pag_saldo) VALUES (?, ?, ?, ?, ?)";
+                    "cta_pag_fecha_venci, cta_pag_saldo, cta_pag_plazo) VALUES (?, ?, ?, ?, ?, ?)";
 
         try (PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             stmt.setLong(1, cuentaPagar.getFacturaCompra().getIdFacturaCompra());
@@ -122,6 +122,11 @@ public class CuentaPagarDAO {
             stmt.setString(3, cuentaPagar.getEstado());
             stmt.setDate(4, new java.sql.Date(cuentaPagar.getFechaVencimiento().getTime()));
             stmt.setLong(5, cuentaPagar.getSaldo());
+            if (cuentaPagar.getPlazo() != null) {
+                stmt.setLong(6, cuentaPagar.getPlazo());
+            } else {
+                stmt.setNull(6, java.sql.Types.INTEGER);
+            }
 
             int filasAfectadas = stmt.executeUpdate();
             if (filasAfectadas == 0) {
@@ -147,7 +152,7 @@ public class CuentaPagarDAO {
         }
 
         String sql = "UPDATE cuenta_pagar SET cta_pag_monto = ?, cta_pag_estado = ?, " +
-                    "cta_pag_fecha_venci = ?, cta_pag_saldo = ? " +
+                    "cta_pag_fecha_venci = ?, cta_pag_saldo = ?, cta_pag_plazo = ? " +
                     "WHERE id_cta_pagar = ? AND id_fact_comp_cab = ?";
 
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -155,8 +160,13 @@ public class CuentaPagarDAO {
             stmt.setString(2, cuentaPagar.getEstado());
             stmt.setDate(3, new java.sql.Date(cuentaPagar.getFechaVencimiento().getTime()));
             stmt.setLong(4, cuentaPagar.getSaldo());
-            stmt.setLong(5, cuentaPagar.getIdCuentaPagar());
-            stmt.setLong(6, cuentaPagar.getFacturaCompra().getIdFacturaCompra());
+            if (cuentaPagar.getPlazo() != null) {
+                stmt.setLong(5, cuentaPagar.getPlazo());
+            } else {
+                stmt.setNull(5, java.sql.Types.INTEGER);
+            }
+            stmt.setLong(6, cuentaPagar.getIdCuentaPagar());
+            stmt.setLong(7, cuentaPagar.getFacturaCompra().getIdFacturaCompra());
 
             stmt.executeUpdate();
         }
