@@ -304,45 +304,46 @@ public class CuentaPagarDAO {
             delta = -delta;
         }
 
-        // UPDATE atómico + recálculo de estado en un solo statement (sin read-modify-write).
-        // En SQL, la cláusula SET y el CASE leen el valor VIEJO de la columna -> correcto.
-        // WHERE excluye cuentas anuladas: una factura anulada no ajusta saldo.
-        // RETURNING (PostgreSQL) devuelve el saldo ya actualizado en el mismo round-trip.
-        String sql =
-            "UPDATE cuenta_pagar " +
-            "   SET cta_pag_saldo  = cta_pag_saldo + ?, " +
-            "       cta_pag_estado = CASE " +
-            "                           WHEN cta_pag_saldo + ? > 0 THEN ? " +
-            "                           WHEN cta_pag_saldo + ? = 0 THEN ? " +
-            "                           ELSE ? " +
-            "                        END " +
-            " WHERE id_fact_comp_cab = ? " +
-            "   AND cta_pag_estado <> ? " +
-            "RETURNING cta_pag_saldo";
-
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setLong(1, delta);
-            stmt.setLong(2, delta);
-            stmt.setString(3, ESTADO_PENDIENTE);
-            stmt.setLong(4, delta);
-            stmt.setString(5, ESTADO_CANCELADO);
-            stmt.setString(6, ESTADO_SALDO_FAVOR);
-            stmt.setLong(7, idFacturaCompra);
-            stmt.setString(8, ESTADO_ANULADO);
-
-            try (ResultSet rs = stmt.executeQuery()) {   // RETURNING -> executeQuery()
+        // Read-modify-write con la lógica de estado resuelta en Java (no en la consulta).
+        // 1. Leer el saldo actual bloqueando la fila hasta el commit (FOR UPDATE evita
+        //    lost-updates entre transacciones concurrentes; este método siempre corre en tx).
+        //    Excluye la cuenta anulada: una factura anulada no ajusta saldo.
+        Long saldoActual = null;
+        String sqlSelect = "SELECT cta_pag_saldo FROM cuenta_pagar "
+                         + "WHERE id_fact_comp_cab = ? AND cta_pag_estado <> ? FOR UPDATE";
+        try (PreparedStatement stmt = conn.prepareStatement(sqlSelect)) {
+            stmt.setLong(1, idFacturaCompra);
+            stmt.setString(2, ESTADO_ANULADO);
+            try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
-                    long nuevoSaldo = rs.getLong("cta_pag_saldo");
-                    LOGGER.log(Level.INFO,
-                        "Cuenta a pagar de factura {0} ajustada por nota (delta={1}) -> saldo={2}",
-                        new Object[]{idFacturaCompra, delta, nuevoSaldo});
-                    return nuevoSaldo;
+                    saldoActual = rs.getLong("cta_pag_saldo");
                 }
-                // 0 filas: la factura no tiene cuenta a pagar, o está Anulada.
-                throw new SQLException("No se pudo ajustar: la factura " + idFacturaCompra
-                        + " no tiene cuenta a pagar gestionable (inexistente o anulada).");
             }
         }
+        if (saldoActual == null) {
+            throw new SQLException("No se pudo ajustar: la factura " + idFacturaCompra
+                    + " no tiene cuenta a pagar gestionable (inexistente o anulada).");
+        }
+
+        // 2. Calcular el nuevo saldo y el estado en Java.
+        long nuevoSaldo = saldoActual + delta;
+        String nuevoEstado = calcularEstadoPorSaldo(nuevoSaldo);
+
+        // 3. Actualizar con los valores ya resueltos.
+        String sqlUpdate = "UPDATE cuenta_pagar SET cta_pag_saldo = ?, cta_pag_estado = ? "
+                         + "WHERE id_fact_comp_cab = ? AND cta_pag_estado <> ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sqlUpdate)) {
+            stmt.setLong(1, nuevoSaldo);
+            stmt.setString(2, nuevoEstado);
+            stmt.setLong(3, idFacturaCompra);
+            stmt.setString(4, ESTADO_ANULADO);
+            stmt.executeUpdate();
+        }
+
+        LOGGER.log(Level.INFO,
+            "Cuenta a pagar de factura {0} ajustada por nota (delta={1}) -> saldo={2}",
+            new Object[]{idFacturaCompra, delta, nuevoSaldo});
+        return nuevoSaldo;
     }
 
     /**
