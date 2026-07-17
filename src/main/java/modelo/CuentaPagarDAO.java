@@ -254,6 +254,7 @@ public class CuentaPagarDAO {
     private static final String ESTADO_CANCELADO   = "Cancelado";
     private static final String ESTADO_SALDO_FAVOR = "Saldo a favor";
     private static final String ESTADO_ANULADO     = "Anulado";
+    private static final String ESTADO_EN_PROVISION = "En provision";
 
     public enum TipoNota { CREDITO, DEBITO }
 
@@ -414,18 +415,53 @@ public class CuentaPagarDAO {
 
     /**
      * Revierte la reserva (al anular la provisión): recalcula el estado desde el saldo,
-     * solo si estaba 'En provision'. Idempotente.
+     * solo si estaba 'En provision'. La lógica del estado se resuelve en Java, no en la consulta.
      */
     public void revertirProvision(Long idCtaPagar, Long idFacturaCompra) throws SQLException {
-        String sql = "UPDATE cuenta_pagar SET cta_pag_estado = CASE "
-                   + "WHEN cta_pag_saldo > 0 THEN 'Pendiente' "
-                   + "WHEN cta_pag_saldo = 0 THEN 'Cancelado' "
-                   + "ELSE 'Saldo a favor' END "
-                   + "WHERE id_cta_pagar = ? AND id_fact_comp_cab = ? AND cta_pag_estado = 'En provision'";
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+        // 1. Leer saldo y estado actual
+        Long saldo = null;
+        String estadoActual = null;
+        String sqlSelect = "SELECT cta_pag_saldo, cta_pag_estado FROM cuenta_pagar "
+                         + "WHERE id_cta_pagar = ? AND id_fact_comp_cab = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sqlSelect)) {
             stmt.setLong(1, idCtaPagar);
             stmt.setLong(2, idFacturaCompra);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    saldo = rs.getLong("cta_pag_saldo");
+                    estadoActual = rs.getString("cta_pag_estado");
+                }
+            }
+        }
+
+        // 2. Solo revierte si la cuenta estaba reservada por la provisión
+        if (saldo == null || !ESTADO_EN_PROVISION.equals(estadoActual)) {
+            return;
+        }
+
+        // 3. Calcular el estado en Java y actualizar
+        String nuevoEstado = calcularEstadoPorSaldo(saldo);
+        String sqlUpdate = "UPDATE cuenta_pagar SET cta_pag_estado = ? "
+                         + "WHERE id_cta_pagar = ? AND id_fact_comp_cab = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sqlUpdate)) {
+            stmt.setString(1, nuevoEstado);
+            stmt.setLong(2, idCtaPagar);
+            stmt.setLong(3, idFacturaCompra);
             stmt.executeUpdate();
         }
+    }
+
+    /**
+     * Estado de la cuenta a pagar según el saldo (lógica de negocio en Java):
+     * saldo &gt; 0 -&gt; Pendiente | = 0 -&gt; Cancelado | &lt; 0 -&gt; Saldo a favor.
+     */
+    private String calcularEstadoPorSaldo(long saldo) {
+        if (saldo > 0) {
+            return ESTADO_PENDIENTE;
+        }
+        if (saldo == 0) {
+            return ESTADO_CANCELADO;
+        }
+        return ESTADO_SALDO_FAVOR;
     }
 }
