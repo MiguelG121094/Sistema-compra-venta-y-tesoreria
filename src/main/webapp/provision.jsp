@@ -267,9 +267,6 @@
                                                         </td>
                                                     </tr>
                                                 </c:forEach>
-                                                <c:if test="${empty listaCuentasPagar}">
-                                                    <tr><td colspan="5" class="text-center text-muted">El proveedor no tiene cuentas a pagar</td></tr>
-                                                </c:if>
                                             </tbody>
                                         </table>
                                         <small class="text-muted">Las filas resaltadas son saldos a favor (negativos) por notas de crédito.</small>
