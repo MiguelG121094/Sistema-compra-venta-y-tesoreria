@@ -20,6 +20,7 @@ public class CuentaPagar implements java.io.Serializable {
     private String estado;
     private Date fechaVencimiento;
     private Long saldo;
+    private Long plazo;
 
     public CuentaPagar() {
     }
@@ -84,5 +85,13 @@ public class CuentaPagar implements java.io.Serializable {
 
     public void setSaldo(Long saldo) {
         this.saldo = saldo;
+    }
+
+    public Long getPlazo() {
+        return plazo;
+    }
+
+    public void setPlazo(Long plazo) {
+        this.plazo = plazo;
     }
 }

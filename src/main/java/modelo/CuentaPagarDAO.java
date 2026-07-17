@@ -354,4 +354,78 @@ public class CuentaPagarDAO {
             }
         }
     }
+
+    // ==================== PROVISIÓN DE CUENTA A PAGAR ====================
+
+    /**
+     * Cuentas a pagar de un proveedor disponibles para provisionar: saldo != 0 (incluye
+     * saldos NEGATIVOS = saldo a favor de NC, para el neteo), y estado provisionable
+     * (excluye 'En provision' y 'Anulado'). Trae la factura (numero) y el plazo.
+     * Ver MODULO_TESORERIA_PLAN.md §B y NOTA_CREDITO_DEBITO_PLAN.md §8.3.
+     */
+    public List<CuentaPagar> listarCuentasPagarPorProveedor(Long idProveedor) throws SQLException {
+        List<CuentaPagar> cuentas = new ArrayList<>();
+        if (idProveedor == null) {
+            return cuentas;
+        }
+        String sql = "SELECT cp.id_cta_pagar, cp.id_fact_comp_cab, cp.cta_pag_monto, cp.cta_pag_estado, "
+                   + "cp.cta_pag_fecha_venci, cp.cta_pag_saldo, cp.cta_pag_plazo, f.fact_comp_numero "
+                   + "FROM cuenta_pagar cp "
+                   + "JOIN factura_compra_cabecera f ON cp.id_fact_comp_cab = f.id_fact_comp_cab "
+                   + "WHERE f.id_proveedor = ? AND cp.cta_pag_saldo <> 0 "
+                   + "AND cp.cta_pag_estado NOT IN ('En provision', 'Anulado') "
+                   + "ORDER BY cp.id_cta_pagar";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, idProveedor);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    FacturaCompra fc = new FacturaCompra(rs.getLong("id_fact_comp_cab"));
+                    fc.setNumero(rs.getString("fact_comp_numero"));
+
+                    CuentaPagar cp = new CuentaPagar();
+                    cp.setIdCuentaPagar(rs.getLong("id_cta_pagar"));
+                    cp.setFacturaCompra(fc);
+                    cp.setMonto(rs.getLong("cta_pag_monto"));
+                    cp.setEstado(rs.getString("cta_pag_estado"));
+                    cp.setFechaVencimiento(rs.getDate("cta_pag_fecha_venci"));
+                    cp.setSaldo(rs.getLong("cta_pag_saldo"));
+                    long plazo = rs.getLong("cta_pag_plazo");
+                    cp.setPlazo(rs.wasNull() ? null : plazo);
+                    cuentas.add(cp);
+                }
+            }
+        }
+        return cuentas;
+    }
+
+    /**
+     * Reserva la cuenta a pagar al provisionarla (estado 'En provision'), sin tocar el saldo.
+     * El saldo se descuenta recién en la Orden de Pago.
+     */
+    public void marcarEnProvision(Long idCtaPagar, Long idFacturaCompra) throws SQLException {
+        String sql = "UPDATE cuenta_pagar SET cta_pag_estado = 'En provision' "
+                   + "WHERE id_cta_pagar = ? AND id_fact_comp_cab = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, idCtaPagar);
+            stmt.setLong(2, idFacturaCompra);
+            stmt.executeUpdate();
+        }
+    }
+
+    /**
+     * Revierte la reserva (al anular la provisión): recalcula el estado desde el saldo,
+     * solo si estaba 'En provision'. Idempotente.
+     */
+    public void revertirProvision(Long idCtaPagar, Long idFacturaCompra) throws SQLException {
+        String sql = "UPDATE cuenta_pagar SET cta_pag_estado = CASE "
+                   + "WHEN cta_pag_saldo > 0 THEN 'Pendiente' "
+                   + "WHEN cta_pag_saldo = 0 THEN 'Cancelado' "
+                   + "ELSE 'Saldo a favor' END "
+                   + "WHERE id_cta_pagar = ? AND id_fact_comp_cab = ? AND cta_pag_estado = 'En provision'";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, idCtaPagar);
+            stmt.setLong(2, idFacturaCompra);
+            stmt.executeUpdate();
+        }
+    }
 }
