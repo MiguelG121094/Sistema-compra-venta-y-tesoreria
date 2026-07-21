@@ -511,6 +511,30 @@ COMMENT ON TABLE public.provision_cuenta_pagar IS 'la provision es por proveedor
 
 ALTER SEQUENCE public.provision_cuenta_pagar_id_provi_cta_pagar_cabecera_seq OWNED BY public.provision_cuenta_pagar.id_provi_cta_pagar_cabecera;
 
+CREATE SEQUENCE public.orden_pago_cabecera_id_orden_pago_cabecera_seq;
+
+CREATE TABLE public.orden_pago_cabecera (
+                id_orden_pago INTEGER NOT NULL DEFAULT nextval('public.orden_pago_cabecera_id_orden_pago_cabecera_seq'),
+                ord_pag_numero INTEGER NOT NULL,
+                ord_pag_fecha_emision DATE NOT NULL,
+                ord_pag_monto INTEGER NOT NULL,
+                ord_pag_estado VARCHAR(100) NOT NULL,
+                id_provi_cta_pagar_cabecera INTEGER NOT NULL,
+                ord_pag_nro_recibo INTEGER NOT NULL,
+                id_moneda INTEGER NOT NULL,
+                ord_pag_tipo_cambio DOUBLE PRECISION,
+                id_sucursal INTEGER NOT NULL,
+                ord_pag_tipo_pago VARCHAR NOT NULL,
+                id_proveedor INTEGER NOT NULL,
+                CONSTRAINT id_orden_pago PRIMARY KEY (id_orden_pago)
+);
+COMMENT ON TABLE public.orden_pago_cabecera IS 'No se puede generar una OP sin antes haber hecho una provision de cta a pag';
+COMMENT ON COLUMN public.orden_pago_cabecera.ord_pag_nro_recibo IS 'numero de recibo que da el proveedor en caso de que la compra sea a credito';
+COMMENT ON COLUMN public.orden_pago_cabecera.ord_pag_tipo_pago IS 'detalle de si el pago es para reposicion de fondo fijo u otro gasto(Aqui se debe seleccionar la opcion de si es reposicion de FF u otros gastos) (aqui debe traer la info de la factura compra fact_comp_tipo_factura)';
+
+
+ALTER SEQUENCE public.orden_pago_cabecera_id_orden_pago_cabecera_seq OWNED BY public.orden_pago_cabecera.id_orden_pago;
+
 CREATE SEQUENCE public.fondo_fijo_id_fondo_fijo_seq;
 
 CREATE TABLE public.fondo_fijo (
@@ -574,32 +598,6 @@ COMMENT ON COLUMN public.cheque.chq_a_la_orden IS 'a nombre de quien va el chequ
 
 ALTER SEQUENCE public.cheque_id_cheque_seq OWNED BY public.cheque.id_cheque;
 
-CREATE SEQUENCE public.orden_pago_cabecera_id_orden_pago_cabecera_seq;
-
-CREATE TABLE public.orden_pago_cabecera (
-                id_orden_pago INTEGER NOT NULL DEFAULT nextval('public.orden_pago_cabecera_id_orden_pago_cabecera_seq'),
-                ord_pag_numero INTEGER NOT NULL,
-                ord_pag_fecha_emision DATE NOT NULL,
-                ord_pag_monto INTEGER NOT NULL,
-                ord_pag_estado VARCHAR(100) NOT NULL,
-                id_provi_cta_pagar_cabecera INTEGER NOT NULL,
-                ord_pag_nro_recibo INTEGER NOT NULL,
-                id_moneda INTEGER NOT NULL,
-                ord_pag_tipo_cambio DOUBLE PRECISION,
-                id_sucursal INTEGER NOT NULL,
-                id_cheque INTEGER,
-                ord_pag_tipo_pago VARCHAR NOT NULL,
-                id_proveedor INTEGER NOT NULL,
-                id_cuenta INTEGER NOT NULL,
-                CONSTRAINT id_orden_pago PRIMARY KEY (id_orden_pago)
-);
-COMMENT ON TABLE public.orden_pago_cabecera IS 'No se puede generar una OP sin antes haber hecho una provision de cta a pag';
-COMMENT ON COLUMN public.orden_pago_cabecera.ord_pag_nro_recibo IS 'numero de recibo que da el proveedor en caso de que la compra sea a credito';
-COMMENT ON COLUMN public.orden_pago_cabecera.ord_pag_tipo_pago IS 'detalle de si el pago es para reposicion de fondo fijo u otro gasto(Aqui se debe seleccionar la opcion de si es reposicion de FF u otros gastos) (aqui debe traer la info de la factura compra fact_comp_tipo_factura)';
-
-
-ALTER SEQUENCE public.orden_pago_cabecera_id_orden_pago_cabecera_seq OWNED BY public.orden_pago_cabecera.id_orden_pago;
-
 CREATE SEQUENCE public.forma_pago_detalle_id_forma_pago_det_seq;
 
 CREATE TABLE public.forma_pago_detalle (
@@ -611,6 +609,7 @@ CREATE TABLE public.forma_pago_detalle (
                 forma_pag_referencia VARCHAR,
                 id_cuenta INTEGER NOT NULL,
                 forma_pag_fecha DATE,
+                id_cheque INTEGER,
                 CONSTRAINT id_forma_pago_det PRIMARY KEY (id_forma_pago_det)
 );
 COMMENT ON TABLE public.forma_pago_detalle IS 'una orden de pago se puede pagar de varias formas por eso hay una tabla donde se detalla cual orden de pago se pago con transferenia y cheque';
@@ -857,7 +856,7 @@ CREATE TABLE public.conciliacion_bancaria_detalle (
                 conc_bancaria_monto INTEGER NOT NULL,
                 conc_bancaria_tipo VARCHAR NOT NULL,
                 conc_bancaria_conciliado BOOLEAN NOT NULL,
-                id_forma_pago_det INTEGER NOT NULL,
+                id_forma_pago_det INTEGER,
                 CONSTRAINT id_conc_bancaria_det PRIMARY KEY (id_conc_bancaria, conc_bancaria_nro_item)
 );
 COMMENT ON COLUMN public.conciliacion_bancaria_detalle.conc_bancaria_tipo IS '''Cred''=Crédito, ''Deb''=Débito, etc';
@@ -1353,13 +1352,6 @@ ON UPDATE NO ACTION
 NOT DEFERRABLE;
 
 ALTER TABLE public.conciliacion_bancaria ADD CONSTRAINT cuenta_conciliacion_bancaria_fk
-FOREIGN KEY (id_cuenta)
-REFERENCES public.cuenta (id_cuenta)
-ON DELETE NO ACTION
-ON UPDATE NO ACTION
-NOT DEFERRABLE;
-
-ALTER TABLE public.orden_pago_cabecera ADD CONSTRAINT cuenta_orden_pago_cabecera_fk
 FOREIGN KEY (id_cuenta)
 REFERENCES public.cuenta (id_cuenta)
 ON DELETE NO ACTION
@@ -1926,6 +1918,27 @@ ON DELETE NO ACTION
 ON UPDATE NO ACTION
 NOT DEFERRABLE;
 
+ALTER TABLE public.conciliacion_bancaria_detalle ADD CONSTRAINT orden_pagoorden_pago_cabecera_conciliacion_bancaria_detalle_fk
+FOREIGN KEY (id_orden_pago)
+REFERENCES public.orden_pago_cabecera (id_orden_pago)
+ON DELETE NO ACTION
+ON UPDATE NO ACTION
+NOT DEFERRABLE;
+
+ALTER TABLE public.forma_pago_detalle ADD CONSTRAINT orden_pago_cabecera_forma_pago_detalle_fk
+FOREIGN KEY (id_orden_pago)
+REFERENCES public.orden_pago_cabecera (id_orden_pago)
+ON DELETE NO ACTION
+ON UPDATE NO ACTION
+NOT DEFERRABLE;
+
+ALTER TABLE public.orden_pago_detalle ADD CONSTRAINT orden_pago_cabecera_orden_pago_detalle_fk
+FOREIGN KEY (id_orden_pago)
+REFERENCES public.orden_pago_cabecera (id_orden_pago)
+ON DELETE NO ACTION
+ON UPDATE NO ACTION
+NOT DEFERRABLE;
+
 ALTER TABLE public.fondo_fijo_rendicion ADD CONSTRAINT fondo_fijo_fondo_fijo_rendicion_fk
 FOREIGN KEY (id_fondo_fijo)
 REFERENCES public.fondo_fijo (id_fondo_fijo)
@@ -2052,30 +2065,9 @@ ON DELETE NO ACTION
 ON UPDATE NO ACTION
 NOT DEFERRABLE;
 
-ALTER TABLE public.orden_pago_cabecera ADD CONSTRAINT cheque_emitido_orden_pagoorden_pago_cabecera_fk
+ALTER TABLE public.forma_pago_detalle ADD CONSTRAINT cheque_forma_pago_detalle_fk
 FOREIGN KEY (id_cheque)
 REFERENCES public.cheque (id_cheque)
-ON DELETE NO ACTION
-ON UPDATE NO ACTION
-NOT DEFERRABLE;
-
-ALTER TABLE public.conciliacion_bancaria_detalle ADD CONSTRAINT orden_pagoorden_pago_cabecera_conciliacion_bancaria_detalle_fk
-FOREIGN KEY (id_orden_pago)
-REFERENCES public.orden_pago_cabecera (id_orden_pago)
-ON DELETE NO ACTION
-ON UPDATE NO ACTION
-NOT DEFERRABLE;
-
-ALTER TABLE public.forma_pago_detalle ADD CONSTRAINT orden_pago_cabecera_forma_pago_detalle_fk
-FOREIGN KEY (id_orden_pago)
-REFERENCES public.orden_pago_cabecera (id_orden_pago)
-ON DELETE NO ACTION
-ON UPDATE NO ACTION
-NOT DEFERRABLE;
-
-ALTER TABLE public.orden_pago_detalle ADD CONSTRAINT orden_pago_cabecera_orden_pago_detalle_fk
-FOREIGN KEY (id_orden_pago)
-REFERENCES public.orden_pago_cabecera (id_orden_pago)
 ON DELETE NO ACTION
 ON UPDATE NO ACTION
 NOT DEFERRABLE;
