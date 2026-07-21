@@ -359,3 +359,18 @@ INSERT INTO public.entidad_financiera (enti_finan_nombre, id_tipo_enti_finan) VA
 -- TIPO CUENTA
 INSERT INTO public.tipo_cuenta (tipo_cuenta_descripcion) VALUES('Cuenta Corriente');  -- id 1
 INSERT INTO public.tipo_cuenta (tipo_cuenta_descripcion) VALUES('Cuenta de Ahorro');  -- id 2
+
+-- CUENTA BANCARIA (id_tipo_cuenta, id_enti_finan, cuenta_numero, id_moneda)
+--   tipo_cuenta: 1=Corriente, 2=Ahorro | enti_finan: 1=Itau, 2=Ueno, 3=Atlas | moneda: 1=Guaranies, 2=Dolares
+INSERT INTO public.cuenta (id_tipo_cuenta, id_enti_finan, cuenta_numero, id_moneda) VALUES(1, 1, 123456, 1);  -- id 1: Itau Cte Gs
+INSERT INTO public.cuenta (id_tipo_cuenta, id_enti_finan, cuenta_numero, id_moneda) VALUES(1, 2, 789012, 1);  -- id 2: Ueno Cte Gs
+INSERT INTO public.cuenta (id_tipo_cuenta, id_enti_finan, cuenta_numero, id_moneda) VALUES(2, 1, 654321, 2);  -- id 3: Itau Ahorro USD
+
+-- TIPO CHEQUE (tipo_cheque_descripcion)
+INSERT INTO public.tipo_cheque (tipo_cheque_descripcion) VALUES('A la vista');  -- id 1
+INSERT INTO public.tipo_cheque (tipo_cheque_descripcion) VALUES('Diferido');    -- id 2
+
+-- CHEQUERA (id_cuenta, chequera_serie, chequera_desde_nro, chequera_hasta_nro)
+--   Define el RANGO de numeros de cheque disponibles por cuenta.
+INSERT INTO public.chequera (id_cuenta, chequera_serie, chequera_desde_nro, chequera_hasta_nro) VALUES(1, 1, 1000001, 1000050);  -- id 1: Itau, cheques 1000001..1000050
+INSERT INTO public.chequera (id_cuenta, chequera_serie, chequera_desde_nro, chequera_hasta_nro) VALUES(2, 1, 2000001, 2000050);  -- id 2: Ueno, cheques 2000001..2000050
