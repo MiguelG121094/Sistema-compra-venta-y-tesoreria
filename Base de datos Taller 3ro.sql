@@ -144,7 +144,7 @@ CREATE TABLE public.tipo_cheque (
                 tipo_cheque_descripcion VARCHAR(25) NOT NULL,
                 CONSTRAINT id_tipo_cheque PRIMARY KEY (id_tipo_cheque)
 );
-COMMENT ON TABLE public.tipo_cheque IS 'diferido, a la vista';
+COMMENT ON TABLE public.tipo_cheque IS 'diferido, a la vista, a la orden, al portador o no a la orden';
 COMMENT ON COLUMN public.tipo_cheque.tipo_cheque_descripcion IS '- Diferido: tiene dos fechas, la primera, la fecha de emisión del cheque y la segunda la fecha a partir de la cual se puede efectivizar el cheque. - A la orden: van específicamente a nombre de una persona. No se pueden endosar, solamente cobrar o depositar. - Al portador o No a la orden: cuando no se escribe el nombre de quien lo recibe, se pueden endosar, cobrar o depositar. - Cruzado: cuando se dibujan dos rayas diagonales en una de las esquinas del cheque. Esto indica que no puede cobrarse en ventanilla, solo debe depositarse en otra cuenta bancaria.';
 
 
@@ -249,6 +249,7 @@ CREATE TABLE public.forma_pago_cabecera (
                 CONSTRAINT id_forma_pago_cabecera PRIMARY KEY (id_forma_pago_cab)
 );
 COMMENT ON TABLE public.forma_pago_cabecera IS 'cheque o transferencia, en la orden de pago no se puede pagar con efectivo para eso está el fondo fijo que se repone con orden de pago, o en todo caso se saca un cheque y se efectivisa';
+COMMENT ON COLUMN public.forma_pago_cabecera.forma_pago_descripcion IS 'cheque, transferencia';
 
 
 ALTER SEQUENCE public.forma_pago_cabecera_id_forma_pago_cab_cabecera_seq OWNED BY public.forma_pago_cabecera.id_forma_pago_cab;
@@ -568,6 +569,7 @@ CREATE TABLE public.cheque (
                 id_usuario INTEGER NOT NULL,
                 CONSTRAINT id_cheque PRIMARY KEY (id_cheque)
 );
+COMMENT ON COLUMN public.cheque.chq_a_la_orden IS 'a nombre de quien va el cheque en caso de ser a la orden';
 
 
 ALTER SEQUENCE public.cheque_id_cheque_seq OWNED BY public.cheque.id_cheque;
@@ -598,12 +600,12 @@ COMMENT ON COLUMN public.orden_pago_cabecera.ord_pag_tipo_pago IS 'detalle de si
 
 ALTER SEQUENCE public.orden_pago_cabecera_id_orden_pago_cabecera_seq OWNED BY public.orden_pago_cabecera.id_orden_pago;
 
+CREATE SEQUENCE public.forma_pago_detalle_id_forma_pago_det_seq;
+
 CREATE TABLE public.forma_pago_detalle (
-                id_forma_pago_det INTEGER NOT NULL,
+                id_forma_pago_det INTEGER NOT NULL DEFAULT nextval('public.forma_pago_detalle_id_forma_pago_det_seq'),
                 id_forma_pago_cab INTEGER NOT NULL,
                 id_orden_pago INTEGER NOT NULL,
-                forma_pag_tranferencia INTEGER NOT NULL,
-                forma_pag_cheque INTEGER NOT NULL,
                 forma_pag_monto INTEGER NOT NULL,
                 forma_pag_estado VARCHAR(100),
                 forma_pag_referencia VARCHAR,
@@ -612,8 +614,11 @@ CREATE TABLE public.forma_pago_detalle (
                 CONSTRAINT id_forma_pago_det PRIMARY KEY (id_forma_pago_det)
 );
 COMMENT ON TABLE public.forma_pago_detalle IS 'una orden de pago se puede pagar de varias formas por eso hay una tabla donde se detalla cual orden de pago se pago con transferenia y cheque';
+COMMENT ON COLUMN public.forma_pago_detalle.id_forma_pago_cab IS 'con el id de la cabecera de forma de pago ya se dice cual es el metodo de pago (cheque o transferencia)';
 COMMENT ON COLUMN public.forma_pago_detalle.forma_pag_referencia IS 'Nro cheque, transferencia, etc';
 
+
+ALTER SEQUENCE public.forma_pago_detalle_id_forma_pago_det_seq OWNED BY public.forma_pago_detalle.id_forma_pago_det;
 
 CREATE SEQUENCE public.nota_debito_venta_cabecera_id_nota_debi_vent_cab_seq;
 
@@ -1109,14 +1114,19 @@ CREATE TABLE public.fondo_fijo_rendicion_detalle (
 );
 
 
+CREATE SEQUENCE public.orden_pago_detalle_id_orden_pago_det_seq;
+
 CREATE TABLE public.orden_pago_detalle (
-                id_orden_pago INTEGER NOT NULL,
+                id_orden_pago_det INTEGER NOT NULL DEFAULT nextval('public.orden_pago_detalle_id_orden_pago_det_seq'),
                 orden_pag_det_monto INTEGER NOT NULL,
                 id_cta_pagar INTEGER NOT NULL,
                 id_fact_comp_cab INTEGER NOT NULL,
-                CONSTRAINT id_orden_pago_detalle PRIMARY KEY (id_orden_pago)
+                id_orden_pago INTEGER NOT NULL,
+                CONSTRAINT id_orden_pago_detalle PRIMARY KEY (id_orden_pago_det)
 );
 
+
+ALTER SEQUENCE public.orden_pago_detalle_id_orden_pago_det_seq OWNED BY public.orden_pago_detalle.id_orden_pago_det;
 
 CREATE SEQUENCE public.nota_debito_compra_cabecera_id_nota_debi_comp_cab_seq;
 
@@ -2049,13 +2059,6 @@ ON DELETE NO ACTION
 ON UPDATE NO ACTION
 NOT DEFERRABLE;
 
-ALTER TABLE public.orden_pago_detalle ADD CONSTRAINT orden_pago_orden_pago_detalle_fk
-FOREIGN KEY (id_orden_pago)
-REFERENCES public.orden_pago_cabecera (id_orden_pago)
-ON DELETE NO ACTION
-ON UPDATE NO ACTION
-NOT DEFERRABLE;
-
 ALTER TABLE public.conciliacion_bancaria_detalle ADD CONSTRAINT orden_pagoorden_pago_cabecera_conciliacion_bancaria_detalle_fk
 FOREIGN KEY (id_orden_pago)
 REFERENCES public.orden_pago_cabecera (id_orden_pago)
@@ -2064,6 +2067,13 @@ ON UPDATE NO ACTION
 NOT DEFERRABLE;
 
 ALTER TABLE public.forma_pago_detalle ADD CONSTRAINT orden_pago_cabecera_forma_pago_detalle_fk
+FOREIGN KEY (id_orden_pago)
+REFERENCES public.orden_pago_cabecera (id_orden_pago)
+ON DELETE NO ACTION
+ON UPDATE NO ACTION
+NOT DEFERRABLE;
+
+ALTER TABLE public.orden_pago_detalle ADD CONSTRAINT orden_pago_cabecera_orden_pago_detalle_fk
 FOREIGN KEY (id_orden_pago)
 REFERENCES public.orden_pago_cabecera (id_orden_pago)
 ON DELETE NO ACTION
