@@ -17,13 +17,12 @@ public class FormaPagoDetalle implements java.io.Serializable {
     private Long idFormaPagoDetalle;
     private FormaPagoCabecera formaPagoCabecera;
     private OrdenPago ordenPago;
-    private Long transferencia;
-    private Long cheque;
     private Long monto;
     private String estado;
     private String referencia;
     private Cuenta cuenta;
     private Date fecha;
+    private Cheque cheque;
 
     public FormaPagoDetalle() {
     }
@@ -33,18 +32,17 @@ public class FormaPagoDetalle implements java.io.Serializable {
     }
 
     public FormaPagoDetalle(Long idFormaPagoDetalle, FormaPagoCabecera formaPagoCabecera,
-            OrdenPago ordenPago, Long transferencia, Long cheque, Long monto, String estado,
-            String referencia, Cuenta cuenta, Date fecha) {
+            OrdenPago ordenPago, Long monto, String estado, String referencia, Cuenta cuenta,
+            Date fecha, Cheque cheque) {
         this.idFormaPagoDetalle = idFormaPagoDetalle;
         this.formaPagoCabecera = formaPagoCabecera;
         this.ordenPago = ordenPago;
-        this.transferencia = transferencia;
-        this.cheque = cheque;
         this.monto = monto;
         this.estado = estado;
         this.referencia = referencia;
         this.cuenta = cuenta;
         this.fecha = fecha;
+        this.cheque = cheque;
     }
 
     public Long getIdFormaPagoDetalle() {
@@ -69,22 +67,6 @@ public class FormaPagoDetalle implements java.io.Serializable {
 
     public void setOrdenPago(OrdenPago ordenPago) {
         this.ordenPago = ordenPago;
-    }
-
-    public Long getTransferencia() {
-        return transferencia;
-    }
-
-    public void setTransferencia(Long transferencia) {
-        this.transferencia = transferencia;
-    }
-
-    public Long getCheque() {
-        return cheque;
-    }
-
-    public void setCheque(Long cheque) {
-        this.cheque = cheque;
     }
 
     public Long getMonto() {
@@ -125,5 +107,13 @@ public class FormaPagoDetalle implements java.io.Serializable {
 
     public void setFecha(Date fecha) {
         this.fecha = fecha;
+    }
+
+    public Cheque getCheque() {
+        return cheque;
+    }
+
+    public void setCheque(Cheque cheque) {
+        this.cheque = cheque;
     }
 }

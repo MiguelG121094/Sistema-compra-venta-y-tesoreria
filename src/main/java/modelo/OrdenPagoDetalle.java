@@ -12,6 +12,7 @@ public class OrdenPagoDetalle implements java.io.Serializable {
 
     private static final long serialVersionUID = 1L;
 
+    private Long idOrdenPagoDet;
     private OrdenPago ordenPago;
     private Long monto;
     private CuentaPagar cuentaPagar;
@@ -24,12 +25,21 @@ public class OrdenPagoDetalle implements java.io.Serializable {
         this.ordenPago = ordenPago;
     }
 
-    public OrdenPagoDetalle(OrdenPago ordenPago, Long monto, CuentaPagar cuentaPagar,
-            FacturaCompra facturaCompra) {
+    public OrdenPagoDetalle(Long idOrdenPagoDet, OrdenPago ordenPago, Long monto,
+            CuentaPagar cuentaPagar, FacturaCompra facturaCompra) {
+        this.idOrdenPagoDet = idOrdenPagoDet;
         this.ordenPago = ordenPago;
         this.monto = monto;
         this.cuentaPagar = cuentaPagar;
         this.facturaCompra = facturaCompra;
+    }
+
+    public Long getIdOrdenPagoDet() {
+        return idOrdenPagoDet;
+    }
+
+    public void setIdOrdenPagoDet(Long idOrdenPagoDet) {
+        this.idOrdenPagoDet = idOrdenPagoDet;
     }
 
     public OrdenPago getOrdenPago() {

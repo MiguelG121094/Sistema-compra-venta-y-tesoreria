@@ -24,10 +24,8 @@ public class OrdenPago implements java.io.Serializable {
     private Long idMoneda;
     private Double tipoCambio;
     private Sucursal sucursal;
-    private Long idCheque;
     private String tipoPago;
     private Proveedor proveedor;
-    private Long idCuenta;
 
     public OrdenPago() {
     }
@@ -38,7 +36,7 @@ public class OrdenPago implements java.io.Serializable {
 
     public OrdenPago(Long idOrdenPago, Integer numero, Date fechaEmision, Long monto, String estado,
             Long idProvisionCtaPagar, Integer numeroRecibo, Long idMoneda, Double tipoCambio,
-            Sucursal sucursal, Long idCheque, String tipoPago, Proveedor proveedor, Long idCuenta) {
+            Sucursal sucursal, String tipoPago, Proveedor proveedor) {
         this.idOrdenPago = idOrdenPago;
         this.numero = numero;
         this.fechaEmision = fechaEmision;
@@ -49,10 +47,8 @@ public class OrdenPago implements java.io.Serializable {
         this.idMoneda = idMoneda;
         this.tipoCambio = tipoCambio;
         this.sucursal = sucursal;
-        this.idCheque = idCheque;
         this.tipoPago = tipoPago;
         this.proveedor = proveedor;
-        this.idCuenta = idCuenta;
     }
 
     public Long getIdOrdenPago() {
@@ -135,14 +131,6 @@ public class OrdenPago implements java.io.Serializable {
         this.sucursal = sucursal;
     }
 
-    public Long getIdCheque() {
-        return idCheque;
-    }
-
-    public void setIdCheque(Long idCheque) {
-        this.idCheque = idCheque;
-    }
-
     public String getTipoPago() {
         return tipoPago;
     }
@@ -157,13 +145,5 @@ public class OrdenPago implements java.io.Serializable {
 
     public void setProveedor(Proveedor proveedor) {
         this.proveedor = proveedor;
-    }
-
-    public Long getIdCuenta() {
-        return idCuenta;
-    }
-
-    public void setIdCuenta(Long idCuenta) {
-        this.idCuenta = idCuenta;
     }
 }
