@@ -464,6 +464,58 @@ public class CuentaPagarDAO {
         }
     }
 
+    // ==================== ORDEN DE PAGO ====================
+
+    /**
+     * Descuenta el importe pagado del saldo de una cuenta a pagar al generar la Orden de Pago:
+     * read-modify-write con FOR UPDATE (evita lost-updates; siempre corre dentro de la tx de la OP)
+     * y recalcula el estado en Java. La cuenta que estaba 'En provision' pasa a
+     * Cancelado/Pendiente/Saldo a favor según el saldo resultante. Ver MODULO_TESORERIA_PLAN.md §C.
+     */
+    public long descontarSaldo(Long idCtaPagar, Long idFacturaCompra, long importe) throws SQLException {
+        if (idCtaPagar == null || idFacturaCompra == null) {
+            throw new SQLException("descontarSaldo: parámetros nulos");
+        }
+
+        // 1. Leer el saldo actual bloqueando la fila hasta el commit.
+        Long saldoActual = null;
+        String sqlSelect = "SELECT cta_pag_saldo FROM cuenta_pagar "
+                         + "WHERE id_cta_pagar = ? AND id_fact_comp_cab = ? FOR UPDATE";
+        try (PreparedStatement stmt = conn.prepareStatement(sqlSelect)) {
+            stmt.setLong(1, idCtaPagar);
+            stmt.setLong(2, idFacturaCompra);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    saldoActual = rs.getLong("cta_pag_saldo");
+                }
+            }
+        }
+        if (saldoActual == null) {
+            throw new SQLException("descontarSaldo: la cuenta a pagar (" + idCtaPagar + ", "
+                    + idFacturaCompra + ") no existe.");
+        }
+
+        // 2. Calcular el nuevo saldo y el estado en Java.
+        long nuevoSaldo = saldoActual - importe;
+        String nuevoEstado = calcularEstadoPorSaldo(nuevoSaldo);
+
+        // 3. Actualizar con los valores ya resueltos.
+        String sqlUpdate = "UPDATE cuenta_pagar SET cta_pag_saldo = ?, cta_pag_estado = ? "
+                         + "WHERE id_cta_pagar = ? AND id_fact_comp_cab = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sqlUpdate)) {
+            stmt.setLong(1, nuevoSaldo);
+            stmt.setString(2, nuevoEstado);
+            stmt.setLong(3, idCtaPagar);
+            stmt.setLong(4, idFacturaCompra);
+            stmt.executeUpdate();
+        }
+
+        LOGGER.log(Level.INFO,
+            "Cuenta a pagar ({0},{1}) descontada por OP (importe={2}) -> saldo={3}",
+            new Object[]{idCtaPagar, idFacturaCompra, importe, nuevoSaldo});
+        return nuevoSaldo;
+    }
+
     /**
      * Estado de la cuenta a pagar según el saldo (lógica de negocio en Java):
      * saldo &gt; 0 -&gt; Pendiente | = 0 -&gt; Cancelado | &lt; 0 -&gt; Saldo a favor.
