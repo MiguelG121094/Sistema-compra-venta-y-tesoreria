@@ -205,7 +205,6 @@
                             <!-- Detalle de orden de pago (facturas de la provisión, SOLO LECTURA) -->
                             <div class="row mb-3">
                                 <div class="col custom-card">
-                                    <p class="section-title">Detalle de orden de pago</p>
                                     <div class="table-responsive">
                                         <table id="tablaDetalleOP" class="table table-bordered table-sm custom-table">
                                             <thead>
