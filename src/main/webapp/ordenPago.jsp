@@ -15,7 +15,10 @@
       listaSucursales, listaMonedas, listaCuentas, listaFormaPago (Cheque/Transferencia),
       listaChequeras, listaTipoCheque
       listaOrdenesPago (modal), listaProvisiones (modal)
-      formaEnEditor (FormaPagoDetalle, opcional) para precargar el editor
+      formaEnEditor (FormaPagoDetalle, opcional) para precargar el modal de forma de pago
+      abrirModalForma (boolean, opcional): si el servlet detecta un error de validación al
+        AgregarForma, lo setea a true para reabrir automáticamente el modal con lo cargado
+    El alta de forma de pago se hace en el modal #modalAgregarForma (dentro del form principal).
     Acciones (accionPrincipal): Nuevo, CargarOrdenPago, CargarProvision, CambiarTipoPago,
       AgregarForma, EliminarForma, Generar, Anular, Cancelar
 --%>
@@ -237,10 +240,22 @@
                                 <div class="col custom-card">
                                     <p class="section-title">Formas de Pago</p>
 
-                                    <!-- Editor de forma (solo al crear, con provisión cargada) -->
-                                    <c:if test="${not empty token and esNuevo and not empty listaDetalle}">
-                                        <div class="row g-2 align-items-end mb-3">
-                                            <div class="col-md-2">
+                                    <!-- Botón que abre el modal para agregar una forma de pago -->
+                                    <c:if test="${not empty token and esNuevo and not empty listaDetalle and puedeInsertar}">
+                                        <div class="mb-3">
+                                            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalAgregarForma">&#43; Agregar Forma de Pago</button>
+                                            <small class="text-muted ms-2">Solo Cheque o Transferencia (sin efectivo). La suma de las formas debe igualar el Importe Total a Pagar.</small>
+                                        </div>
+
+                                        <!-- Modal: Agregar Forma de Pago (dentro del form para que sus inputs se envíen con AgregarForma) -->
+                                        <div class="modal fade" id="modalAgregarForma" tabindex="-1" aria-hidden="true">
+                                            <div class="modal-dialog modal-lg">
+                                                <div class="modal-content">
+                                                    <div class="modal-header"><h5 class="modal-title">Agregar Forma de Pago</h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                                                    <div class="modal-body">
+                                                        <div class="row g-2 align-items-end mb-3">
+                                            <div class="col-md-3">
                                                 <label class="form-label mb-1">Tipo</label>
                                                 <select class="form-control" id="tipoForma" name="idFormaPagoCab" onchange="toggleCamposCheque();">
                                                     <option value="">Seleccionar...</option>
@@ -266,13 +281,10 @@
                                                 <input type="text" inputmode="numeric" class="form-control mask-miles" id="montoForma" name="montoForma"
                                                        placeholder="Monto" value="${formaEnEditor.monto}">
                                             </div>
-                                            <div class="col-md-2">
+                                            <div class="col-md-3">
                                                 <label class="form-label mb-1">Referencia</label>
                                                 <input type="text" class="form-control" id="referenciaForma" name="referenciaForma"
                                                        placeholder="Referencia" value="${formaEnEditor.referencia}">
-                                            </div>
-                                            <div class="col-md-3">
-                                                <button type="button" class="btn btn-success w-100" onclick="agregarForma();">Agregar forma</button>
                                             </div>
                                         </div>
 
@@ -313,7 +325,14 @@
                                                 <small class="text-muted">El N° de cheque se asigna automáticamente del rango de la chequera al Generar.</small>
                                             </div>
                                         </div>
-                                        <small class="text-muted">Solo se admite Cheque o Transferencia (sin efectivo). La suma de las formas debe igualar el Importe Total a Pagar.</small>
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                                        <button type="button" class="btn btn-success" onclick="agregarForma();">Agregar forma</button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </c:if>
 
                                     <!-- Tabla de formas cargadas -->
@@ -547,6 +566,13 @@
                 // Tooltips de Bootstrap
                 var tips = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
                 tips.forEach(function (el) { new bootstrap.Tooltip(el); });
+
+                // Modal de forma de pago: ajustar campos de cheque al abrir y reabrir si hubo error
+                var modalForma = document.getElementById('modalAgregarForma');
+                if (modalForma) {
+                    modalForma.addEventListener('shown.bs.modal', toggleCamposCheque);
+                    <c:if test="${abrirModalForma}">new bootstrap.Modal(modalForma).show();</c:if>
+                }
                 $('#tablaDetalleOP').DataTable({ language: { url: "DataTables 2/es-ES.json" } });
                 $('#tablaFormasPago').DataTable({ language: { url: "DataTables 2/es-ES.json" } });
                 $('#tablaOrdenesPago').DataTable({ language: { url: "DataTables 2/es-ES.json" } });
