@@ -194,8 +194,10 @@ Acá se **consume el "saldo a favor"** de las NC (Enfoque 1 con neteo). Por eso 
 - ✅ `conciliacion_bancaria_detalle.id_forma_pago_det` → **NULLABLE** (los ítems de débito/crédito no tienen forma de pago).
 - ✅ Seed cargado en `Inserts inciales.sql`: `cuenta` (Itaú/Ueno Gs, Itaú Ahorro USD), `tipo_cheque` (A la vista / Diferido), `chequera` (Itaú 1000001–1000050, Ueno 2000001–2000050).
 
-**Los 5 pasos transaccionales de `guardarOrdenPagoCompleta(...)`** (todo en UNA tx — el Service es dueño de la conexión):
+**Los pasos transaccionales de `guardarOrdenPagoCompleta(...)`** (todo en UNA tx — el Service es dueño de la conexión). ✅ **Implementado** (ver §C.1 para el detalle de participantes/mensajes):
 ```
+0. Bloquear la provisión (SELECT ... FOR UPDATE) y validar que esté 'Pendiente'
+     → si es null (no existe) o != 'Pendiente' (ya 'Procesada'/'Anulado')  →  ABORTA (anti doble-pago)
 1. INSERT orden_pago_cabecera                → id_orden_pago (serial)
 2. Por cada factura de la provisión:
      INSERT orden_pago_detalle (SOLO LECTURA, viene de la provisión)
@@ -204,7 +206,7 @@ Acá se **consume el "saldo a favor"** de las NC (Enfoque 1 con neteo). Por eso 
      - INSERT forma_pago_detalle (id_forma_pago_cab, monto, id_cuenta, referencia, id_cheque|NULL)
 4. Por cada factura: cta_pag_saldo -= importe_pagado; recalcular estado (calcularEstadoPorSaldo)
      ('En provision' → 'Cancelado' / 'Pendiente' / 'Saldo a favor')
-5. (opcional) marcar la provisión como procesada/con OP
+5. UPDATE provision_cuenta_pagar SET estado = 'Procesada'   (la consume: no se puede volver a pagar)
    → commit   (rollback si cualquier paso falla)
 ```
 
@@ -248,6 +250,151 @@ cuenta_pagar: saldo A 500.000→0 ('Cancelado'), saldo B 150.000→0 ('Cancelado
 guardar la OP → por eso la OP no inserta ahí; el módulo de Conciliación (§F) levanta los movimientos del período.
 Nota: la conciliación referencia **`id_forma_pago_det`** (nivel cuenta/instrumento), no `id_orden_pago` — así un pago multi-cuenta genera un ítem por banco.
 
+---
+
+### C.1 Flujos para diagrama de secuencia (Generar / Anular OP)
+
+> Documentación de los dos flujos transaccionales de la Orden de Pago, con **participantes** y
+> **mensajes ordenados**, pensada como insumo directo para los diagramas de secuencia. Refleja lo
+> **implementado** en `OrdenPagoService` (2026-07-24). El "guard anti doble-pago" y la "anulación con
+> reversa total" son los dos puntos que motivaron esta sección.
+
+**Participantes (lifelines) comunes:**
+`Servlet` (`OrdenPagoServlet`, pendiente) · `OrdenPagoService` (dueño de la transacción) ·
+`OrdenPagoDAO` · `OrdenPagoDetalleDAO` · `FormaPagoDetalleDAO` · `ChequeDAO` · `ChequeraDAO` ·
+`CuentaPagarDAO` · `ProvisionCuentaPagarDAO` · `BD` (PostgreSQL).
+Regla transversal: **el Service abre la conexión, hace `setAutoCommit(false)` y es el único que hace
+`commit`/`rollback`**; todos los DAOs corren sobre esa misma `Connection`.
+
+---
+
+#### Flujo 1 — Generar OP: `guardarOrdenPagoCompleta(orden, detalles, formasPago)`
+
+**Pre-condición (fuera de la tx):** `validar(...)` — provisión previa obligatoria
+(`orden.idProvisionCtaPagar != null`), hay detalles y formas de pago, cada forma con
+`monto > 0` y con cuenta bancaria, cada línea de **cheque** con chequera + tipo de cheque + usuario
+(evita el NPE de emisión), y **Σ formas == monto de la OP**. Si algo falla → excepción, no se abre la tx.
+
+```
+Servlet → Service : guardarOrdenPagoCompleta(orden, detalles, formasPago)
+Service → Service : validar(...)                              [si falla → throw, fin]
+Service → BD      : getConnection(); setAutoCommit(false)     [inicio TX]
+
+  paso 0 — GUARD ANTI DOBLE-PAGO (el fix del punto 1)
+  Service → ProvisionCuentaPagarDAO : getEstadoBloqueado(idProvision)
+  ProvisionCuentaPagarDAO → BD      : SELECT prov_cta_pag_estado ... FOR UPDATE   (bloquea la fila)
+  BD → Service                      : estado
+     alt estado == null            → throw "La provisión no existe"           → rollback
+     alt estado != 'Pendiente'     → throw "no disponible (Procesada/Anulado)" → rollback
+     (else continúa)
+
+  paso 1 — Cabecera
+  Service → OrdenPagoDAO : insertarOrdenPago(orden)
+  OrdenPagoDAO → BD      : INSERT orden_pago_cabecera → id_orden_pago (serial)
+
+  paso 2 — Detalle (N facturas de la provisión, solo lectura)
+  loop por cada detalle:
+    Service → OrdenPagoDetalleDAO : insertarDetalle(det, idOrden)
+    OrdenPagoDetalleDAO → BD      : INSERT orden_pago_detalle (FK compuesta id_cta_pagar+id_fact_comp_cab)
+
+  paso 3 — Formas de pago (+ emisión de cheque real por línea de cheque)
+  loop por cada forma:
+    alt la forma es CHEQUE:
+      Service → ChequeraDAO : proximoNumeroCheque(idChequera)
+      ChequeraDAO → BD      : SELECT COALESCE(MAX(chq_numero), desde-1)+1 ; valida ≤ hasta_nro
+      BD → Service          : proximoNro         [si > hasta_nro → throw "Chequera agotada" → rollback]
+      Service → ChequeDAO   : insertarCheque(cheque)   (defaults: estado 'Emitido', fechas, a la orden…)
+      ChequeDAO → BD        : INSERT cheque → id_cheque
+    Service → FormaPagoDetalleDAO : insertarFormaPago(fp, idOrden)   (id_cheque NULL si transferencia)
+    FormaPagoDetalleDAO → BD      : INSERT forma_pago_detalle
+
+  paso 4 — Descontar saldo de cada factura
+  loop por cada detalle:
+    Service → CuentaPagarDAO : descontarSaldo(idCtaPagar, idFactura, importe)
+    CuentaPagarDAO → BD      : SELECT cta_pag_saldo ... FOR UPDATE
+    CuentaPagarDAO → BD      : UPDATE cta_pag_saldo -= importe, cta_pag_estado = recalc
+                              ('En provision' → 'Cancelado' | 'Pendiente' | 'Saldo a favor')
+
+  paso 5 — Consumir la provisión (el fix del punto 1)
+  Service → ProvisionCuentaPagarDAO : actualizarEstado(idProvision, 'Procesada')
+  ProvisionCuentaPagarDAO → BD      : UPDATE provision_cuenta_pagar SET estado = 'Procesada'
+
+Service → BD : commit()                                       [fin TX OK]
+  (cualquier throw en 0..5 → Service → BD : rollback() ; se re-lanza la excepción)
+Service → Servlet : idOrden
+```
+
+**Por qué evita el doble pago:** el `FOR UPDATE` del paso 0 **bloquea la fila de la provisión** hasta
+el `commit`. Una segunda OP concurrente sobre la misma provisión queda esperando ese lock; cuando lo
+obtiene, la provisión ya está en `'Procesada'` → la validación la rechaza. Sin este guard, dos OPs
+podían descontar el saldo dos veces (pago duplicado). El `estado` es a la vez el **candado lógico** (una
+provisión `'Procesada'` no se re-paga) y el que se **revierte** al anular.
+
+---
+
+#### Flujo 2 — Anular OP: `anularOrdenPagoCompleta(idOrdenPago)` (el fix del punto 2)
+
+Reversa **simétrica** del Flujo 1: deshace saldo, cheques y la consumición de la provisión, todo en
+UNA transacción. Es el equivalente al patrón de "anular Factura de Compra".
+
+```
+Servlet → Service : anularOrdenPagoCompleta(idOrdenPago)
+Service → BD      : getConnection(); setAutoCommit(false)     [inicio TX]
+
+  paso 1 — Cargar y validar
+  Service → OrdenPagoDAO : getOrdenPago(idOrdenPago)
+  OrdenPagoDAO → BD      : SELECT orden_pago_cabecera
+  BD → Service           : orden
+     alt orden == null            → throw "no existe"        → rollback
+     alt orden.estado == 'Anulado'→ throw "ya está anulada"  → rollback
+
+  paso 2 — Devolver el saldo de cada factura pagada
+  Service → OrdenPagoDetalleDAO : listarPorOrden(idOrdenPago)
+  OrdenPagoDetalleDAO → BD       : SELECT detalle JOIN cuenta_pagar JOIN factura
+  loop por cada detalle:
+    Service → CuentaPagarDAO : restaurarSaldoPorAnulacionOP(idCtaPagar, idFactura, importe)
+    CuentaPagarDAO → BD      : SELECT cta_pag_saldo ... FOR UPDATE
+    CuentaPagarDAO → BD      : UPDATE cta_pag_saldo += importe, cta_pag_estado = 'En provision'
+                              (vuelve a quedar reservada por la provisión que se reactiva)
+
+  paso 3 — Anular los cheques emitidos por esta OP
+  Service → FormaPagoDetalleDAO : listarPorOrden(idOrdenPago)
+  FormaPagoDetalleDAO → BD       : SELECT forma_pago_detalle
+  loop por cada forma con id_cheque != NULL:
+    Service → ChequeDAO : anularCheque(idCheque)
+    ChequeDAO → BD      : UPDATE cheque SET chq_estado = 'Anulado'
+
+  paso 4 — Anular la cabecera de la OP
+  Service → OrdenPagoDAO : anularOrdenPago(idOrdenPago)
+  OrdenPagoDAO → BD      : UPDATE orden_pago_cabecera SET ord_pag_estado = 'Anulado'
+
+  paso 5 — Reactivar la provisión
+  Service → ProvisionCuentaPagarDAO : actualizarEstado(idProvision, 'Pendiente')
+  ProvisionCuentaPagarDAO → BD      : UPDATE provision_cuenta_pagar SET estado = 'Pendiente'
+
+Service → BD : commit()                                       [fin TX OK]
+  (cualquier throw en 1..5 → rollback ; se re-lanza la excepción)
+```
+
+**Simetría exacta (por qué es correcta la reversa):**
+
+| Efecto | Generar (Flujo 1) | Anular (Flujo 2) |
+|---|---|---|
+| Saldo de la factura | `saldo -= importe` (`descontarSaldo`) | `saldo += importe` (`restaurarSaldoPorAnulacionOP`) |
+| Estado de `cuenta_pagar` | `'En provision'` → recalc por saldo | vuelve a `'En provision'` (reservada) |
+| Cheque | INSERT `cheque` (estado `'Emitido'`) | `chq_estado = 'Anulado'` |
+| Cabecera OP | INSERT (estado `'Pendiente'`/activo) | `ord_pag_estado = 'Anulado'` |
+| Provisión | `'Pendiente'` → `'Procesada'` | `'Procesada'` → `'Pendiente'` (reutilizable) |
+
+> **Estados de la provisión (máquina de estados):** `Pendiente` (activa, lista para pagar) →
+> `Procesada` (consumida por una OP) → y si se anula la OP, vuelve a `Pendiente`. `Anulado` es un
+> estado terminal aparte (anulación de la propia provisión, no de la OP).
+>
+> **Nota de alcance:** los cheques se marcan `'Anulado'` (no se borran) por trazabilidad. No se
+> "devuelve" el número al rango de la chequera: `proximoNumeroCheque` usa `MAX(chq_numero)`, así que un
+> cheque anulado deja su número consumido (comportamiento bancario correcto: un talonario no reusa
+> números). Si en el futuro se quisiera reusar, habría que excluir los anulados del `MAX`.
+
 **Componentes a crear:**
 - `OrdenPagoDAO` — **reescribir**: quitar el CRUD aislado de cabecera; insert de cabecera sin `id_cheque`/`id_cuenta`; parte de la tx.
 - `OrdenPagoDetalleDAO` — insert N filas (con FK compuesta a `cuenta_pagar`).
@@ -269,9 +416,12 @@ Nota: la conciliación referencia **`id_forma_pago_det`** (nivel cuenta/instrume
 > "no editar/anular factura con pagos aplicados" (ver `NOTA_CREDITO_DEBITO_PLAN.md` §8.4) detecta el pago.
 
 > **📍 DÓNDE NOS QUEDAMOS (para retomar):** Provisión terminada y probada. **Esquema de la OP LISTO**
-> (todos los ajustes de Power Architect aplicados y verificados; seed de chequera cargado). **Próximo
-> paso:** (1) alinear los 3 POJOs (`OrdenPago`, `OrdenPagoDetalle`, `FormaPagoDetalle`), (2) construir
-> DAOs + `OrdenPagoService` (5 pasos) + Servlet + `ordenPago.jsp` como está descrito arriba.
+> y **BACKEND de la OP TERMINADO** (2026-07-24): POJOs alineados y verificados, DAOs + `OrdenPagoService`
+> transaccional con **guard anti doble-pago**, **consumo de provisión** y **anulación con reversa total**
+> (ver §C.1, flujos para diagrama de secuencia). **Próximo paso:** construir la capa web —
+> `OrdenPagoServlet` (Session+Token) + `ordenPago.jsp` (prototipo), registrar en `AuthorizationFilter`
+> y menú. Recordar: al emitir cheque, el servlet debe **setear `usuario` desde la sesión** (el Service lo
+> valida). Falta compilar/probar de punta a punta (no hay JDK en el entorno actual del análisis).
 
 ---
 
@@ -360,15 +510,16 @@ existan OP, débitos y créditos (por eso va al final).
 - [x] `ProvisionCuentaPagarServlet` (Session+Token) + `provision.jsp`; valida **neto ≥ 0**
 - [x] Registrar `/ProvisionCuentaPagarServlet` en `AuthorizationFilter` (módulo `tesoreria`)
 
-**C. Orden de pago** — 🔨 EN CONSTRUCCIÓN (esquema ✅ listo; ver §C)
+**C. Orden de pago** — 🔨 EN CONSTRUCCIÓN (esquema ✅ listo; **backend ✅ hecho**; falta capa web)
 - [x] ✅ Esquema en Power Architect: seriales `id_orden_pago_det` / `id_forma_pago_det`, `id_cheque` movido a `forma_pago_detalle`, `id_cheque`/`id_cuenta` fuera de la cabecera, `conciliacion_bancaria_detalle.id_forma_pago_det` nullable
 - [x] ✅ Seed de `cuenta` / `tipo_cheque` / `chequera` en `Inserts inciales.sql`
-- [ ] ⚠️ **Alinear POJOs** (§11): `OrdenPago` (quitar idCheque/idCuenta), `OrdenPagoDetalle` (agregar idOrdenPagoDet), `FormaPagoDetalle` (quitar transferencia/cheque, agregar Cheque)
-- [ ] `OrdenPagoDAO` → **reescribir** transaccional (cabecera sin idCheque/idCuenta) + `OrdenPagoDetalleDAO` (N filas)
-- [ ] `FormaPagoDetalleDAO` (con `id_cheque` nullable) + `ChequeDAO` (insert + `proximoNumero`) + `ChequeraDAO`
-- [ ] `CuentaPagarDAO.descontarSaldo(...)` + recálculo de estado con `calcularEstadoPorSaldo`
-- [ ] `OrdenPagoService` (dueño de la tx, orquesta los 5 pasos). **NO** inserta conciliación
-- [ ] `OrdenPagoServlet` (Session+Token) + `ordenPago.jsp`; validar **sin efectivo**, **provisión previa obligatoria**, **Σ formas = monto OP**, **Nro cheque en rango**
+- [x] ✅ **Alinear POJOs** (§11): `OrdenPago` (sin idCheque/idCuenta), `OrdenPagoDetalle` (con idOrdenPagoDet), `FormaPagoDetalle` (con `Cheque`) — verificado contra el esquema
+- [x] ✅ `OrdenPagoDAO` transaccional (cabecera sin idCheque/idCuenta) + `OrdenPagoDetalleDAO` (N filas, FK compuesta)
+- [x] ✅ `FormaPagoDetalleDAO` (con `id_cheque` nullable) + `ChequeDAO` (insert + `anularCheque`) + `ChequeraDAO` (`proximoNumeroCheque` con validación de rango)
+- [x] ✅ `CuentaPagarDAO.descontarSaldo(...)` + `restaurarSaldoPorAnulacionOP(...)`, recálculo con `calcularEstadoPorSaldo`
+- [x] ✅ `OrdenPagoService` (dueño de la tx). **NO** inserta conciliación. Incluye **guard anti doble-pago** (paso 0, provisión `FOR UPDATE`) + **consumo de provisión** (paso 5, `'Procesada'`) + **`anularOrdenPagoCompleta`** con reversa total. Ver §C.1. Validación de cheque (chequera/tipo/usuario) evita NPE de emisión.
+- [x] ✅ `ordenPago.jsp` — vista calcada de `facturaCompra.jsp`/`provision.jsp` (form único + JS, Session+Token). Cabecera SIN Banco/Cuenta/Cheque (movidos al carrito); **bloque "Formas de Pago" tipo carrito** (Tipo Cheque/Transferencia, cuenta bancaria, monto, referencia + campos de cheque condicionales: chequera/tipo/fechas, con N° auto al generar); detalle de facturas SOLO LECTURA; "Tipo de pago" (`ord_pag_tipo_pago`) con **tooltip**; validación visual Σ formas == Importe Total; modales Buscar OP / Buscar Provisión / confirmaciones. **El contrato de atributos/acciones que espera el servlet está documentado en el encabezado del JSP.**
+- [ ] `OrdenPagoServlet` (Session+Token) — implementar según el contrato del `ordenPago.jsp`: acciones `Nuevo, CargarOrdenPago, CargarProvision, CambiarTipoPago, AgregarForma, EliminarForma, Generar, Anular, Cancelar`; poblar combos (sucursal/moneda/cuentas/formaPago/chequeras/tipoCheque); validar **sin efectivo**, **provisión previa**, **Σ formas = monto OP**, **N° cheque en rango**. Al emitir cheque, **setear `usuario` desde la sesión** (lo exige el Service).
 - [ ] Registrar `/OrdenPagoServlet` en `AuthorizationFilter` (módulo `tesoreria`) + link en `menuLateral.jsp`
 
 **D. Débitos / Créditos**
