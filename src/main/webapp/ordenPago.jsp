@@ -202,39 +202,6 @@
                                 </div>
                             </div>
 
-                            <!-- Detalle de orden de pago (facturas de la provisión, SOLO LECTURA) -->
-                            <div class="row mb-3">
-                                <div class="col custom-card">
-                                    <div class="table-responsive">
-                                        <table id="tablaDetalleOP" class="table table-bordered table-sm custom-table">
-                                            <thead>
-                                                <tr>
-                                                    <th class="text-bg-dark text-center">Item</th>
-                                                    <th class="text-bg-dark text-center">Nro. de factura</th>
-                                                    <th class="text-bg-dark text-center">Importe total</th>
-                                                    <th class="text-bg-dark text-center">Saldo pendiente</th>
-                                                    <th class="text-bg-dark text-center">Importe a pagar</th>
-                                                    <th class="text-bg-dark text-center">Plazo de pago</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <c:forEach var="det" items="${listaDetalle}" varStatus="st">
-                                                    <tr>
-                                                        <td class="text-center">${st.index + 1}</td>
-                                                        <td class="text-center">${det.cuentaPagar.facturaCompra.numero}</td>
-                                                        <td class="text-end"><fmt:formatNumber value="${det.cuentaPagar.monto}" pattern="#,##0"/></td>
-                                                        <td class="text-end"><fmt:formatNumber value="${det.cuentaPagar.saldo}" pattern="#,##0"/></td>
-                                                        <td class="text-end"><fmt:formatNumber value="${det.monto}" pattern="#,##0"/></td>
-                                                        <td class="text-center">${empty det.cuentaPagar.plazo ? '-' : det.cuentaPagar.plazo} días</td>
-                                                    </tr>
-                                                </c:forEach>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                    <small class="text-muted">Las facturas y sus importes vienen fijos de la provisión (solo lectura).</small>
-                                </div>
-                            </div>
-
                             <!-- FORMAS DE PAGO (botón -> modal) -->
                             <div class="row mb-3">
                                 <div class="col custom-card">
@@ -401,8 +368,45 @@
                                             </div>
                                         </div>
                                     </div>
+                                </div>
+                            </div>
 
-                                    <!-- Botones finales + total (vista principal) -->
+                            <!-- Detalle de orden de pago (facturas de la provisión, SOLO LECTURA) -->
+                            <div class="row mb-3">
+                                <div class="col custom-card">
+                                    <div class="table-responsive">
+                                        <table id="tablaDetalleOP" class="table table-bordered table-sm custom-table">
+                                            <thead>
+                                                <tr>
+                                                    <th class="text-bg-dark text-center">Item</th>
+                                                    <th class="text-bg-dark text-center">Nro. de factura</th>
+                                                    <th class="text-bg-dark text-center">Importe total</th>
+                                                    <th class="text-bg-dark text-center">Saldo pendiente</th>
+                                                    <th class="text-bg-dark text-center">Importe a pagar</th>
+                                                    <th class="text-bg-dark text-center">Plazo de pago</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <c:forEach var="det" items="${listaDetalle}" varStatus="st">
+                                                    <tr>
+                                                        <td class="text-center">${st.index + 1}</td>
+                                                        <td class="text-center">${det.cuentaPagar.facturaCompra.numero}</td>
+                                                        <td class="text-end"><fmt:formatNumber value="${det.cuentaPagar.monto}" pattern="#,##0"/></td>
+                                                        <td class="text-end"><fmt:formatNumber value="${det.cuentaPagar.saldo}" pattern="#,##0"/></td>
+                                                        <td class="text-end"><fmt:formatNumber value="${det.monto}" pattern="#,##0"/></td>
+                                                        <td class="text-center">${empty det.cuentaPagar.plazo ? '-' : det.cuentaPagar.plazo} días</td>
+                                                    </tr>
+                                                </c:forEach>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <small class="text-muted">Las facturas y sus importes vienen fijos de la provisión (solo lectura).</small>
+                                </div>
+                            </div>
+
+                            <!-- Botones finales + total (vista principal) -->
+                            <div class="row mb-3">
+                                <div class="col custom-card">
                                     <div class="row mt-3">
                                         <div class="col-md-6">
                                             <c:if test="${esNuevo or empty token}">
