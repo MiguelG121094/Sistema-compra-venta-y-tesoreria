@@ -5,6 +5,12 @@
 package modelo;
 
 /**
+ * Detalle de la Orden de Pago: una factura de la provisión que se está pagando.
+ *
+ * <p><b>Invariante canónica:</b> {@code facturaCompra} y {@code cuentaPagar.getFacturaCompra()}
+ * refieren SIEMPRE a la misma factura y deben cargarse con la misma información (idealmente la
+ * misma instancia). Ambos son fuentes válidas del id de factura; los DAOs los mantienen
+ * sincronizados al leer y usan {@code cuentaPagar} como origen al insertar.</p>
  *
  * @author Miguel
  */

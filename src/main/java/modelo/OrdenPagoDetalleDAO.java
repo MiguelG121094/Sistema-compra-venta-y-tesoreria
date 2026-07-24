@@ -64,7 +64,10 @@ public class OrdenPagoDetalleDAO {
                     OrdenPagoDetalle det = new OrdenPagoDetalle();
                     det.setIdOrdenPagoDet(rs.getLong("id_orden_pago_det"));
                     det.setMonto(rs.getLong("orden_pag_det_monto"));
+                    // Ambos campos apuntan a la MISMA factura (invariante canónica del detalle):
+                    // cuentaPagar.facturaCompra y facturaCompra son la misma instancia.
                     det.setCuentaPagar(cp);
+                    det.setFacturaCompra(fc);
                     detalles.add(det);
                 }
             }

@@ -14,22 +14,32 @@ import modelo.OrdenPagoDetalle;
 import modelo.OrdenPagoDetalleDAO;
 import modelo.ChequeDAO;
 import modelo.ChequeraDAO;
+import modelo.ProvisionCuentaPagarDAO;
 
 /**
  * Service de Orden de Pago. Dueño de la transacción (setAutoCommit(false)), calcado del patrón
- * de ProvisionCuentaPagarService. Genera la OP en UNA transacción con 5 pasos:
+ * de ProvisionCuentaPagarService. Genera la OP en UNA transacción:
+ *   0. Bloquea la provisión (FOR UPDATE) y valida que esté 'Pendiente' (guard anti doble-pago).
  *   1. INSERT orden_pago_cabecera.
  *   2. INSERT orden_pago_detalle (N facturas de la provisión, SOLO LECTURA).
  *   3. INSERT forma_pago_detalle (N formas: transferencia + cheque(s)); por cada línea de
  *      cheque se emite un cheque real de la chequera (nro dentro del rango).
  *   4. Descuenta cta_pag_saldo de cada factura + recalcula el estado.
- * Ver MODULO_TESORERIA_PLAN.md §C.
+ *   5. Marca la provisión como 'Procesada' (no puede volver a pagarse).
+ * La anulación (anularOrdenPagoCompleta) revierte todo: devuelve el saldo, anula los cheques y
+ * reactiva la provisión a 'Pendiente'. Ver MODULO_TESORERIA_PLAN.md §C.
  *
  * @author Miguel
  */
 public class OrdenPagoService {
 
     private static final String ESTADO_CHEQUE_EMITIDO = "Emitido";
+    private static final String ESTADO_OP_ANULADO     = "Anulado";
+
+    // Estados de la provisión: 'Pendiente' = activa/lista para pagar; 'Procesada' = ya consumida
+    // por una OP (no se puede volver a pagar); 'Anulado' = anulada. Ver MODULO_TESORERIA_PLAN.md §C.
+    private static final String ESTADO_PROV_PENDIENTE = "Pendiente";
+    private static final String ESTADO_PROV_PROCESADA = "Procesada";
 
     public List<OrdenPago> listarOrdenesPago() throws SQLException {
         try (Connection conn = Conexion.getConnection()) {
@@ -88,6 +98,21 @@ public class OrdenPagoService {
             ChequeDAO chequeDAO = new ChequeDAO(conn);
             ChequeraDAO chequeraDAO = new ChequeraDAO(conn);
             CuentaPagarDAO cuentaPagarDAO = new CuentaPagarDAO(conn);
+            ProvisionCuentaPagarDAO provisionDAO = new ProvisionCuentaPagarDAO(conn);
+
+            // 0. Consumir la provisión (guard anti doble-pago): se bloquea la fila de la provisión
+            //    (FOR UPDATE) y se exige que esté 'Pendiente'. Si otra OP ya la procesó (o está
+            //    anulada), se aborta. Dos OPs concurrentes se serializan por el lock y solo la
+            //    primera la ve 'Pendiente'. Ver MODULO_TESORERIA_PLAN.md §C.
+            Long idProvision = orden.getIdProvisionCtaPagar();
+            String estadoProvision = provisionDAO.getEstadoBloqueado(idProvision);
+            if (estadoProvision == null) {
+                throw new SQLException("La provisión " + idProvision + " no existe");
+            }
+            if (!ESTADO_PROV_PENDIENTE.equals(estadoProvision)) {
+                throw new SQLException("La provisión " + idProvision + " no está disponible para pagar "
+                        + "(estado actual: '" + estadoProvision + "'). Ya fue procesada o anulada.");
+            }
 
             // 1. Cabecera
             idOrden = ordenDAO.insertarOrdenPago(orden);
@@ -141,6 +166,9 @@ public class OrdenPagoService {
                     det.getMonto());
             }
 
+            // 5. Marcar la provisión como procesada (ya no puede volver a pagarse).
+            provisionDAO.actualizarEstado(idProvision, ESTADO_PROV_PROCESADA);
+
             conn.commit();
         } catch (SQLException e) {
             if (conn != null) {
@@ -155,6 +183,80 @@ public class OrdenPagoService {
             }
         }
         return idOrden;
+    }
+
+    /**
+     * Anula una Orden de Pago revirtiendo TODOS sus efectos en una sola transacción (reversa
+     * simétrica de {@link #guardarOrdenPagoCompleta}):
+     *   1. Valida que la OP exista y no esté ya anulada.
+     *   2. Por cada factura del detalle: devuelve el importe al cta_pag_saldo y la deja 'En provision'.
+     *   3. Por cada forma de pago con cheque: anula el cheque emitido.
+     *   4. Marca la OP como 'Anulado'.
+     *   5. Reactiva la provisión a 'Pendiente' (vuelve a estar disponible para pagar).
+     * Rollback total si cualquier paso falla. Ver MODULO_TESORERIA_PLAN.md §C.
+     */
+    public void anularOrdenPagoCompleta(Long idOrdenPago) throws SQLException {
+        if (idOrdenPago == null) {
+            throw new SQLException("anularOrdenPagoCompleta: idOrdenPago es nulo");
+        }
+
+        Connection conn = null;
+        try {
+            conn = Conexion.getConnection();
+            conn.setAutoCommit(false);
+
+            OrdenPagoDAO ordenDAO = new OrdenPagoDAO(conn);
+            OrdenPagoDetalleDAO detalleDAO = new OrdenPagoDetalleDAO(conn);
+            FormaPagoDetalleDAO formaDAO = new FormaPagoDetalleDAO(conn);
+            ChequeDAO chequeDAO = new ChequeDAO(conn);
+            CuentaPagarDAO cuentaPagarDAO = new CuentaPagarDAO(conn);
+            ProvisionCuentaPagarDAO provisionDAO = new ProvisionCuentaPagarDAO(conn);
+
+            // 1. Cargar la OP y validar que se pueda anular.
+            OrdenPago orden = ordenDAO.getOrdenPago(idOrdenPago);
+            if (orden == null) {
+                throw new SQLException("La orden de pago " + idOrdenPago + " no existe");
+            }
+            if (ESTADO_OP_ANULADO.equals(orden.getEstado())) {
+                throw new SQLException("La orden de pago " + idOrdenPago + " ya está anulada");
+            }
+
+            // 2. Devolver el saldo de cada factura pagada (queda 'En provision' de nuevo).
+            List<OrdenPagoDetalle> detalles = detalleDAO.listarPorOrden(idOrdenPago);
+            for (OrdenPagoDetalle det : detalles) {
+                cuentaPagarDAO.restaurarSaldoPorAnulacionOP(
+                    det.getCuentaPagar().getIdCuentaPagar(),
+                    det.getCuentaPagar().getFacturaCompra().getIdFacturaCompra(),
+                    det.getMonto());
+            }
+
+            // 3. Anular los cheques emitidos por esta OP.
+            List<FormaPagoDetalle> formas = formaDAO.listarPorOrden(idOrdenPago);
+            for (FormaPagoDetalle fp : formas) {
+                if (fp.getCheque() != null && fp.getCheque().getIdCheque() != null) {
+                    chequeDAO.anularCheque(fp.getCheque().getIdCheque());
+                }
+            }
+
+            // 4. Anular la cabecera de la OP.
+            ordenDAO.anularOrdenPago(idOrdenPago);
+
+            // 5. Reactivar la provisión (vuelve a estar disponible para generar otra OP).
+            provisionDAO.actualizarEstado(orden.getIdProvisionCtaPagar(), ESTADO_PROV_PENDIENTE);
+
+            conn.commit();
+        } catch (SQLException e) {
+            if (conn != null) {
+                conn.rollback();
+            }
+            System.out.println("Error en anularOrdenPagoCompleta - rollback ejecutado: " + e);
+            throw e;
+        } finally {
+            if (conn != null) {
+                conn.setAutoCommit(true);
+                conn.close();
+            }
+        }
     }
 
     /**
@@ -181,6 +283,24 @@ public class OrdenPagoService {
         for (FormaPagoDetalle fp : formasPago) {
             if (fp.getMonto() == null || fp.getMonto() <= 0) {
                 throw new SQLException("Cada forma de pago debe tener un monto mayor a 0");
+            }
+            if (fp.getCuenta() == null || fp.getCuenta().getIdCuenta() == null) {
+                throw new SQLException("Cada forma de pago debe indicar la cuenta bancaria de origen");
+            }
+            // Fix 3: las líneas de cheque requieren los datos mínimos para emitir el cheque real;
+            // sin esto, la emisión fallaría con un NullPointerException poco claro (el Service
+            // defaultea el resto de los campos del cheque, pero NO estos tres).
+            Cheque cheque = fp.getCheque();
+            if (cheque != null) {
+                if (cheque.getChequera() == null || cheque.getChequera().getIdChequera() == null) {
+                    throw new SQLException("La forma de pago con cheque debe indicar la chequera");
+                }
+                if (cheque.getTipoCheque() == null || cheque.getTipoCheque().getIdTipoCheque() == null) {
+                    throw new SQLException("La forma de pago con cheque debe indicar el tipo de cheque");
+                }
+                if (cheque.getUsuario() == null || cheque.getUsuario().getIdUsuario() == null) {
+                    throw new SQLException("La forma de pago con cheque debe tener el usuario que lo emite");
+                }
             }
             sumaFormas += fp.getMonto();
         }

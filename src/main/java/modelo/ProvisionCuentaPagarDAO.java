@@ -149,4 +149,44 @@ public class ProvisionCuentaPagarDAO {
             stmt.executeUpdate();
         }
     }
+
+    /**
+     * Lee el estado de la provisión bloqueando la fila hasta el commit (FOR UPDATE). Sirve para
+     * consumir la provisión al generar la Orden de Pago sin condición de carrera: dos OPs
+     * concurrentes sobre la misma provisión se serializan y solo la primera la ve 'Pendiente'.
+     * Ver MODULO_TESORERIA_PLAN.md §C (evita el doble pago).
+     *
+     * @return el estado actual, o null si la provisión no existe
+     */
+    public String getEstadoBloqueado(Long idProvision) throws SQLException {
+        if (idProvision == null) {
+            return null;
+        }
+        String sql = "SELECT prov_cta_pag_estado FROM provision_cuenta_pagar "
+                   + "WHERE id_provi_cta_pagar_cabecera = ? FOR UPDATE";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, idProvision);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getString("prov_cta_pag_estado");
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Cambia el estado de la provisión (p. ej. 'Pendiente' -&gt; 'Procesada' al generar la OP, o
+     * 'Procesada' -&gt; 'Pendiente' al anularla). Corre sobre la Connection compartida (la
+     * transacción la controla el Service).
+     */
+    public void actualizarEstado(Long idProvision, String estado) throws SQLException {
+        String sql = "UPDATE provision_cuenta_pagar SET prov_cta_pag_estado = ? "
+                   + "WHERE id_provi_cta_pagar_cabecera = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, estado);
+            stmt.setLong(2, idProvision);
+            stmt.executeUpdate();
+        }
+    }
 }

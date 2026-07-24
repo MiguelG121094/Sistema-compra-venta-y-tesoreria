@@ -59,4 +59,19 @@ public class ChequeDAO {
             throw new SQLException("No se generó id de cheque");
         }
     }
+
+    /**
+     * Anula un cheque emitido (estado 'Anulado'). Se usa al anular la Orden de Pago que lo emitió.
+     * Corre sobre la Connection compartida; la transacción la controla el Service.
+     */
+    public void anularCheque(Long idCheque) throws SQLException {
+        if (idCheque == null) {
+            return;
+        }
+        String sql = "UPDATE cheque SET chq_estado = 'Anulado' WHERE id_cheque = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, idCheque);
+            stmt.executeUpdate();
+        }
+    }
 }
