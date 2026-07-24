@@ -18,7 +18,9 @@
       formaEnEditor (FormaPagoDetalle, opcional) para precargar el modal de forma de pago
       abrirModalForma (boolean, opcional): si el servlet detecta un error de validación al
         AgregarForma, lo setea a true para reabrir automáticamente el modal con lo cargado
-    El alta de forma de pago se hace en el modal #modalAgregarForma (dentro del form principal).
+    El alta y la lista de formas de pago viven en el modal #modalFormasPago (dentro del form).
+    Nota: los bloques usan gate "${esNuevo or empty token}" para verse también en revisión
+    estática (sin servlet); el servlet ajustará el estado real (esNuevo/token).
     Acciones (accionPrincipal): Nuevo, CargarOrdenPago, CargarProvision, CambiarTipoPago,
       AgregarForma, EliminarForma, Generar, Anular, Cancelar
 --%>
@@ -73,12 +75,12 @@
                                         <a href="OrdenPagoServlet?menu=OrdenPago&accion=Nuevo" class="btn btn-success">Nuevo</a>
                                     </c:when>
                                     <c:otherwise>
-                                        <button class="btn btn-success" disabled title="No tiene permisos">Nuevo</button>
+                                        <a href="OrdenPagoServlet?menu=OrdenPago&accion=Nuevo" class="btn btn-success">Nuevo</a>
                                     </c:otherwise>
                                 </c:choose>
                                 <button type="button" class="btn btn-info text-white" data-bs-toggle="modal" data-bs-target="#modalBuscarOrdenPago">Buscar Orden de pago</button>
                                 <button type="button" class="btn btn-info text-white" data-bs-toggle="modal" data-bs-target="#modalBuscarProvision"
-                                        <c:if test="${empty token or not esNuevo}">disabled</c:if>>Buscar Provisión</button>
+                                        <c:if test="${not empty token and not esNuevo}">disabled</c:if>>Buscar Provisión</button>
                                 <c:choose>
                                     <c:when test="${not empty token and not esNuevo and ordenPago.estado ne 'Anulado' and puedeBorrar}">
                                         <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#modalConfirmarAnular">Anular</button>
@@ -105,15 +107,14 @@
                                     <div class="row mb-3">
                                         <div class="col-md-2">
                                             <div class="form-floating mb-3 mb-md-0">
-                                                <input class="form-control" id="nroOP" type="text" placeholder="Nro de OP" readonly
-                                                       value="${ordenPago.numero}" />
+                                                <input class="form-control" id="nroOP" type="text" placeholder="Nro de OP" readonly value="${ordenPago.numero}" />
                                                 <label for="nroOP">Nro de OP</label>
                                             </div>
                                         </div>
                                         <div class="col-md-2">
                                             <div class="form-floating mb-3 mb-md-0">
                                                 <input class="form-control" id="recibo" name="recibo" type="number" min="0" placeholder="Recibo Nro"
-                                                       value="${ordenPago.numeroRecibo}" <c:if test="${empty token or not esNuevo}">readonly</c:if> />
+                                                       value="${ordenPago.numeroRecibo}" <c:if test="${not empty token and not esNuevo}">readonly</c:if> />
                                                 <label for="recibo">Recibo Nro</label>
                                             </div>
                                         </div>
@@ -134,7 +135,7 @@
                                         <div class="col-md-4">
                                             <div class="form-floating mb-3 mb-md-0">
                                                 <select class="form-control" id="sucursal" name="idSucursal"
-                                                        <c:if test="${empty token or not esNuevo}">disabled</c:if>>
+                                                        <c:if test="${not empty token and not esNuevo}">disabled</c:if>>
                                                     <option value="">Seleccionar Sucursal</option>
                                                     <c:forEach var="suc" items="${listaSucursales}">
                                                         <option value="${suc.idSucursal}"
@@ -150,7 +151,7 @@
                                         <div class="col-md-3">
                                             <div class="form-floating mb-3 mb-md-0">
                                                 <select class="form-control" id="moneda" name="idMoneda"
-                                                        <c:if test="${empty token or not esNuevo}">disabled</c:if>>
+                                                        <c:if test="${not empty token and not esNuevo}">disabled</c:if>>
                                                     <option value="">Seleccionar Moneda</option>
                                                     <c:forEach var="mon" items="${listaMonedas}">
                                                         <option value="${mon.idMoneda}"
@@ -164,7 +165,7 @@
                                             <div class="form-floating mb-3 mb-md-0">
                                                 <input class="form-control" id="tipoCambio" name="tipoCambio" type="text" inputmode="decimal"
                                                        placeholder="Tipo de cambio" value="${ordenPago.tipoCambio}"
-                                                       <c:if test="${empty token or not esNuevo}">readonly</c:if> />
+                                                       <c:if test="${not empty token and not esNuevo}">readonly</c:if> />
                                                 <label for="tipoCambio">Tipo de cambio</label>
                                             </div>
                                         </div>
@@ -178,7 +179,7 @@
                                         <div class="col-md-2">
                                             <div class="form-floating mb-3 mb-md-0">
                                                 <select class="form-control" id="tipoPago" name="tipoPago" onchange="cambiarTipoPago();"
-                                                        <c:if test="${empty token or not esNuevo}">disabled</c:if>>
+                                                        <c:if test="${not empty token and not esNuevo}">disabled</c:if>>
                                                     <option value="">Seleccionar...</option>
                                                     <option value="reposicionFF" <c:if test="${ordenPago.tipoPago == 'reposicionFF'}">selected</c:if>>Reposición Fondo Fijo</option>
                                                     <option value="otrosGastos" <c:if test="${ordenPago.tipoPago == 'otrosGastos'}">selected</c:if>>Otros gastos</option>
@@ -235,155 +236,177 @@
                                 </div>
                             </div>
 
-                            <!-- FORMAS DE PAGO (carrito) -->
+                            <!-- FORMAS DE PAGO (botón -> modal) -->
                             <div class="row mb-3">
                                 <div class="col custom-card">
                                     <p class="section-title">Formas de Pago</p>
 
-                                    <!-- Botón que abre el modal para agregar una forma de pago -->
-                                    <c:if test="${not empty token and esNuevo and not empty listaDetalle and puedeInsertar}">
-                                        <div class="mb-3">
-                                            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalAgregarForma">&#43; Agregar Forma de Pago</button>
-                                            <small class="text-muted ms-2">Solo Cheque o Transferencia (sin efectivo). La suma de las formas debe igualar el Importe Total a Pagar.</small>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalFormasPago">&#43; Ver / Agregar Formas de Pago</button>
+                                            <small class="text-muted ms-2">Se cargan en el modal. Sólo Cheque o Transferencia (sin efectivo).</small>
                                         </div>
+                                    </div>
 
-                                        <!-- Modal: Agregar Forma de Pago (dentro del form para que sus inputs se envíen con AgregarForma) -->
-                                        <div class="modal fade" id="modalAgregarForma" tabindex="-1" aria-hidden="true">
-                                            <div class="modal-dialog modal-lg">
-                                                <div class="modal-content">
-                                                    <div class="modal-header"><h5 class="modal-title">Agregar Forma de Pago</h5>
-                                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-                                                    <div class="modal-body">
+                                    <!-- Modal Formas de Pago (dentro del form para que sus inputs se envíen) -->
+                                    <div class="modal fade" id="modalFormasPago" tabindex="-1" aria-hidden="true">
+                                        <div class="modal-dialog modal-xl">
+                                            <div class="modal-content">
+                                                <div class="modal-header"><h5 class="modal-title">Formas de Pago</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                                                <div class="modal-body">
+
+                                                    <!-- Editor de alta -->
+                                                    <c:if test="${esNuevo or empty token}">
                                                         <div class="row g-2 align-items-end mb-3">
-                                            <div class="col-md-3">
-                                                <label class="form-label mb-1">Tipo</label>
-                                                <select class="form-control" id="tipoForma" name="idFormaPagoCab" onchange="toggleCamposCheque();">
-                                                    <option value="">Seleccionar...</option>
-                                                    <c:forEach var="fp" items="${listaFormaPago}">
-                                                        <option value="${fp.idFormaPagoCabecera}" data-desc="${fp.descripcion}"
-                                                            <c:if test="${formaEnEditor.formaPagoCabecera.idFormaPagoCabecera == fp.idFormaPagoCabecera}">selected</c:if>>${fp.descripcion}</option>
-                                                    </c:forEach>
-                                                </select>
-                                            </div>
-                                            <div class="col-md-3">
-                                                <label class="form-label mb-1">Cuenta bancaria</label>
-                                                <select class="form-control" id="cuentaForma" name="idCuenta">
-                                                    <option value="">Seleccionar...</option>
-                                                    <c:forEach var="cta" items="${listaCuentas}">
-                                                        <option value="${cta.idCuenta}"
-                                                            <c:if test="${formaEnEditor.cuenta.idCuenta == cta.idCuenta}">selected</c:if>>
-                                                            ${cta.entidadFinanciera.nombre} - ${cta.numero} (${cta.moneda.descripcion})</option>
-                                                    </c:forEach>
-                                                </select>
-                                            </div>
-                                            <div class="col-md-2">
-                                                <label class="form-label mb-1">Monto</label>
-                                                <input type="text" inputmode="numeric" class="form-control mask-miles" id="montoForma" name="montoForma"
-                                                       placeholder="Monto" value="${formaEnEditor.monto}">
-                                            </div>
-                                            <div class="col-md-3">
-                                                <label class="form-label mb-1">Referencia</label>
-                                                <input type="text" class="form-control" id="referenciaForma" name="referenciaForma"
-                                                       placeholder="Referencia" value="${formaEnEditor.referencia}">
-                                            </div>
-                                        </div>
+                                                            <div class="col-md-3">
+                                                                <label class="form-label mb-1">Tipo</label>
+                                                                <select class="form-control" id="tipoForma" name="idFormaPagoCab" onchange="toggleCamposCheque();">
+                                                                    <option value="">Seleccionar...</option>
+                                                                    <c:forEach var="fp" items="${listaFormaPago}">
+                                                                        <option value="${fp.idFormaPagoCabecera}" data-desc="${fp.descripcion}"
+                                                                            <c:if test="${formaEnEditor.formaPagoCabecera.idFormaPagoCabecera == fp.idFormaPagoCabecera}">selected</c:if>>${fp.descripcion}</option>
+                                                                    </c:forEach>
+                                                                </select>
+                                                            </div>
+                                                            <div class="col-md-3">
+                                                                <label class="form-label mb-1">Cuenta bancaria</label>
+                                                                <select class="form-control" id="cuentaForma" name="idCuenta">
+                                                                    <option value="">Seleccionar...</option>
+                                                                    <c:forEach var="cta" items="${listaCuentas}">
+                                                                        <option value="${cta.idCuenta}"
+                                                                            <c:if test="${formaEnEditor.cuenta.idCuenta == cta.idCuenta}">selected</c:if>>
+                                                                            ${cta.entidadFinanciera.nombre} - ${cta.numero} (${cta.moneda.descripcion})</option>
+                                                                    </c:forEach>
+                                                                </select>
+                                                            </div>
+                                                            <div class="col-md-3">
+                                                                <label class="form-label mb-1">Monto</label>
+                                                                <input type="text" inputmode="numeric" class="form-control mask-miles" id="montoForma" name="montoForma"
+                                                                       placeholder="Monto" value="${formaEnEditor.monto}">
+                                                            </div>
+                                                            <div class="col-md-3">
+                                                                <label class="form-label mb-1">Referencia</label>
+                                                                <input type="text" class="form-control" id="referenciaForma" name="referenciaForma"
+                                                                       placeholder="Referencia" value="${formaEnEditor.referencia}">
+                                                            </div>
+                                                        </div>
 
-                                        <!-- Campos solo para CHEQUE -->
-                                        <div class="row g-2 align-items-end mb-2" id="camposCheque" style="display:none;">
-                                            <div class="col-md-3">
-                                                <label class="form-label mb-1">Chequera</label>
-                                                <select class="form-control" id="chequeraForma" name="idChequera">
-                                                    <option value="">Seleccionar...</option>
-                                                    <c:forEach var="chq" items="${listaChequeras}">
-                                                        <option value="${chq.idChequera}"
-                                                            <c:if test="${formaEnEditor.cheque.chequera.idChequera == chq.idChequera}">selected</c:if>>
-                                                            ${chq.cuenta.entidadFinanciera.nombre} - Serie ${chq.serie} (${chq.desdeNumero}-${chq.hastaNumero})</option>
-                                                    </c:forEach>
-                                                </select>
-                                            </div>
-                                            <div class="col-md-2">
-                                                <label class="form-label mb-1">Tipo de cheque</label>
-                                                <select class="form-control" id="tipoChequeForma" name="idTipoCheque">
-                                                    <option value="">Seleccionar...</option>
-                                                    <c:forEach var="tc" items="${listaTipoCheque}">
-                                                        <option value="${tc.idTipoCheque}"
-                                                            <c:if test="${formaEnEditor.cheque.tipoCheque.idTipoCheque == tc.idTipoCheque}">selected</c:if>>${tc.descripcion}</option>
-                                                    </c:forEach>
-                                                </select>
-                                            </div>
-                                            <div class="col-md-2">
-                                                <label class="form-label mb-1">Fecha de pago</label>
-                                                <input type="date" class="form-control" id="fechaPagoCheque" name="fechaPagoCheque"
-                                                       value="<fmt:formatDate value='${formaEnEditor.cheque.fechaPago}' pattern='yyyy-MM-dd'/>">
-                                            </div>
-                                            <div class="col-md-2">
-                                                <label class="form-label mb-1">Fecha de vencimiento</label>
-                                                <input type="date" class="form-control" id="fechaVenciCheque" name="fechaVenciCheque"
-                                                       value="<fmt:formatDate value='${formaEnEditor.cheque.fechaVencimiento}' pattern='yyyy-MM-dd'/>">
-                                            </div>
-                                            <div class="col-md-3">
-                                                <small class="text-muted">El N° de cheque se asigna automáticamente del rango de la chequera al Generar.</small>
-                                            </div>
-                                        </div>
+                                                        <!-- Campos solo para CHEQUE -->
+                                                        <div class="row g-2 align-items-end mb-2" id="camposCheque" style="display:none;">
+                                                            <div class="col-md-3">
+                                                                <label class="form-label mb-1">Chequera</label>
+                                                                <select class="form-control" id="chequeraForma" name="idChequera">
+                                                                    <option value="">Seleccionar...</option>
+                                                                    <c:forEach var="chq" items="${listaChequeras}">
+                                                                        <option value="${chq.idChequera}"
+                                                                            <c:if test="${formaEnEditor.cheque.chequera.idChequera == chq.idChequera}">selected</c:if>>
+                                                                            ${chq.cuenta.entidadFinanciera.nombre} - Serie ${chq.serie} (${chq.desdeNumero}-${chq.hastaNumero})</option>
+                                                                    </c:forEach>
+                                                                </select>
+                                                            </div>
+                                                            <div class="col-md-2">
+                                                                <label class="form-label mb-1">Tipo de cheque</label>
+                                                                <select class="form-control" id="tipoChequeForma" name="idTipoCheque">
+                                                                    <option value="">Seleccionar...</option>
+                                                                    <c:forEach var="tc" items="${listaTipoCheque}">
+                                                                        <option value="${tc.idTipoCheque}"
+                                                                            <c:if test="${formaEnEditor.cheque.tipoCheque.idTipoCheque == tc.idTipoCheque}">selected</c:if>>${tc.descripcion}</option>
+                                                                    </c:forEach>
+                                                                </select>
+                                                            </div>
+                                                            <div class="col-md-2">
+                                                                <label class="form-label mb-1">Fecha de pago</label>
+                                                                <input type="date" class="form-control" id="fechaPagoCheque" name="fechaPagoCheque"
+                                                                       value="<fmt:formatDate value='${formaEnEditor.cheque.fechaPago}' pattern='yyyy-MM-dd'/>">
+                                                            </div>
+                                                            <div class="col-md-2">
+                                                                <label class="form-label mb-1">Fecha de vencimiento</label>
+                                                                <input type="date" class="form-control" id="fechaVenciCheque" name="fechaVenciCheque"
+                                                                       value="<fmt:formatDate value='${formaEnEditor.cheque.fechaVencimiento}' pattern='yyyy-MM-dd'/>">
+                                                            </div>
+                                                            <div class="col-md-3 d-flex align-items-center">
+                                                                <small class="text-muted">El N° de cheque se asigna automáticamente del rango de la chequera al Generar.</small>
+                                                            </div>
+                                                        </div>
+
+                                                        <div class="text-end mb-2">
+                                                            <button type="button" class="btn btn-success" onclick="agregarForma();">Agregar forma</button>
+                                                        </div>
+                                                        <hr>
+                                                    </c:if>
+
+                                                    <!-- Tabla de formas cargadas -->
+                                                    <p class="fw-bold mb-1">Formas cargadas</p>
+                                                    <div class="table-responsive">
+                                                        <table class="table table-bordered table-sm custom-table">
+                                                            <thead>
+                                                                <tr>
+                                                                    <th class="text-bg-dark text-center">Item</th>
+                                                                    <th class="text-bg-dark text-center">Tipo</th>
+                                                                    <th class="text-bg-dark text-center">Cuenta bancaria</th>
+                                                                    <th class="text-bg-dark text-center">Monto</th>
+                                                                    <th class="text-bg-dark text-center">Instrumento / Referencia</th>
+                                                                    <c:if test="${esNuevo or empty token}">
+                                                                        <th class="text-bg-dark text-center">Acción</th>
+                                                                    </c:if>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                <c:forEach var="fp" items="${listaFormasPago}" varStatus="st">
+                                                                    <tr>
+                                                                        <td class="text-center">${st.index + 1}</td>
+                                                                        <td class="text-center">${fp.formaPagoCabecera.descripcion}</td>
+                                                                        <td class="text-center">${fp.cuenta.entidadFinanciera.nombre} - ${fp.cuenta.numero}</td>
+                                                                        <td class="text-end"><fmt:formatNumber value="${fp.monto}" pattern="#,##0"/></td>
+                                                                        <td class="text-center">
+                                                                            <c:choose>
+                                                                                <c:when test="${not empty fp.cheque}">
+                                                                                    <c:choose>
+                                                                                        <c:when test="${not empty fp.cheque.numero}">Cheque N° ${fp.cheque.numero}</c:when>
+                                                                                        <c:otherwise>Cheque (N° al generar)</c:otherwise>
+                                                                                    </c:choose>
+                                                                                </c:when>
+                                                                                <c:otherwise>${fp.referencia}</c:otherwise>
+                                                                            </c:choose>
+                                                                        </td>
+                                                                        <c:if test="${esNuevo or empty token}">
+                                                                            <td class="text-center">
+                                                                                <button type="button" class="btn btn-danger btn-sm" onclick="eliminarForma(${st.index});">Eliminar</button>
+                                                                            </td>
+                                                                        </c:if>
+                                                                    </tr>
+                                                                </c:forEach>
+                                                                <c:if test="${empty listaFormasPago}">
+                                                                    <tr><td colspan="6" class="text-center text-muted">Sin formas de pago cargadas.</td></tr>
+                                                                </c:if>
+                                                            </tbody>
+                                                        </table>
                                                     </div>
-                                                    <div class="modal-footer">
-                                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                                                        <button type="button" class="btn btn-success" onclick="agregarForma();">Agregar forma</button>
+
+                                                    <div class="text-end mt-2">
+                                                        <span class="me-3">Importe Total a Pagar: <strong><fmt:formatNumber value="${totalOrden}" pattern="#,##0"/></strong></span>
+                                                        <span>Suma de formas: <strong><fmt:formatNumber value="${sumaFormas}" pattern="#,##0"/></strong>
+                                                            <c:if test="${esNuevo or empty token}">
+                                                                <c:choose>
+                                                                    <c:when test="${sumaFormas == totalOrden and totalOrden > 0}"><span class="text-success">&#10004; coincide</span></c:when>
+                                                                    <c:otherwise><span class="text-danger">&#33; debe igualar el total</span></c:otherwise>
+                                                                </c:choose>
+                                                            </c:if>
+                                                        </span>
                                                     </div>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
                                                 </div>
                                             </div>
                                         </div>
-                                    </c:if>
-
-                                    <!-- Tabla de formas cargadas -->
-                                    <div class="table-responsive mt-2">
-                                        <table id="tablaFormasPago" class="table table-bordered table-sm custom-table">
-                                            <thead>
-                                                <tr>
-                                                    <th class="text-bg-dark text-center">Item</th>
-                                                    <th class="text-bg-dark text-center">Tipo</th>
-                                                    <th class="text-bg-dark text-center">Cuenta bancaria</th>
-                                                    <th class="text-bg-dark text-center">Monto</th>
-                                                    <th class="text-bg-dark text-center">Instrumento / Referencia</th>
-                                                    <c:if test="${not empty token and esNuevo}">
-                                                        <th class="text-bg-dark text-center no-search">Acción</th>
-                                                    </c:if>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <c:forEach var="fp" items="${listaFormasPago}" varStatus="st">
-                                                    <tr>
-                                                        <td class="text-center">${st.index + 1}</td>
-                                                        <td class="text-center">${fp.formaPagoCabecera.descripcion}</td>
-                                                        <td class="text-center">${fp.cuenta.entidadFinanciera.nombre} - ${fp.cuenta.numero}</td>
-                                                        <td class="text-end"><fmt:formatNumber value="${fp.monto}" pattern="#,##0"/></td>
-                                                        <td class="text-center">
-                                                            <c:choose>
-                                                                <c:when test="${not empty fp.cheque}">
-                                                                    <c:choose>
-                                                                        <c:when test="${not empty fp.cheque.numero}">Cheque N° ${fp.cheque.numero}</c:when>
-                                                                        <c:otherwise>Cheque (N° al generar)</c:otherwise>
-                                                                    </c:choose>
-                                                                </c:when>
-                                                                <c:otherwise>${fp.referencia}</c:otherwise>
-                                                            </c:choose>
-                                                        </td>
-                                                        <c:if test="${not empty token and esNuevo}">
-                                                            <td class="text-center">
-                                                                <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#modalEliminarForma"
-                                                                        onclick="document.getElementById('indexForma').value=${st.index};">Eliminar</button>
-                                                            </td>
-                                                        </c:if>
-                                                    </tr>
-                                                </c:forEach>
-                                            </tbody>
-                                        </table>
                                     </div>
 
-                                    <!-- Botones finales + total -->
+                                    <!-- Botones finales + total (vista principal) -->
                                     <div class="row mt-3">
                                         <div class="col-md-6">
-                                            <c:if test="${not empty token and esNuevo and puedeInsertar}">
+                                            <c:if test="${esNuevo or empty token}">
                                                 <button type="button" class="btn btn-success" onclick="generarOrdenPago();">Generar</button>
                                             </c:if>
                                             <c:if test="${not empty token}">
@@ -398,7 +421,7 @@
                                             </div>
                                             <small class="text-muted">Suma de formas cargadas:
                                                 <strong><fmt:formatNumber value="${sumaFormas}" pattern="#,##0"/></strong>
-                                                <c:if test="${not empty token and esNuevo}">
+                                                <c:if test="${esNuevo or empty token}">
                                                     <c:choose>
                                                         <c:when test="${sumaFormas == totalOrden and totalOrden > 0}"><span class="text-success">&#10004; coincide</span></c:when>
                                                         <c:otherwise><span class="text-danger">&#33; debe igualar el total</span></c:otherwise>
@@ -504,21 +527,6 @@
                             </div>
                         </div>
 
-                        <!-- Modal Confirmar Eliminar forma -->
-                        <div class="modal fade" id="modalEliminarForma" tabindex="-1" aria-hidden="true">
-                            <div class="modal-dialog modal-dialog-centered">
-                                <div class="modal-content">
-                                    <div class="modal-header bg-danger text-white"><h5 class="modal-title">Confirmación</h5>
-                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
-                                    <div class="modal-body"><p>¿Está seguro que desea eliminar esta forma de pago?</p></div>
-                                    <div class="modal-footer">
-                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">No</button>
-                                        <button type="button" class="btn btn-danger" onclick="confirmarEliminarForma();">Sí, Eliminar</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
                     </div>
                 </main>
             </div>
@@ -546,7 +554,9 @@
                 setAccion('AgregarForma');
                 document.getElementById('formPrincipal').submit();
             }
-            function confirmarEliminarForma() {
+            function eliminarForma(index) {
+                if (!confirm('¿Está seguro que desea eliminar esta forma de pago?')) return;
+                document.getElementById('indexForma').value = index;
                 setAccion('EliminarForma');
                 document.getElementById('formPrincipal').submit();
             }
@@ -567,14 +577,14 @@
                 var tips = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
                 tips.forEach(function (el) { new bootstrap.Tooltip(el); });
 
-                // Modal de forma de pago: ajustar campos de cheque al abrir y reabrir si hubo error
-                var modalForma = document.getElementById('modalAgregarForma');
+                // Modal de formas de pago: ajustar campos de cheque al abrir y reabrir si hubo error
+                var modalForma = document.getElementById('modalFormasPago');
                 if (modalForma) {
                     modalForma.addEventListener('shown.bs.modal', toggleCamposCheque);
                     <c:if test="${abrirModalForma}">new bootstrap.Modal(modalForma).show();</c:if>
                 }
+
                 $('#tablaDetalleOP').DataTable({ language: { url: "DataTables 2/es-ES.json" } });
-                $('#tablaFormasPago').DataTable({ language: { url: "DataTables 2/es-ES.json" } });
                 $('#tablaOrdenesPago').DataTable({ language: { url: "DataTables 2/es-ES.json" } });
                 $('#tablaProvisiones').DataTable({ language: { url: "DataTables 2/es-ES.json" } });
             });
