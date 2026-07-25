@@ -432,18 +432,23 @@
                                     <div class="row mt-3">
                                         <div class="col-md-6">
                                             <c:if test="${esNuevo or empty token}">
-                                                <button type="button" class="btn btn-success" onclick="generarOrdenPago();">Generar</button>
+                                                <c:choose>
+                                                    <c:when test="${puedeInsertar or empty token}">
+                                                        <button type="button" class="btn btn-success" onclick="generarOrdenPago();">Generar</button>
+                                                    </c:when>
+                                                    <c:otherwise>
+                                                        <button class="btn btn-success" disabled title="No tiene permisos">Generar</button>
+                                                    </c:otherwise>
+                                                </c:choose>
                                             </c:if>
                                             <c:if test="${not empty token}">
-                                                <a href="OrdenPagoServlet?menu=OrdenPago&accion=Cancelar&token=${token}" class="btn btn-danger">Cancelar</a>
+                                                <a href="OrdenPagoServlet?menu=OrdenPago&accion=Cancelar&token=${token}"
+                                                   class="btn btn-danger">Cancelar</a>
                                             </c:if>
                                         </div>
                                         <div class="col-md-6 text-end">
-                                            <div class="form-floating mb-1" style="max-width: 320px; margin-left: auto;">
-                                                <input class="form-control text-end" id="importeTotal" type="text" readonly
-                                                       value="<fmt:formatNumber value='${totalOrden}' pattern='#,##0'/>" />
-                                                <label for="importeTotal">Importe Total a Pagar</label>
-                                            </div>
+                                            <h5>Importe Total a Pagar: <fmt:formatNumber value="${totalOrden}" pattern="#,##0"/></h5>
+                                            <small>Suma de formas: <fmt:formatNumber value="${sumaFormas}" pattern="#,##0"/></small>
                                         </div>
                                     </div>
                                 </div>
