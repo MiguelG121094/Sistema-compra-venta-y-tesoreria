@@ -7,6 +7,8 @@ package modelo;
 import java.util.Date;
 
 /**
+ * Cabecera de la Orden de Pago. La moneda y el tipo de cambio ya NO viven acá: la moneda la
+ * define cada cuenta bancaria y el tipo de cambio va por forma de pago (ver FormaPagoDetalle).
  *
  * @author Miguel
  */
@@ -21,8 +23,6 @@ public class OrdenPago implements java.io.Serializable {
     private String estado;
     private Long idProvisionCtaPagar;
     private Integer numeroRecibo;
-    private Long idMoneda;
-    private Double tipoCambio;
     private Sucursal sucursal;
     private String tipoPago;
     private Proveedor proveedor;
@@ -35,8 +35,8 @@ public class OrdenPago implements java.io.Serializable {
     }
 
     public OrdenPago(Long idOrdenPago, Integer numero, Date fechaEmision, Long monto, String estado,
-            Long idProvisionCtaPagar, Integer numeroRecibo, Long idMoneda, Double tipoCambio,
-            Sucursal sucursal, String tipoPago, Proveedor proveedor) {
+            Long idProvisionCtaPagar, Integer numeroRecibo, Sucursal sucursal, String tipoPago,
+            Proveedor proveedor) {
         this.idOrdenPago = idOrdenPago;
         this.numero = numero;
         this.fechaEmision = fechaEmision;
@@ -44,8 +44,6 @@ public class OrdenPago implements java.io.Serializable {
         this.estado = estado;
         this.idProvisionCtaPagar = idProvisionCtaPagar;
         this.numeroRecibo = numeroRecibo;
-        this.idMoneda = idMoneda;
-        this.tipoCambio = tipoCambio;
         this.sucursal = sucursal;
         this.tipoPago = tipoPago;
         this.proveedor = proveedor;
@@ -105,22 +103,6 @@ public class OrdenPago implements java.io.Serializable {
 
     public void setNumeroRecibo(Integer numeroRecibo) {
         this.numeroRecibo = numeroRecibo;
-    }
-
-    public Long getIdMoneda() {
-        return idMoneda;
-    }
-
-    public void setIdMoneda(Long idMoneda) {
-        this.idMoneda = idMoneda;
-    }
-
-    public Double getTipoCambio() {
-        return tipoCambio;
-    }
-
-    public void setTipoCambio(Double tipoCambio) {
-        this.tipoCambio = tipoCambio;
     }
 
     public Sucursal getSucursal() {

@@ -5,15 +5,17 @@
 
     Atributos de request esperados del servlet:
       token (String), esNuevo (boolean), puedeInsertar/puedeBorrar (boolean)
-      ordenPago (OrdenPago): numero, numeroRecibo, fechaEmision, estado, tipoCambio,
+      ordenPago (OrdenPago): numero, numeroRecibo, fechaEmision, estado,
                              idProvisionCtaPagar, tipoPago, monto, proveedor.razonSocial
-      sucursalSeleccionada (Sucursal), idMonedaSeleccionada (Long)
+      sucursalSeleccionada (Sucursal)
       listaDetalle (List<OrdenPagoDetalle>)  -> facturas de la provisión (SOLO LECTURA)
       listaFormasPago (List<FormaPagoDetalle>) -> carrito de formas de pago
       totalOrden (Long) = ord_pag_monto (Σ importe a pagar del detalle)
       sumaFormas (Long) = Σ montos de las formas cargadas
-      listaSucursales, listaMonedas, listaCuentas, listaFormaPago (Cheque/Transferencia),
+      listaSucursales, listaCuentas, listaFormaPago (Cheque/Transferencia),
       listaChequeras, listaTipoCheque
+      La moneda ya NO va en la cabecera (la define la cuenta de cada forma). El tipo de cambio
+      va por forma de pago (input tipoCambioForma en el modal -> FormaPagoDetalle.tipoCambio).
       listaOrdenesPago (modal), listaProvisiones (modal)
       formaEnEditor (FormaPagoDetalle, opcional) para precargar el modal de forma de pago
       abrirModalForma (boolean, opcional): si el servlet detecta un error de validación al
@@ -182,51 +184,30 @@
                                     <div class="row mb-3">
                                         <div class="col-md-3">
                                             <div class="form-floating mb-3 mb-md-0">
-                                                <select class="form-control" id="moneda" name="idMoneda"
-                                                        <c:if test="${not empty token and not esNuevo}">disabled</c:if>>
-                                                            <option value="">Seleccionar Moneda</option>
-                                                        <c:forEach var="mon" items="${listaMonedas}">
-                                                            <option value="${mon.idMoneda}"
-                                                                    <c:if test="${idMonedaSeleccionada == mon.idMoneda}">selected</c:if>>${mon.descripcion}</option>
-                                                        </c:forEach>
-                                                </select>
-                                                <label for="moneda">Moneda</label>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-2">
-                                            <div class="form-floating mb-3 mb-md-0">
-                                                <input class="form-control" id="tipoCambio" name="tipoCambio" type="text" inputmode="decimal"
-                                                       placeholder="Tipo de cambio" value="${ordenPago.tipoCambio}"
-                                                       <c:if test="${not empty token and not esNuevo}">readonly</c:if> />
-                                                       <label for="tipoCambio">Tipo de cambio</label>
-                                                </div>
-                                            </div>
-                                            <div class="col-md-2">
-                                                <div class="form-floating mb-3 mb-md-0">
-                                                    <input class="form-control" id="provisionNro" type="text" placeholder="Provisión Nro" readonly
-                                                           value="${ordenPago.idProvisionCtaPagar}" />
+                                                <input class="form-control" id="provisionNro" type="text" placeholder="Provisión Nro" readonly
+                                                       value="${ordenPago.idProvisionCtaPagar}" />
                                                 <label for="provisionNro">Provisión Nro</label>
                                             </div>
                                         </div>
-                                        <div class="col-md-2">
+                                        <div class="col-md-4">
                                             <div class="form-floating mb-3 mb-md-0">
                                                 <select class="form-control" id="tipoPago" name="tipoPago" onchange="cambiarTipoPago();"
                                                         <c:if test="${not empty token and not esNuevo}">disabled</c:if>>
-                                                            <option value="">Seleccionar...</option>
-                                                            <option value="reposicionFF" <c:if test="${ordenPago.tipoPago == 'reposicionFF'}">selected</c:if>>Reposición Fondo Fijo</option>
-                                                        <option value="otrosGastos" <c:if test="${ordenPago.tipoPago == 'otrosGastos'}">selected</c:if>>Otros gastos</option>
-                                                        </select>
-                                                        <label for="tipoPago">
-                                                            Tipo de pago
-                                                            <span class="info-icon" tabindex="0" data-bs-toggle="tooltip" data-bs-placement="top"
-                                                                  title="Indica el motivo de la OP: 'Reposición Fondo Fijo' repone la caja chica rendida; 'Otros gastos' es un pago normal de facturas provisionadas.">&#9432;</span>
-                                                        </label>
-                                                </div>
+                                                    <option value="">Seleccionar...</option>
+                                                    <option value="reposicionFF" <c:if test="${ordenPago.tipoPago == 'reposicionFF'}">selected</c:if>>Reposición Fondo Fijo</option>
+                                                    <option value="otrosGastos" <c:if test="${ordenPago.tipoPago == 'otrosGastos'}">selected</c:if>>Otros gastos</option>
+                                                </select>
+                                                <label for="tipoPago">
+                                                    Tipo de pago
+                                                    <span class="info-icon" tabindex="0" data-bs-toggle="tooltip" data-bs-placement="top"
+                                                          title="Indica el motivo de la OP: 'Reposición Fondo Fijo' repone la caja chica rendida; 'Otros gastos' es un pago normal de facturas provisionadas.">&#9432;</span>
+                                                </label>
                                             </div>
-                                            <div class="col-md-3">
-                                                <div class="form-floating mb-3 mb-md-0">
-                                                    <input class="form-control" id="razonSocial" type="text" placeholder="Razón Social" readonly
-                                                           value="${ordenPago.proveedor.razonSocial}" />
+                                        </div>
+                                        <div class="col-md-5">
+                                            <div class="form-floating mb-3 mb-md-0">
+                                                <input class="form-control" id="razonSocial" type="text" placeholder="Razón Social" readonly
+                                                       value="${ordenPago.proveedor.razonSocial}" />
                                                 <label for="razonSocial">Razón Social</label>
                                             </div>
                                         </div>
@@ -251,7 +232,7 @@
                                                         <!-- Editor de alta -->
                                                         <c:if test="${esNuevo or empty token}">
                                                             <div class="row g-2 align-items-end mb-3">
-                                                                <div class="col-md-3">
+                                                                <div class="col-md-2">
                                                                     <label class="form-label mb-1">Tipo</label>
                                                                     <select class="form-control" id="tipoForma" name="idFormaPagoCab" onchange="toggleCamposCheque();">
                                                                         <option value="">Seleccionar...</option>
@@ -272,10 +253,15 @@
                                                                             </c:forEach>
                                                                     </select>
                                                                 </div>
-                                                                <div class="col-md-3">
+                                                                <div class="col-md-2">
                                                                     <label class="form-label mb-1">Monto</label>
                                                                     <input type="text" inputmode="numeric" class="form-control mask-miles" id="montoForma" name="montoForma"
                                                                            placeholder="Monto" value="${formaEnEditor.monto}">
+                                                                </div>
+                                                                <div class="col-md-2">
+                                                                    <label class="form-label mb-1">Tipo de cambio</label>
+                                                                    <input type="text" inputmode="decimal" class="form-control" id="tipoCambioForma" name="tipoCambioForma"
+                                                                           placeholder="Tipo de cambio" value="${formaEnEditor.tipoCambio}">
                                                                 </div>
                                                                 <div class="col-md-3">
                                                                     <label class="form-label mb-1">Referencia</label>

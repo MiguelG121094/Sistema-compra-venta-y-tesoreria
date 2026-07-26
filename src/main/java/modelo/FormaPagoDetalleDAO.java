@@ -27,8 +27,8 @@ public class FormaPagoDetalleDAO {
     public void insertarFormaPago(FormaPagoDetalle fp, Long idOrdenPago) throws SQLException {
         String sql = "INSERT INTO forma_pago_detalle "
                    + "(id_forma_pago_cab, id_orden_pago, forma_pag_monto, forma_pag_estado, "
-                   + "forma_pag_referencia, id_cuenta, forma_pag_fecha, id_cheque) "
-                   + "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+                   + "forma_pag_referencia, id_cuenta, forma_pag_fecha, id_cheque, forma_pag_tipo_cambio) "
+                   + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setLong(1, fp.getFormaPagoCabecera().getIdFormaPagoCabecera());
             stmt.setLong(2, idOrdenPago);
@@ -54,6 +54,11 @@ public class FormaPagoDetalleDAO {
             } else {
                 stmt.setNull(8, Types.INTEGER);
             }
+            if (fp.getTipoCambio() != null) {
+                stmt.setDouble(9, fp.getTipoCambio());
+            } else {
+                stmt.setNull(9, Types.DOUBLE);
+            }
             stmt.executeUpdate();
         }
     }
@@ -65,7 +70,7 @@ public class FormaPagoDetalleDAO {
         List<FormaPagoDetalle> lista = new ArrayList<>();
         String sql = "SELECT fp.id_forma_pago_det, fp.id_forma_pago_cab, fc.forma_pago_descripcion, "
                    + "fp.forma_pag_monto, fp.forma_pag_estado, fp.forma_pag_referencia, "
-                   + "fp.id_cuenta, fp.forma_pag_fecha, fp.id_cheque "
+                   + "fp.id_cuenta, fp.forma_pag_fecha, fp.id_cheque, fp.forma_pag_tipo_cambio "
                    + "FROM forma_pago_detalle fp "
                    + "JOIN forma_pago_cabecera fc ON fp.id_forma_pago_cab = fc.id_forma_pago_cab "
                    + "WHERE fp.id_orden_pago = ? ORDER BY fp.id_forma_pago_det";
@@ -86,6 +91,8 @@ public class FormaPagoDetalleDAO {
                     if (!rs.wasNull()) {
                         fp.setCheque(new Cheque(idCheque));
                     }
+                    double tc = rs.getDouble("forma_pag_tipo_cambio");
+                    fp.setTipoCambio(rs.wasNull() ? null : tc);
                     lista.add(fp);
                 }
             }

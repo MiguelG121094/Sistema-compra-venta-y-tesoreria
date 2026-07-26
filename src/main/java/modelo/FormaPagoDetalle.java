@@ -23,6 +23,7 @@ public class FormaPagoDetalle implements java.io.Serializable {
     private Cuenta cuenta;
     private Date fecha;
     private Cheque cheque;
+    private Double tipoCambio;   // por forma: convierte la moneda de la cuenta a la de la deuda
 
     public FormaPagoDetalle() {
     }
@@ -33,7 +34,7 @@ public class FormaPagoDetalle implements java.io.Serializable {
 
     public FormaPagoDetalle(Long idFormaPagoDetalle, FormaPagoCabecera formaPagoCabecera,
             OrdenPago ordenPago, Long monto, String estado, String referencia, Cuenta cuenta,
-            Date fecha, Cheque cheque) {
+            Date fecha, Cheque cheque, Double tipoCambio) {
         this.idFormaPagoDetalle = idFormaPagoDetalle;
         this.formaPagoCabecera = formaPagoCabecera;
         this.ordenPago = ordenPago;
@@ -43,6 +44,7 @@ public class FormaPagoDetalle implements java.io.Serializable {
         this.cuenta = cuenta;
         this.fecha = fecha;
         this.cheque = cheque;
+        this.tipoCambio = tipoCambio;
     }
 
     public Long getIdFormaPagoDetalle() {
@@ -115,5 +117,13 @@ public class FormaPagoDetalle implements java.io.Serializable {
 
     public void setCheque(Cheque cheque) {
         this.cheque = cheque;
+    }
+
+    public Double getTipoCambio() {
+        return tipoCambio;
+    }
+
+    public void setTipoCambio(Double tipoCambio) {
+        this.tipoCambio = tipoCambio;
     }
 }

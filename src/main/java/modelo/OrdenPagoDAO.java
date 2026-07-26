@@ -5,7 +5,6 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.sql.Types;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
@@ -28,7 +27,7 @@ public class OrdenPagoDAO {
 
     private static final String COLUMNAS =
         "id_orden_pago, ord_pag_numero, ord_pag_fecha_emision, ord_pag_monto, ord_pag_estado, "
-      + "id_provi_cta_pagar_cabecera, ord_pag_nro_recibo, id_moneda, ord_pag_tipo_cambio, "
+      + "id_provi_cta_pagar_cabecera, ord_pag_nro_recibo, "
       + "id_sucursal, ord_pag_tipo_pago, id_proveedor";
 
     public OrdenPagoDAO(Connection conn) {
@@ -44,8 +43,6 @@ public class OrdenPagoDAO {
             rs.getString("ord_pag_estado"),
             rs.getLong("id_provi_cta_pagar_cabecera"),
             rs.getInt("ord_pag_nro_recibo"),
-            rs.getLong("id_moneda"),
-            rs.getDouble("ord_pag_tipo_cambio"),
             sucursalDAO.getSucursal(rs.getLong("id_sucursal")),
             rs.getString("ord_pag_tipo_pago"),
             proveedorDAO.getProveedor(rs.getLong("id_proveedor"))
@@ -93,8 +90,8 @@ public class OrdenPagoDAO {
         }
         String sql = "INSERT INTO orden_pago_cabecera (ord_pag_numero, ord_pag_fecha_emision, "
                    + "ord_pag_monto, ord_pag_estado, id_provi_cta_pagar_cabecera, ord_pag_nro_recibo, "
-                   + "id_moneda, ord_pag_tipo_cambio, id_sucursal, ord_pag_tipo_pago, id_proveedor) "
-                   + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                   + "id_sucursal, ord_pag_tipo_pago, id_proveedor) "
+                   + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             stmt.setInt(1, ordenPago.getNumero());
             stmt.setDate(2, new java.sql.Date(ordenPago.getFechaEmision().getTime()));
@@ -102,15 +99,9 @@ public class OrdenPagoDAO {
             stmt.setString(4, ordenPago.getEstado());
             stmt.setLong(5, ordenPago.getIdProvisionCtaPagar());
             stmt.setInt(6, ordenPago.getNumeroRecibo());
-            stmt.setLong(7, ordenPago.getIdMoneda());
-            if (ordenPago.getTipoCambio() != null) {
-                stmt.setDouble(8, ordenPago.getTipoCambio());
-            } else {
-                stmt.setNull(8, Types.DOUBLE);
-            }
-            stmt.setLong(9, ordenPago.getSucursal().getIdSucursal());
-            stmt.setString(10, ordenPago.getTipoPago());
-            stmt.setLong(11, ordenPago.getProveedor().getIdProveedor());
+            stmt.setLong(7, ordenPago.getSucursal().getIdSucursal());
+            stmt.setString(8, ordenPago.getTipoPago());
+            stmt.setLong(9, ordenPago.getProveedor().getIdProveedor());
 
             int filas = stmt.executeUpdate();
             if (filas == 0) {

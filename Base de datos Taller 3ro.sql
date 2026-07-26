@@ -521,8 +521,6 @@ CREATE TABLE public.orden_pago_cabecera (
                 ord_pag_estado VARCHAR(100) NOT NULL,
                 id_provi_cta_pagar_cabecera INTEGER NOT NULL,
                 ord_pag_nro_recibo INTEGER NOT NULL,
-                id_moneda INTEGER NOT NULL,
-                ord_pag_tipo_cambio DOUBLE PRECISION,
                 id_sucursal INTEGER NOT NULL,
                 ord_pag_tipo_pago VARCHAR NOT NULL,
                 id_proveedor INTEGER NOT NULL,
@@ -610,6 +608,7 @@ CREATE TABLE public.forma_pago_detalle (
                 id_cuenta INTEGER NOT NULL,
                 forma_pag_fecha DATE,
                 id_cheque INTEGER,
+                forma_pag_tipo_cambio DOUBLE PRECISION,
                 CONSTRAINT id_forma_pago_det PRIMARY KEY (id_forma_pago_det)
 );
 COMMENT ON TABLE public.forma_pago_detalle IS 'una orden de pago se puede pagar de varias formas por eso hay una tabla donde se detalla cual orden de pago se pago con transferenia y cheque';
@@ -1310,13 +1309,6 @@ ON UPDATE NO ACTION
 NOT DEFERRABLE;
 
 ALTER TABLE public.cheque_recibido ADD CONSTRAINT moneda_cheque_recibido_fk
-FOREIGN KEY (id_moneda)
-REFERENCES public.moneda (id_moneda)
-ON DELETE NO ACTION
-ON UPDATE NO ACTION
-NOT DEFERRABLE;
-
-ALTER TABLE public.orden_pago_cabecera ADD CONSTRAINT moneda_orden_pagoorden_pago_cabecera_fk
 FOREIGN KEY (id_moneda)
 REFERENCES public.moneda (id_moneda)
 ON DELETE NO ACTION
