@@ -21,8 +21,9 @@
       abrirModalForma (boolean, opcional): si el servlet detecta un error de validación al
         AgregarForma, lo setea a true para reabrir automáticamente el modal con lo cargado
     El alta y la lista de formas de pago viven en el modal #modalFormasPago (dentro del form).
-    Nota: los bloques usan gate "${esNuevo or empty token}" para verse también en revisión
-    estática (sin servlet); el servlet ajustará el estado real (esNuevo/token).
+    Nota: la pantalla arranca INERTE — sin token (recién abierta) sólo se puede usar "Nuevo" y
+    "Buscar Orden de pago"; el resto (Buscar Provisión, formas de pago, cabecera, Generar) se
+    habilita con un documento abierto, y sólo con esNuevo=true si además es editable.
     Acciones (accionPrincipal): Nuevo, CargarOrdenPago, CargarProvision, CambiarTipoPago,
       AgregarForma, EliminarForma, Generar, Anular, Cancelar
 --%>
@@ -109,12 +110,12 @@
                                         <a href="OrdenPagoServlet?menu=OrdenPago&accion=Nuevo" class="btn btn-success">Nuevo</a>
                                     </c:when>
                                     <c:otherwise>
-                                        <a href="OrdenPagoServlet?menu=OrdenPago&accion=Nuevo" class="btn btn-success">Nuevo</a>
+                                        <button type="button" class="btn btn-success" disabled title="No tiene permisos">Nuevo</button>
                                     </c:otherwise>
                                 </c:choose>
                                 <button type="button" class="btn btn-info text-white" data-bs-toggle="modal" data-bs-target="#modalBuscarOrdenPago">Buscar Orden de pago</button>
                                 <button type="button" class="btn btn-info text-white" data-bs-toggle="modal" data-bs-target="#modalBuscarProvision"
-                                        <c:if test="${not empty token and not esNuevo}">disabled</c:if>>Buscar Provisión</button>
+                                        <c:if test="${empty token or not esNuevo}">disabled title="Presione Nuevo para iniciar una orden de pago"</c:if>>Buscar Provisión</button>
                                 <c:choose>
                                     <c:when test="${not empty token and not esNuevo and ordenPago.estado ne 'Anulado' and puedeBorrar}">
                                         <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#modalConfirmarAnular">Anular</button>
@@ -148,7 +149,7 @@
                                         <div class="col-md-2">
                                             <div class="form-floating mb-3 mb-md-0">
                                                 <input class="form-control" id="recibo" name="recibo" type="number" min="0" placeholder="Recibo Nro"
-                                                       value="${ordenPago.numeroRecibo}" <c:if test="${not empty token and not esNuevo}">readonly</c:if> />
+                                                       value="${ordenPago.numeroRecibo}" <c:if test="${empty token or not esNuevo}">readonly</c:if> />
                                                        <label for="recibo">Recibo Nro</label>
                                                 </div>
                                             </div>
@@ -169,7 +170,7 @@
                                         <div class="col-md-4">
                                             <div class="form-floating mb-3 mb-md-0">
                                                 <select class="form-control" id="sucursal" name="idSucursal"
-                                                        <c:if test="${not empty token and not esNuevo}">disabled</c:if>>
+                                                        <c:if test="${empty token or not esNuevo}">disabled</c:if>>
                                                             <option value="">Seleccionar Sucursal</option>
                                                         <c:forEach var="suc" items="${listaSucursales}">
                                                             <option value="${suc.idSucursal}"
@@ -192,7 +193,7 @@
                                         <div class="col-md-4">
                                             <div class="form-floating mb-3 mb-md-0">
                                                 <select class="form-control" id="tipoPago" name="tipoPago" onchange="cambiarTipoPago();"
-                                                        <c:if test="${not empty token and not esNuevo}">disabled</c:if>>
+                                                        <c:if test="${empty token or not esNuevo}">disabled</c:if>>
                                                     <option value="">Seleccionar...</option>
                                                     <option value="reposicionFF" <c:if test="${ordenPago.tipoPago == 'reposicionFF'}">selected</c:if>>Reposición Fondo Fijo</option>
                                                     <option value="otrosGastos" <c:if test="${ordenPago.tipoPago == 'otrosGastos'}">selected</c:if>>Otros gastos</option>
@@ -216,7 +217,8 @@
                                     <div class="row mb-3">
                                         <div class="row">
                                             <div class="col-md-6">
-                                                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalFormasPago">&#43; Ver / Agregar Forma de Pago</button>
+                                                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalFormasPago"
+                                                        <c:if test="${empty token}">disabled title="Presione Nuevo para iniciar una orden de pago"</c:if>>&#43; Ver / Agregar Forma de Pago</button>
                                                 <small class="text-muted ms-2">Se cargan en el modal. Sólo Cheque o Transferencia (sin efectivo).</small>
                                             </div>
                                         </div>
@@ -230,7 +232,7 @@
                                                     <div class="modal-body">
 
                                                         <!-- Editor de alta -->
-                                                        <c:if test="${esNuevo or empty token}">
+                                                        <c:if test="${esNuevo}">
                                                             <div class="row g-2 align-items-end mb-3">
                                                                 <div class="col-md-2">
                                                                     <label class="form-label mb-1">Tipo</label>
@@ -325,7 +327,7 @@
                                                                         <th class="text-bg-dark text-center">Cuenta bancaria</th>
                                                                         <th class="text-bg-dark text-center">Monto</th>
                                                                         <th class="text-bg-dark text-center">Instrumento / Referencia</th>
-                                                                            <c:if test="${esNuevo or empty token}">
+                                                                            <c:if test="${esNuevo}">
                                                                             <th class="text-bg-dark text-center">Acción</th>
                                                                             </c:if>
                                                                     </tr>
@@ -348,7 +350,7 @@
                                                                                     <c:otherwise>${fp.referencia}</c:otherwise>
                                                                                 </c:choose>
                                                                             </td>
-                                                                            <c:if test="${esNuevo or empty token}">
+                                                                            <c:if test="${esNuevo}">
                                                                                 <td class="text-center">
                                                                                     <button type="button" class="btn btn-danger btn-sm" onclick="eliminarForma(${st.index});">Eliminar</button>
                                                                                 </td>
@@ -365,7 +367,7 @@
                                                         <div class="text-end mt-2">
                                                             <span class="me-3">Importe Total a Pagar: <strong><fmt:formatNumber value="${totalOrden}" pattern="#,##0"/></strong></span>
                                                             <span>Suma de formas: <strong><fmt:formatNumber value="${sumaFormas}" pattern="#,##0"/></strong>
-                                                                <c:if test="${esNuevo or empty token}">
+                                                                <c:if test="${esNuevo}">
                                                                     <c:choose>
                                                                         <c:when test="${sumaFormas == totalOrden and totalOrden > 0}"><span class="text-success">&#10004; coincide</span></c:when>
                                                                         <c:otherwise><span class="text-danger">&#33; debe igualar el total</span></c:otherwise>
@@ -417,9 +419,9 @@
                                     <!-- Botones finales + total (vista principal) -->
                                     <div class="row mt-3">
                                         <div class="col-md-6">
-                                            <c:if test="${esNuevo or empty token}">
+                                            <c:if test="${esNuevo}">
                                                 <c:choose>
-                                                    <c:when test="${puedeInsertar or empty token}">
+                                                    <c:when test="${puedeInsertar}">
                                                         <button type="button" class="btn btn-success" onclick="generarOrdenPago();">Generar</button>
                                                     </c:when>
                                                     <c:otherwise>
