@@ -61,6 +61,43 @@ public class ChequeDAO {
     }
 
     /**
+     * Cheque por id, con la chequera y el tipo hidratados — para ver una OP ya generada
+     * (el detalle de formas de pago solo guarda el id_cheque).
+     */
+    public Cheque getCheque(Long idCheque) throws SQLException {
+        if (idCheque == null) {
+            return null;
+        }
+        String sql = "SELECT c.id_cheque, c.chq_numero, c.chq_fecha_emision, c.chq_estado, c.id_chequera, "
+                   + "c.chq_a_la_orden, c.chq_observacion, c.id_tipo_cheque, tc.tipo_cheque_descripcion, "
+                   + "c.chq_fecha_pago, c.chq_fecha_venci, c.id_usuario "
+                   + "FROM cheque c "
+                   + "JOIN tipo_cheque tc ON c.id_tipo_cheque = tc.id_tipo_cheque "
+                   + "WHERE c.id_cheque = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, idCheque);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    Cheque cheque = new Cheque(rs.getLong("id_cheque"));
+                    cheque.setNumero(rs.getLong("chq_numero"));
+                    cheque.setFechaEmision(rs.getDate("chq_fecha_emision"));
+                    cheque.setEstado(rs.getString("chq_estado"));
+                    cheque.setChequera(new ChequeraDAO(conn).getChequera(rs.getLong("id_chequera")));
+                    cheque.setaLaOrden(rs.getString("chq_a_la_orden"));
+                    cheque.setObservacion(rs.getString("chq_observacion"));
+                    cheque.setTipoCheque(new TipoCheque(rs.getLong("id_tipo_cheque"),
+                            rs.getString("tipo_cheque_descripcion")));
+                    cheque.setFechaPago(rs.getDate("chq_fecha_pago"));
+                    cheque.setFechaVencimiento(rs.getDate("chq_fecha_venci"));
+                    cheque.setUsuario(new Usuario(rs.getLong("id_usuario")));
+                    return cheque;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
      * Anula un cheque emitido (estado 'Anulado'). Se usa al anular la Orden de Pago que lo emitió.
      * Corre sobre la Connection compartida; la transacción la controla el Service.
      */

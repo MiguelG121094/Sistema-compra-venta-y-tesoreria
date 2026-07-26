@@ -118,6 +118,23 @@ public class OrdenPagoDAO {
         }
     }
 
+    /**
+     * Próximo número de orden de pago (ord_pag_numero es un correlativo propio, distinto del id).
+     * Se usa al abrir una OP nueva para mostrarlo en la cabecera. El valor definitivo se confirma
+     * recién al insertar; si dos usuarios abren una OP a la vez podrían ver el mismo número, pero
+     * la fila se inserta con el que tenga en el momento del Generar.
+     */
+    public Integer obtenerProximoNumero() throws SQLException {
+        String sql = "SELECT COALESCE(MAX(ord_pag_numero), 0) + 1 AS proximo FROM orden_pago_cabecera";
+        try (PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+            if (rs.next()) {
+                return rs.getInt("proximo");
+            }
+        }
+        return 1;
+    }
+
     public void anularOrdenPago(Long idOrdenPago) throws SQLException {
         String sql = "UPDATE orden_pago_cabecera SET ord_pag_estado = 'Anulado' WHERE id_orden_pago = ?";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {

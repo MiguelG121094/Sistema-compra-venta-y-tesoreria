@@ -64,7 +64,9 @@ public class FormaPagoDetalleDAO {
     }
 
     /**
-     * Formas de pago de una OP (con el tipo y la cuenta hidratados) — para ver la OP.
+     * Formas de pago de una OP con el tipo, la cuenta bancaria y el cheque hidratados — para ver
+     * la OP. La cuenta y el cheque se traen completos porque la pantalla muestra la entidad
+     * financiera y el número de cheque emitido.
      */
     public List<FormaPagoDetalle> listarPorOrden(Long idOrdenPago) throws SQLException {
         List<FormaPagoDetalle> lista = new ArrayList<>();
@@ -74,6 +76,8 @@ public class FormaPagoDetalleDAO {
                    + "FROM forma_pago_detalle fp "
                    + "JOIN forma_pago_cabecera fc ON fp.id_forma_pago_cab = fc.id_forma_pago_cab "
                    + "WHERE fp.id_orden_pago = ? ORDER BY fp.id_forma_pago_det";
+        CuentaDAO cuentaDAO = new CuentaDAO(conn);
+        ChequeDAO chequeDAO = new ChequeDAO(conn);
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setLong(1, idOrdenPago);
             try (ResultSet rs = stmt.executeQuery()) {
@@ -85,11 +89,11 @@ public class FormaPagoDetalleDAO {
                     fp.setMonto(rs.getLong("forma_pag_monto"));
                     fp.setEstado(rs.getString("forma_pag_estado"));
                     fp.setReferencia(rs.getString("forma_pag_referencia"));
-                    fp.setCuenta(new Cuenta(rs.getLong("id_cuenta")));
+                    fp.setCuenta(cuentaDAO.getCuenta(rs.getLong("id_cuenta")));
                     fp.setFecha(rs.getDate("forma_pag_fecha"));
                     long idCheque = rs.getLong("id_cheque");
                     if (!rs.wasNull()) {
-                        fp.setCheque(new Cheque(idCheque));
+                        fp.setCheque(chequeDAO.getCheque(idCheque));
                     }
                     double tc = rs.getDouble("forma_pag_tipo_cambio");
                     fp.setTipoCambio(rs.wasNull() ? null : tc);

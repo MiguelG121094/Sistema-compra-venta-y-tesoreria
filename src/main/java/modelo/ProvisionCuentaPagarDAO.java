@@ -82,6 +82,31 @@ public class ProvisionCuentaPagarDAO {
         return lista;
     }
 
+    /**
+     * Provisiones filtradas por estado. La Orden de Pago solo puede partir de una provisión
+     * 'Pendiente' (las 'Procesada' ya fueron pagadas y las 'Anulado' no sirven).
+     */
+    public List<ProvisionCuentaPagar> listarProvisionesPorEstado(String estado) throws SQLException {
+        List<ProvisionCuentaPagar> lista = new ArrayList<>();
+        String sql = "SELECT id_provi_cta_pagar_cabecera, prov_cta_pag_estado, prov_cta_pag_fecha, id_proveedor "
+                   + "FROM provision_cuenta_pagar WHERE prov_cta_pag_estado = ? "
+                   + "ORDER BY id_provi_cta_pagar_cabecera DESC";
+        ProveedorDAO proveedorDAO = new ProveedorDAO(conn);
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, estado);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    lista.add(new ProvisionCuentaPagar(
+                        rs.getLong("id_provi_cta_pagar_cabecera"),
+                        rs.getString("prov_cta_pag_estado"),
+                        rs.getDate("prov_cta_pag_fecha"),
+                        proveedorDAO.getProveedor(rs.getLong("id_proveedor"))));
+                }
+            }
+        }
+        return lista;
+    }
+
     public ProvisionCuentaPagar getProvision(Long idProvision) throws SQLException {
         if (idProvision == null) {
             return null;

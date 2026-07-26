@@ -27,6 +27,19 @@ public class ProvisionCuentaPagarService {
         }
     }
 
+    /**
+     * Provisiones disponibles para generar una Orden de Pago (solo las 'Pendiente'; las
+     * 'Procesada' ya fueron pagadas por otra OP y las 'Anulado' no sirven).
+     */
+    public List<ProvisionCuentaPagar> listarProvisionesPendientes() throws SQLException {
+        try (Connection conn = Conexion.getConnection()) {
+            return new ProvisionCuentaPagarDAO(conn).listarProvisionesPorEstado("Pendiente");
+        } catch (SQLException e) {
+            System.out.println("Error en ProvisionCuentaPagarService: " + e);
+            return null;
+        }
+    }
+
     public ProvisionCuentaPagar getProvision(Long idProvision) throws SQLException {
         try (Connection conn = Conexion.getConnection()) {
             return new ProvisionCuentaPagarDAO(conn).getProvision(idProvision);

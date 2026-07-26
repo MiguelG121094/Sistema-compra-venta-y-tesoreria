@@ -50,6 +50,16 @@ public class OrdenPagoService {
         }
     }
 
+    /** Próximo correlativo de OP (ord_pag_numero), para mostrarlo al abrir una orden nueva. */
+    public Integer obtenerProximoNumero() throws SQLException {
+        try (Connection conn = Conexion.getConnection()) {
+            return new OrdenPagoDAO(conn).obtenerProximoNumero();
+        } catch (SQLException e) {
+            System.out.println("Error en OrdenPagoService.obtenerProximoNumero: " + e);
+            return null;
+        }
+    }
+
     public OrdenPago getOrdenPago(Long idOrdenPago) throws SQLException {
         try (Connection conn = Conexion.getConnection()) {
             return new OrdenPagoDAO(conn).getOrdenPago(idOrdenPago);
