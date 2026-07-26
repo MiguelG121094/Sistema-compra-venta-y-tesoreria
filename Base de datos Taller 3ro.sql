@@ -66,6 +66,7 @@ CREATE SEQUENCE public.moneda_id_moneda_seq;
 CREATE TABLE public.moneda (
                 id_moneda INTEGER NOT NULL DEFAULT nextval('public.moneda_id_moneda_seq'),
                 moneda_descipcion VARCHAR(50) NOT NULL,
+                moneda_abreviatura VARCHAR,
                 CONSTRAINT id_moneda PRIMARY KEY (id_moneda)
 );
 COMMENT ON TABLE public.moneda IS 'Guaranies, dolar';
@@ -607,8 +608,8 @@ CREATE TABLE public.forma_pago_detalle (
                 forma_pag_referencia VARCHAR,
                 id_cuenta INTEGER NOT NULL,
                 forma_pag_fecha DATE,
-                id_cheque INTEGER,
                 forma_pag_tipo_cambio DOUBLE PRECISION,
+                id_cheque INTEGER,
                 CONSTRAINT id_forma_pago_det PRIMARY KEY (id_forma_pago_det)
 );
 COMMENT ON TABLE public.forma_pago_detalle IS 'una orden de pago se puede pagar de varias formas por eso hay una tabla donde se detalla cual orden de pago se pago con transferenia y cheque';
