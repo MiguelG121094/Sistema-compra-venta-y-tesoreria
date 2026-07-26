@@ -4,9 +4,14 @@
 > **Cuenta a Pagar** y **Libro IVA Compra**) y el diseño de la capa Java (servlet/DAO/service)
 > siguiendo el patrón de **Factura de Compra**.
 >
-> **Estado (actualizado):** los cambios de esquema de §3 y §5.1 **ya están aplicados** en
-> `Base de datos Taller 3ro.sql`. La decisión de **`cuenta_pagar` (§4)** ya está **tomada** →
-> **Enfoque 1 con neteo en la provisión** (ver §4). Queda pendiente toda la **capa Java/JSP** (§7–§9).
+> **Estado (2026-07):** ✅ **IMPLEMENTADO.** Los cambios de esquema de §3 y §5.1 están aplicados en
+> `Base de datos Taller 3ro.sql` (incluido el `id_deposito` del #9), la decisión de **`cuenta_pagar`
+> (§4)** es **Enfoque 1 con neteo en la provisión**, y la **capa Java/JSP (§7–§9) ya está construida**:
+> `NotaCreditoDebitoServlet` (Session+Token) + `notaCreditoDebito.jsp` cableada + DAOs/Services
+> transaccionales de NC y ND, con los triggers de stock de §5.3 escritos.
+>
+> **Lo que falta** (ver checklist §9): **validar que la cantidad devuelta no supere la comprada**,
+> y **correr los triggers de stock de NC contra la base** para verificarlos end-to-end.
 
 ---
 
@@ -32,10 +37,14 @@ El alcance de este plan cubre **Nota de Crédito/Débito de Compra**. La variant
 
 ## 2. Estado actual
 
+> ⚠️ Esta sección describe el punto de partida (el prototipo previo a la implementación). Para el
+> estado actual, ver el recuadro del encabezado y el checklist de §9.
+
 ### 2.1 Vista (`notaCreditoDebito.jsp`)
 
-Prototipo estático (sin servlet, datos de ejemplo, sucursales fijas). Es una **vista combinada**:
-un único formulario con un select `tipoNota` (`credito` / `debito`) que decide a qué tabla va.
+Al escribirse este plan era un prototipo estático (sin servlet, datos de ejemplo, sucursales fijas).
+Hoy está **cableada al `NotaCreditoDebitoServlet`**. Es una **vista combinada**: un único formulario
+con un select `tipoNota` (`credito` / `debito`) que decide a qué tabla va.
 
 Campos de cabecera: usuario (sesión), fecha, estado, sucursal, ID factura, razón social, RUC,
 comprobante N° (máscara `000-000-0000000`), fecha de emisión, motivo, timbrado, fecha de
@@ -81,8 +90,9 @@ PK compuesta `(id_articulo, id_nota_*_comp_cab)`.
 
 ### 2.3 Capa Java existente
 
-Según la documentación del proyecto, `NotaCreditoCompra` / `NotaDebitoCompra` ya cuentan con
-**Modelo + DAO + Service**. Falta **Servlet** y conectar la **vista**.
+`NotaCreditoCompra` / `NotaDebitoCompra` cuentan con **Modelo + DAO + Service**; el **Servlet**
+(`NotaCreditoDebitoServlet`) y el cableado de la **vista** se implementaron después (2026-07-16), con
+los DAOs/Services transaccionales que aplican el efecto en `cuenta_pagar` y `libro_iva_compra`.
 
 ### 2.4 Relaciones actuales
 
@@ -106,9 +116,8 @@ entre las notas y estas dos tablas: ese es el centro de este plan.
 
 ## 3. Discrepancias vista ↔ BD y cambios de esquema
 
-> ✅ **Aplicado en `Base de datos Taller 3ro.sql`** (los puntos #1–#4 y #7). Los #5 y #6 se
-> resolvieron **no agregando columnas** (se heredan de la factura). El #8 deriva a §4/§5; el #9
-> (stock, `id_deposito` en el detalle de NC) a §5.3 y está **pendiente**.
+> ✅ **Todo aplicado en `Base de datos Taller 3ro.sql`** (los puntos #1–#4, #7 y también el #9). Los
+> #5 y #6 se resolvieron **no agregando columnas** (se heredan de la factura). El #8 deriva a §4/§5.
 
 | # | Problema | Cambio | Estado en el schema |
 |---|---|---|---|
@@ -120,7 +129,7 @@ entre las notas y estas dos tablas: ese es el centro de este plan.
 | 6 | La vista pide **Condición de compra**, las notas no la tienen | **Decisión:** no se guarda → se hereda de la factura (solo-lectura) | ✅ **Resuelto** (no se agregó columna) |
 | 7 | `observacion` era NOT NULL pero la vista no lo expone (solo "Motivo") | `observacion` nullable | ✅ **Aplicado** |
 | 8 | Las notas no impactan `cuenta_pagar` ni `libro_iva_compra` | Ver §4 (Enfoque 1, decidido) y §5 (aplicado) | ✅ Decidido — `libro_iva` esquema listo, `cuenta_pagar` = Enfoque 1 c/ neteo |
-| 9 | El detalle de NC no tiene depósito → el trigger de devolución no sabe de qué depósito restar | `id_deposito INTEGER` nullable + FK a `deposito` en `nota_credito_compra_detalle` | ⚠️ **Pendiente** (ver §5.3) |
+| 9 | El detalle de NC no tiene depósito → el trigger de devolución no sabe de qué depósito restar | `id_deposito INTEGER` nullable + FK a `deposito` en `nota_credito_compra_detalle` | ✅ **Aplicado** (ver §5.3). El servlet lo expone como combo por línea (se hereda de la factura y se puede cambiar) |
 
 > **Sobre #5 y #6:** confirmado que la sucursal y la condición se **heredan de la factura
 > referenciada** y se muestran como solo-lectura en la vista; **no** se guardan en la nota (se
@@ -485,7 +494,7 @@ devolución física → resta stock. Una línea **sin depósito** = ajuste finan
 bonificación, error de precio) → no toca inventario. El control es **por línea**, exactamente como
 mercadería vs gasto/fondo fijo en la factura. Así no hace falta un campo "tipo" en la NC.
 
-**Cambio de esquema requerido (pendiente):**
+**Cambio de esquema — ✅ aplicado** en `Base de datos Taller 3ro.sql`:
 ```sql
 ALTER TABLE public.nota_credito_compra_detalle ADD COLUMN id_deposito INTEGER;   -- nullable
 ALTER TABLE public.nota_credito_compra_detalle
@@ -493,13 +502,17 @@ ALTER TABLE public.nota_credito_compra_detalle
     FOREIGN KEY (id_deposito) REFERENCES public.deposito (id_deposito);
 ```
 `id_deposito` **nullable**: las líneas financieras lo dejan en NULL. Es el espejo exacto del
-`id_deposito` que ya se agregó a `factura_compra_detalle`.
+`id_deposito` que ya se agregó a `factura_compra_detalle`. Las dos funciones + triggers descritos arriba
+están escritos en `Procedimientos y Triggers para BD.sql`
+(`fn_nota_credito_compra_detalle_stock_insert` / `fn_nota_credito_compra_estado_anular_stock`);
+**falta correrlos contra la base y verificarlos** con una NC real.
 
 **Reglas de negocio asumidas (iguales que factura):**
 - Una NC anulada no se des-anula.
 - Los detalles de una NC guardada son inmutables.
-- Validación (Java, al guardar): **cantidad devuelta ≤ cantidad comprada** en la factura referenciada
-  para ese artículo/depósito (acumulando NC previas), para no dejar stock inconsistente.
+- ⚠️ **PENDIENTE** — Validación (Java, al guardar): **cantidad devuelta ≤ cantidad comprada** en la
+  factura referenciada para ese artículo/depósito (acumulando NC previas), para no dejar stock
+  inconsistente. Hoy el servlet hereda las cantidades de la factura y permite editarlas sin tope.
 
 **Nota de Débito:** no mueve stock (es financiera: intereses, fletes, gastos) → **sin trigger de
 stock**. Si alguna vez se necesitara una ND por mercadería, se trataría como una factura, no como ND.
@@ -525,11 +538,14 @@ stock**. Si alguna vez se necesitara una ND por mercadería, se trataría como u
 | **Ítems sin artículo (gasto/servicio)** | Hoy imposible (id_articulo NOT NULL). Habilitar con cambios #3/#4 si se requiere. | A confirmar |
 | **¿Trigger o Java?** | `cuenta_pagar` y `libro_iva` → **Java** transaccional (DAO/Service de la nota). **Stock → trigger** sobre `nota_credito_compra_detalle` (§5.3), espejo del de factura. | Cerrado |
 | **NC financiera vs devolución** | Se distingue **por línea**: con `id_deposito` = devolución (mueve stock); sin depósito = financiera (no toca stock). Sin campo "tipo de NC". | ✅ **Cerrado** (§5.3) |
-| **Cantidad devuelta > comprada** | **Bloquear**: validar devuelta ≤ comprada en la factura (acumulando NC previas), para no dejar stock inconsistente. | ✅ **Cerrado** (§5.3) |
+| **Cantidad devuelta > comprada** | **Bloquear**: validar devuelta ≤ comprada en la factura (acumulando NC previas), para no dejar stock inconsistente. | ✅ Decidido (§5.3) — ⚠️ **la validación todavía no está implementada** (§9) |
 
 ---
 
 ## 7. Diseño de la capa Java
+
+> ✅ **Ya implementado tal como se describe acá** (2026-07-16). Esta sección queda como especificación
+> de diseño; el estado por ítem está en el checklist de §9.
 
 ### 7.1 Patrón
 
@@ -691,16 +707,16 @@ o anulación de una factura que solo tiene una nota de crédito.
 - [x] ~~Ajustar entidades `NotaCreditoCompra(Detalle)` / `NotaDebitoCompra(Detalle)`~~ ✅ (número VARCHAR; detalle con impuesto/descripción/`id`/`monto` unitario; CC con `deposito`, DC sin).
 - [x] ~~Volver transaccionales `NotaCreditoCompraDAO` / `NotaDebitoCompraDAO`~~ ✅ (detalle + `guardar/anular...Completa` en el Service, dueño de la tx, propaga excepción).
 - [x] ~~`CuentaPagarDAO`: ajuste de saldo (∓ monto_nota, admite negativo) + recálculo de estado~~ ✅ `ajustarSaldoPorNota(...)`.
-- [ ] Provisión: relajar `CuentaPagarDAO.listarCuentasPagarPendientes()` (hoy `WHERE cta_pag_saldo > 0`) para **incluir saldos negativos** (`<> 0`, sin `Anulado`); validar **neto ≥ 0**; permitir `prov_cta_pag_monto` negativo en el detalle.
+- [x] ~~Provisión: relajar el filtro de cuentas a pagar para **incluir saldos negativos**; validar **neto ≥ 0**; permitir `prov_cta_pag_monto` negativo en el detalle~~ ✅ resuelto con `CuentaPagarDAO.listarCuentasPagarPorProveedor` (saldo `<> 0`, sin `Anulado`) + validación de neto ≥ 0 en `ProvisionCuentaPagarServlet`; la vista preserva el signo negativo en la máscara de miles. Ver `MODULO_TESORERIA_PLAN.md` §B.
 - [x] ~~**Corregir la heurística de "pagos aplicados" en `FacturaCompraServlet`** (`saldo < monto`)~~ ✅ `CuentaPagarDAO.tienePagosAplicados` (EXISTS en pagos) + guard **"anular notas antes que la factura"** (`tieneNotaActivaPorFactura` en ambos DAOs de nota), aplicado en editar y anular. Ver §8.4.
 - [x] ~~Reusar `LibroIvaCompraDAO` para filas origen NOTA (insert con signo + anulación)~~ ✅ `insertarLibroIvaNota` + `anularPorNotaCredito`/`anularPorNotaDebito` (filtran por FK de la nota, no por factura).
 - [x] ~~**Stock (NC devolución, §5.3):** `id_deposito` + FK en `nota_credito_compra_detalle`; triggers `trg_nota_credito_compra_detalle_stock_ins` (resta) y `trg_nota_credito_compra_estado_anular` (repone), espejo de factura~~ ✅ escritos en `Base de datos Taller 3ro.sql` y `Procedimientos y Triggers para BD.sql` (falta correrlos contra la BD).
-- [ ] Validar **cantidad devuelta ≤ comprada** (acumulando NC previas) al guardar la NC.
-- [ ] Vista: permitir elegir **depósito por línea devuelta** (heredar de la factura); dejar NULL en líneas financieras.
+- [ ] ⚠️ Validar **cantidad devuelta ≤ comprada** (acumulando NC previas) al guardar la NC. *(Único pendiente de código.)*
+- [x] ~~Vista: permitir elegir **depósito por línea devuelta** (heredar de la factura); dejar NULL en líneas financieras~~ ✅ combo de depósito por línea en el editor (`idDeposito`), heredado de la factura y editable; las líneas financieras quedan sin depósito.
 - [x] ~~Crear `NotaCreditoDebitoServlet` (Session+Token, enrutado NC/ND, validación de permisos)~~ ✅ + registrado en `AuthorizationFilter` (módulo `compra`).
 - [x] ~~Conectar `notaCreditoDebito.jsp`: buscar factura real, heredar líneas, calcular IVA, condicionar botones~~ ✅ (form único + JS, sucursal/condición read-only, IVA con `<fmt>`, modales reales, permisos; menú redirige por el servlet).
 - [ ] Pruebas: NC parcial, NC total (saldo→0), **NC > saldo (saldo→negativo)**, **neteo en provisión (neto ≥ 0 y bloqueo de neto < 0)**, ND sobre saldada, anulación con reversa, **bloqueo de anular NC ya neteada**, factura anulada.
-- [ ] Actualizar `README.md` y `DOCUMENTACION_PROYECTO.md` al completar.
+- [x] ~~Actualizar `README.md` y `DOCUMENTACION_PROYECTO.md` al completar~~ ✅ (2026-07-26).
 
 ---
 

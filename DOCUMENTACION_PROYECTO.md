@@ -200,26 +200,26 @@ Faltan crear los DAOs para las siguientes entidades:
 [ ] LibroIvaVentaDAO
 [ ] NotaRemisionCompraDAO
 [ ] NotaRemisionCompraDetalleDAO
-[ ] MonedaDAO
+[x] MonedaDAO ✅ (referenciales bancarios, 2026-07)
 [ ] TipoEntidadFinancieraDAO
-[ ] EntidadFinancieraDAO
-[ ] TipoCuentaDAO
-[ ] CuentaDAO
-[ ] TipoChequeDAO
-[ ] ChequeraDAO
-[ ] ChequeDAO
+[x] EntidadFinancieraDAO ✅ (2026-07)
+[x] TipoCuentaDAO ✅ (2026-07)
+[x] CuentaDAO ✅ (2026-07)
+[x] TipoChequeDAO ✅ (combo de la Orden de Pago, 2026-07)
+[x] ChequeraDAO ✅ (lectura de chequera/rango + próximo N° de cheque, 2026-07)
+[x] ChequeDAO ✅ (emisión/anulación/lectura de cheque, 2026-07)
 [ ] ChequeRecibidoDAO
 [ ] TitularDAO
 [ ] MotivoAjusteDAO
 [ ] AjusteStockCabeceraDAO
 [ ] AjusteStockDetalleDAO
 [ ] ModuloDAO
-[ ] FormaPagoCabeceraDAO
-[ ] FormaPagoDetalleDAO
+[x] FormaPagoCabeceraDAO ✅ (catálogo cheque/transferencia, 2026-07)
+[x] FormaPagoDetalleDAO ✅ (N formas por OP, con cheque y tipo de cambio, 2026-07)
 [ ] FormaCobroDAO
 [ ] FormaCobroDetalleDAO
 [ ] CobroDetalleDAO
-[ ] OrdenPagoDetalleDAO
+[x] OrdenPagoDetalleDAO ✅ (N facturas por OP, FK compuesta a cuenta_pagar, 2026-07)
 [ ] TipoTarjetaDAO
 [ ] TarjetaDAO
 [ ] ConciliacionBancariaDAO
@@ -229,8 +229,8 @@ Faltan crear los DAOs para las siguientes entidades:
 [ ] RecaudacionDepositarDAO
 [ ] RecaudacionDepositarDetalleDAO
 [ ] TipoComprobanteDAO
-[ ] ProvisionCuentaPagarDAO
-[ ] ProvisionCuentaPagarDetalleDAO
+[x] ProvisionCuentaPagarDAO ✅ (cabecera + detalle en el mismo DAO, 2026-07)
+[—] ProvisionCuentaPagarDetalleDAO — no se creó: el detalle vive dentro de `ProvisionCuentaPagarDAO`
 [ ] FondoFijoDAO
 [ ] FondoFijoRendicionDAO
 [ ] FondoFijoRendicionDetalleDAO
@@ -246,10 +246,12 @@ Faltan crear los servicios REST para las nuevas entidades:
 [x] PermisoService ✅ (creado 2026-02-06)
 [x] LibroIvaCompraService ✅ (creado en refactor transaccional)
 [ ] LibroIvaVentaService
-[ ] MonedaService
-[ ] EntidadFinancieraService
-[ ] CuentaService
-[ ] ChequeService
+[x] MonedaService ✅ (2026-07)
+[x] EntidadFinancieraService ✅ (2026-07)
+[x] CuentaService ✅ (2026-07)
+[x] TipoCuentaService · FormaPagoCabeceraService · TipoChequeService · ChequeraService ✅ (combos de tesorería, 2026-07)
+[x] ProvisionCuentaPagarService · OrdenPagoService ✅ (transaccionales, 2026-07)
+[ ] ChequeService (hoy `ChequeDAO` se usa dentro de la transacción de la OP; no hace falta un Service propio hasta que haya un ABM de cheques)
 [ ] AjusteStockService
 [ ] ConciliacionBancariaService
 [ ] FondoFijoService
@@ -261,8 +263,11 @@ Faltan crear los servicios REST para las nuevas entidades:
 Faltan crear los controladores para las nuevas funcionalidades:
 
 ```
-[ ] CuentaBancariaServlet
-[ ] ChequeServlet
+[x] CuentaServlet ✅ (cuentas bancarias, 2026-07 — reemplaza el "CuentaBancariaServlet" planeado)
+[x] ProvisionCuentaPagarServlet ✅ (2026-07)
+[x] OrdenPagoServlet ✅ (2026-07 — Session+Token, pendiente de prueba end-to-end)
+[ ] ChequeServlet (ABM de cheques/chequeras; hoy los cheques se emiten desde la Orden de Pago)
+[ ] DebitoCreditoServlet (movimientos bancarios)
 [ ] StockServlet
 [ ] AjusteStockServlet
 [ ] ConciliacionBancariaServlet
@@ -276,8 +281,10 @@ Faltan crear las vistas para las nuevas funcionalidades:
 
 ```
 [⚠] notaRemision.jsp        (vista inicial creada, sin servlet aún)
-[⚠] notaCreditoDebito.jsp   (vista Nota Crédito/Débito Compra creada, sin servlet aún)
-[ ] cuentaBancaria.jsp
+[x] notaCreditoDebito.jsp   ✅ (Nota Crédito/Débito Compra, cableada a `NotaCreditoDebitoServlet` — 2026-07)
+[x] cuenta.jsp              ✅ (cuentas bancarias, 2026-07 — reemplaza el "cuentaBancaria.jsp" planeado)
+[x] provision.jsp           ✅ (provisión de cuenta a pagar, 2026-07)
+[x] ordenPago.jsp           ✅ (orden de pago con carrito de formas de pago, 2026-07)
 [ ] cheque.jsp
 [ ] stock.jsp
 [ ] ajusteStock.jsp
@@ -296,19 +303,19 @@ Faltan crear las vistas para las nuevas funcionalidades:
 - [x] Sincronización Cuenta a Pagar al editar/anular Factura ✅ (2026-03)
 - [x] Validación de plazo en facturas a crédito ✅ (2026-04)
 - [⚠] Nota de Remisión Compra (vista inicial creada)
-- [⚠] Nota Crédito Compra (vista `notaCreditoDebito.jsp` creada, falta servlet — ver [plan](NOTA_CREDITO_DEBITO_PLAN.md))
-- [⚠] Nota Débito Compra (vista `notaCreditoDebito.jsp` creada, falta servlet — ver [plan](NOTA_CREDITO_DEBITO_PLAN.md))
+- [x] Nota Crédito Compra ✅ (2026-07 — `NotaCreditoDebitoServlet` + `notaCreditoDebito.jsp`; ajusta `cuenta_pagar` con **saldo negativo permitido** (Enfoque 1 c/ neteo en la provisión), fila propia en el Libro IVA y triggers de stock por devolución. **Falta** validar cantidad devuelta ≤ comprada — ver [plan](NOTA_CREDITO_DEBITO_PLAN.md) §9)
+- [x] Nota Débito Compra ✅ (2026-07 — mismo servlet/vista; aumenta el saldo de `cuenta_pagar` y registra su fila en el Libro IVA; no mueve stock)
 
-#### Tesorería
-- [ ] CRUD de Cuentas Bancarias
-- [ ] Gestión de Chequeras y Cheques
-- [ ] Emisión de Cheques
-- [ ] Recepción de Cheques
-- [ ] Conciliación Bancaria
-- [ ] Gestión de Fondo Fijo
-- [ ] Rendición de Fondo Fijo
-- [ ] Arqueo de Caja
-- [ ] Recaudaciones a Depositar
+#### Tesorería *(plan detallado: [MODULO_TESORERIA_PLAN.md](MODULO_TESORERIA_PLAN.md))*
+- [x] CRUD de Cuentas Bancarias ✅ (2026-07 — `CuentaServlet` + `cuenta.jsp`, con seed de moneda/entidad financiera/tipo de cuenta)
+- [x] Provisión de Cuenta a Pagar ✅ (2026-07 — reserva las cuentas y netea el saldo a favor de las NC; ver plan §B)
+- [x] Orden de Pago ✅ (2026-07 — N formas de pago mixtas transferencia/cheque multi-cuenta, descuenta `cta_pag_saldo`, consume la provisión y anula con reversa total; ver plan §C). **Pendiente de prueba end-to-end.**
+- [x] Emisión de Cheques ✅ (2026-07 — se emiten desde la Orden de Pago, con N° tomado del rango de la chequera)
+- [ ] Débitos / Créditos bancarios (plan §D) — **próximo**
+- [ ] Gestión de Chequeras (ABM propio; hoy las chequeras vienen del seed)
+- [ ] Gestión de Fondo Fijo + Rendición (plan §E)
+- [ ] Conciliación Bancaria (plan §F — el objetivo final)
+- [ ] Recepción de Cheques, Arqueo de Caja, Recaudaciones a Depositar *(lado cobros — requiere Ventas; plan §9)*
 - [ ] UI de Cuenta a Pagar (backend ya integrado con Factura Compra)
 
 #### Inventario
@@ -380,6 +387,73 @@ Todas las entidades siguen el patrón POJO:
 ---
 
 ## Historial de Cambios
+
+### 2026-07-17 al 26 — Módulo de Tesorería: referenciales, Provisión y Orden de Pago
+
+Se arranca el módulo de Tesorería siguiendo [`MODULO_TESORERIA_PLAN.md`](MODULO_TESORERIA_PLAN.md)
+(fases A, B y C del plan). Todo calcado del patrón Session+Token / Service transaccional de
+`FacturaCompraServlet`.
+
+- **Referenciales bancarios (§A):** `CuentaServlet` + `cuenta.jsp` (ABM de cuentas bancarias), con
+  `MonedaDAO`/`Service`, `TipoCuentaDAO`/`Service` y `EntidadFinancieraDAO`/`Service` para los combos.
+  Seed cargado en `Inserts inciales.sql` (moneda, tipo/entidad financiera, tipo de cuenta, `cuenta`,
+  `tipo_cheque`, `chequera`).
+- **Provisión de cuenta a pagar (§B):** `ProvisionCuentaPagarDAO` (cabecera + detalle) +
+  `ProvisionCuentaPagarService` transaccional + `ProvisionCuentaPagarServlet` + `provision.jsp`. La
+  provisión **solo agrupa/reserva** (deja las cuentas en `'En provision'` **sin tocar el saldo**) y
+  **netea el saldo a favor** de las Notas de Crédito (valida neto ≥ 0). `CuentaPagarDAO` gana
+  `listarCuentasPagarPorProveedor` (saldo ≠ 0, incluye negativos), `marcarEnProvision`,
+  `revertirProvision` y `calcularEstadoPorSaldo`; además se corrige la persistencia de `cta_pag_plazo`.
+- **Orden de Pago (§C):** es donde **sale el dinero**. Esquema ajustado en Power Architect (seriales en
+  `orden_pago_detalle`/`forma_pago_detalle`, `id_cheque` movido al detalle de formas, `id_cheque`/
+  `id_cuenta` fuera de la cabecera) y POJOs alineados. `OrdenPagoService` hace todo en **una
+  transacción**: inserta OP + detalle + N formas de pago, **emite los cheques reales** tomando el N°
+  del rango de la chequera, **descuenta `cta_pag_saldo`** de cada factura y marca la provisión como
+  `'Procesada'`. Incluye **guard anti doble-pago** (bloquea la provisión con `FOR UPDATE` y exige
+  `'Pendiente'`) y **`anularOrdenPagoCompleta`** con reversa total (devuelve el saldo, anula los cheques
+  y reactiva la provisión). La OP **no** inserta en conciliación: eso lo hará el módulo periódico (§F).
+  Capa web: `ordenPago.jsp` (formulario único + JS, con **carrito de formas de pago** mixtas
+  transferencia/cheque multi-cuenta) y `OrdenPagoServlet` (Session+Token). Se crean los combos que
+  faltaban: `FormaPagoCabeceraDAO`/`Service`, `TipoChequeDAO`/`Service`, `ChequeraService`.
+- **Decisión de moneda/tipo de cambio (2026-07-25):** la deuda (`factura_compra`/`cuenta_pagar`) no
+  tiene moneda → es **Gs implícito**, así que `id_moneda` y `ord_pag_tipo_cambio` **se quitaron de
+  `orden_pago_cabecera`**: la moneda la define la **cuenta bancaria** de cada forma de pago y el tipo de
+  cambio pasó a `forma_pago_detalle.forma_pag_tipo_cambio` (por instrumento).
+- **Permisos/menú:** `CuentaServlet`, `ProvisionCuentaPagarServlet` y `OrdenPagoServlet` registrados en
+  `AuthorizationFilter` bajo el módulo `tesoreria`, con sus links en `menuLateral.jsp`.
+
+Pendiente: **probar la Orden de Pago de punta a punta** (compilar/desplegar y validar el descuento de
+saldo, el cheque emitido y la anulación), confirmar el nombre de columna `forma_pag_tipo_cambio` contra
+Power Architect, y seguir con Débitos/Créditos (§D) → Fondo Fijo (§E) → Conciliación (§F).
+
+### 2026-07-16 — Nota de Crédito / Débito de Compra (implementación completa)
+
+Se implementa la capa Java/JSP planificada en [`NOTA_CREDITO_DEBITO_PLAN.md`](NOTA_CREDITO_DEBITO_PLAN.md),
+cerrando el circuito de ajustes sobre una factura de compra ya emitida:
+
+- **`NotaCreditoDebitoServlet`** (Session+Token, calcado de `FacturaCompraServlet`) enruta NC y ND desde
+  un único formulario (`tipoNota`), y `notaCreditoDebito.jsp` queda **cableada**: busca la factura real,
+  hereda sus líneas (cantidades editables a lo devuelto), calcula el IVA, hereda sucursal y condición
+  como solo-lectura y condiciona los botones por permiso. Registrado en `AuthorizationFilter` (módulo
+  `compra`).
+- **DAOs/Services transaccionales** de NC y ND (`guardar/anular...Completa`, el Service dueño de la
+  conexión), que en una sola transacción persisten la nota + su detalle y aplican los dos efectos:
+  - **`cuenta_pagar`** vía `CuentaPagarDAO.ajustarSaldoPorNota(...)` (`SELECT ... FOR UPDATE`): la NC
+    resta y la ND suma. Se adopta el **Enfoque 1 con neteo en la provisión** → el saldo **puede quedar
+    negativo** ("Saldo a favor") y se consume después en la provisión del proveedor.
+  - **`libro_iva_compra`**: **fila propia por nota** (`insertarLibroIvaNota`, con el discriminador
+    `libro_iva_comp_origen` y FK a la cabecera de la nota) + `anularPorNotaCredito`/`anularPorNotaDebito`.
+- **Stock por devolución:** `id_deposito` (nullable) en `nota_credito_compra_detalle` + triggers espejo
+  de los de factura (`trg_nota_credito_compra_detalle_stock_ins` resta al insertar,
+  `trg_nota_credito_compra_estado_anular` repone al anular). El discriminador es el **depósito por
+  línea**: con depósito = devolución física (mueve stock), sin depósito = ajuste financiero. La ND no
+  mueve stock.
+- **Guards en Factura de Compra:** se reemplaza la heurística `saldo < monto` por
+  `CuentaPagarDAO.tienePagosAplicados` (EXISTS sobre pagos) y se agrega el bloqueo **"anulá las notas
+  activas antes de editar/anular la factura"** (`tieneNotaActivaPorFactura`).
+
+Pendiente: **validar que la cantidad devuelta no supere la comprada** (acumulando NC previas) al guardar
+la NC, y **correr los triggers de stock contra la base** para verificarlos end-to-end (plan §9).
 
 ### 2026-06 — Refactor de esquema para Nota de Crédito/Débito (schema v2 unificado)
 
@@ -645,16 +719,19 @@ El stock ya se mantiene automáticamente por triggers PL/pgSQL, falta la UI de c
 Todos los backends (Pedido, Factura, Nota Crédito/Débito/Remisión) tienen modelo + DAO + Service. Falta la capa UI completa.
 - Reusar patrón de Factura Compra (Session+Token, transaccional, Libro IVA, triggers de stock)
 
-### 4. Módulo de Tesorería
+### 4. Módulo de Tesorería (en progreso — ver [MODULO_TESORERIA_PLAN.md](MODULO_TESORERIA_PLAN.md))
 Gestión financiera completa: cuentas bancarias, cheques, cobros, pagos, caja, fondo fijo, conciliación bancaria.
-- Submódulos: Bancos, Cheques, Cobros/Pagos, Caja, Fondo Fijo, Conciliación
-- Requiere: DAOs, Services, Servlets, JSPs para cada submódulo
+- ✅ **Hechos:** Referenciales bancarios (§A), Provisión de Cuenta a Pagar (§B) y **Orden de Pago** (§C,
+  con emisión de cheques y descuento de saldo — pendiente de prueba end-to-end).
+- ⏳ **Camino que resta hacia la conciliación:** Débitos/Créditos (§D) → Fondo Fijo + rendición (§E) →
+  **Conciliación bancaria** (§F, el objetivo final).
+- El lado **cobros/caja/arqueo/recaudaciones** (§9 del plan) queda para cuando se aborde Ventas.
 
 ---
 
 ## Otros Pendientes
 
-1. **Crear DAOs** para entidades de tesorería restantes (~40 pendientes)
+1. **Crear DAOs** para las entidades de tesorería restantes (ya están los del flujo Cuenta a Pagar → Provisión → Orden de Pago; faltan los de débitos/créditos, fondo fijo, conciliación y todo el lado cobros/caja)
 2. **Crear Services REST** para exponer las operaciones
 3. **Crear vistas JSP** para las nuevas funcionalidades
 4. ~~**Implementar sistema de permisos** por módulo~~ ✅ (implementado 2026-02-06)

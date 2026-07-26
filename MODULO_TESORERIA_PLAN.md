@@ -60,19 +60,21 @@ tesorería). Ver §4 el detalle por sub-módulo.
 | **Referenciales → Cuenta bancaria** (ABM) | ✅ `CuentaDAO`/`CuentaService`/`CuentaServlet`/`cuenta.jsp`, más `MonedaDAO`/`Service`, `TipoCuentaDAO`/`Service`, `EntidadFinancieraDAO`/`Service` (para los combos). Seed cargado (moneda, tipo_entidad_financiera, entidad_financiera, tipo_cuenta). Servlet limpio (sin el bug de variables de instancia). |
 | **Provisión de cuenta a pagar** | ✅ **Completo**: `ProvisionCuentaPagarDAO` + `ProvisionCuentaPagarService` (transaccional), `ProvisionCuentaPagarServlet` (Session+Token), `provision.jsp` (calcado del prototipo). Reserva las cuentas (`En provision`, sin tocar el saldo) y netea el saldo a favor de NC (valida **neto ≥ 0**). |
 | **`CuentaPagarDAO`** (ampliado) | `ajustarSaldoPorNota` (lógica de estado en Java, `SELECT ... FOR UPDATE`), `tienePagosAplicados`, `listarCuentasPagarPorProveedor` (saldo ≠ 0, incluye negativos + N° factura + plazo + fecha emisión), `marcarEnProvision`, `revertirProvision`, helper `calcularEstadoPorSaldo`. Además: **persistencia de `cta_pag_plazo`** corregida (antes no se guardaba) y campo `plazo` en la entidad `CuentaPagar`. |
+| **Orden de pago** | ✅ **Completa (a falta de prueba end-to-end)**: esquema + POJOs alineados, `OrdenPagoDAO`/`OrdenPagoDetalleDAO`/`FormaPagoDetalleDAO`/`ChequeDAO`/`ChequeraDAO`, `OrdenPagoService` transaccional (guard anti doble-pago + anulación con reversa total), `ordenPago.jsp` y **`OrdenPagoServlet`** (Session+Token). Ver §C. |
 
-**Servlets de tesorería existentes:** `CuentaServlet`, `ProvisionCuentaPagarServlet` — ambos
-registrados en `AuthorizationFilter` (módulo `tesoreria`); links del menú "Módulo Tesorería"
-actualizados (Cuentas Bancarias, Provisión de Cta. Pagar).
+**Servlets de tesorería existentes:** `CuentaServlet`, `ProvisionCuentaPagarServlet`,
+`OrdenPagoServlet` — los tres registrados en `AuthorizationFilter` (módulo `tesoreria`); links del menú
+"Módulo Tesorería" actualizados (Cuentas Bancarias, Provisión de Cta. Pagar, Orden de Pago).
 
 **Esquema de la OP listo (2026-07-21):** ajustes de Power Architect aplicados y verificados (seriales en
 `orden_pago_detalle`/`forma_pago_detalle`, `id_cheque` movido a `forma_pago_detalle`, `id_cheque`/`id_cuenta`
 quitados de la cabecera, `conciliacion_bancaria_detalle.id_forma_pago_det` nullable) + seed de
-`cuenta`/`tipo_cheque`/`chequera` cargado. Ver §C.
+`cuenta`/`tipo_cheque`/`chequera` cargado. Ajuste posterior (2026-07-25): **la moneda salió de la
+cabecera de la OP y el tipo de cambio pasó a `forma_pago_detalle`** (ver C6 en §C). Ver §C.
 
-**Pendiente:** **Orden de Pago (§C — en construcción)**, Débitos/Créditos (§D), Fondo Fijo (§E),
-Conciliación (§F), y el resto de referenciales/entidades. ⚠️ **3 POJOs desalineados** con la BD nueva
-(`OrdenPago`, `OrdenPagoDetalle`, `FormaPagoDetalle`) — a corregir antes de codear los DAOs (ver §11).
+**Pendiente:** **probar la Orden de Pago de punta a punta** (§C), Débitos/Créditos (§D), Fondo Fijo (§E),
+Conciliación (§F), y el resto de referenciales/entidades. Los POJOs del flujo OP ya están alineados y
+verificados contra el esquema (ver §11).
 
 ---
 
@@ -99,9 +101,9 @@ esa dupla se propaga como **FK compuesta** a `provision_cuenta_pagar_detalle`, `
 **Tablas:** `moneda`, `tipo_entidad_financiera`, `entidad_financiera`, `tipo_cuenta`, `cuenta`
 (+ `tipo_cheque`, `tipo_tarjeta` para más adelante).
 
-Son ABM (alta/baja/modificación) simples. **Son prerrequisito** porque una Orden de Pago referencia
-`id_cuenta` (banco de donde sale la plata) y `id_moneda`; una `cuenta` referencia
-`entidad_financiera` + `tipo_cuenta` + `moneda`.
+Son ABM (alta/baja/modificación) simples. **Son prerrequisito** porque cada forma de pago de una Orden
+de Pago referencia `id_cuenta` (el banco de donde sale la plata, que además **define la moneda** del
+pago — ver C6 en §C); y una `cuenta` referencia `entidad_financiera` + `tipo_cuenta` + `moneda`.
 
 **A implementar por cada uno:** DAO + Service + Servlet + JSP (ABM). Se puede agrupar en una o pocas
 vistas de "Referenciales de Tesorería".
@@ -152,28 +154,32 @@ Acá se **consume el "saldo a favor"** de las NC (Enfoque 1 con neteo). Por eso 
 
 ---
 
-### C. Orden de pago *(donde sale el dinero — ✅ ESQUEMA LISTO, EN CONSTRUCCIÓN)*
+### C. Orden de pago *(donde sale el dinero — ✅ IMPLEMENTADA, PENDIENTE DE PRUEBA)*
 
 **Tablas:** `orden_pago_cabecera`, `orden_pago_detalle`, `forma_pago_cabecera`, `forma_pago_detalle`,
 `cheque`, `chequera`, `tipo_cheque`, `cuenta`.
 
-**Prototipo** (`webapp/Images/Prototipo Orden de pago.png`). Es como Factura/Provisión pero para la OP:
+**Prototipo** (`webapp/Images/Prototipo Orden de pago.png` — ⚠️ **quedó viejo**: muestra un pago único
+en la cabecera, y Moneda/Tipo de cambio que ya no van ahí). Es como Factura/Provisión pero para la OP:
 - **Botones:** Nuevo · Buscar Orden de pago · Buscar Provisión · Anular.
-- **Cabecera:** Nro OP · Recibo Nro (`ord_pag_nro_recibo`) · Fecha · Estado · Sucursal · **Moneda** ·
-  **Tipo de cambio** · **Provisión Nro** · **Tipo de pago** (reposición FF / otros gastos) · Razón Social.
-  *(La cuenta bancaria y el/los cheque ya NO van en la cabecera → van en cada forma de pago.)*
+- **Cabecera:** Nro OP · Recibo Nro (`ord_pag_nro_recibo`) · Fecha · Estado · Sucursal ·
+  **Provisión Nro** · **Tipo de pago** (reposición FF / otros gastos) · Razón Social.
+  *(La cuenta bancaria, el/los cheque, la moneda y el tipo de cambio ya NO van en la cabecera → van
+  en cada forma de pago; ver C5 y C6.)*
 - **Detalle de facturas** = las de la provisión, **SOLO LECTURA** (Item, Nro factura, Importe total,
   Saldo pendiente, Importe a pagar, Plazo). Sin Editar/Eliminar (vienen fijas de la provisión).
 - **Bloque de FORMAS DE PAGO** (tipo carrito, **N filas**): por cada una → Tipo (Transferencia/Cheque),
-  **Monto**, **Cuenta bancaria** (de dónde sale), Referencia; si es **Cheque** → Chequera + Tipo de cheque
-  + Fecha de pago/vencimiento (el Nro se toma solo del rango de la chequera). Σ montos = total de la OP.
+  **Monto**, **Cuenta bancaria** (de dónde sale — ella define la moneda), **Tipo de cambio**, Referencia;
+  si es **Cheque** → Chequera + Tipo de cheque + Fecha de pago/vencimiento (el Nro se toma solo del rango
+  de la chequera). Σ montos = total de la OP.
 - **Importe Total a Pagar** + Generar / Cancelar.
 
 **Flujo:**
 1. Nuevo → **Buscar Provisión** → carga sus facturas (detalle SOLO LECTURA) + proveedor (Razón Social) + Provisión Nro.
-2. Completar cabecera: Recibo, Sucursal, Moneda, Tipo de cambio, Tipo de pago (`ord_pag_tipo_pago` = reposición FF / otros gastos).
+2. Completar cabecera: Recibo, Sucursal, Tipo de pago (`ord_pag_tipo_pago` = reposición FF / otros gastos).
 3. **Cargar una o varias formas de pago** (mixto: p. ej. parte transferencia + parte cheque(s), incluso
-   de cuentas distintas). Por cada línea de cheque se emite un cheque real de la chequera.
+   de cuentas distintas, cada una con su tipo de cambio). Por cada línea de cheque se emite un cheque
+   real de la chequera.
 4. **Generar** → transacción única (los 5 pasos de abajo): crea OP + detalle + formas de pago + cheques,
    y **descuenta el `cta_pag_saldo`** de cada factura de la provisión.
 
@@ -186,6 +192,7 @@ Acá se **consume el "saldo a favor"** de las NC (Enfoque 1 con neteo). Por eso 
 | C3 | Formas de pago | ✅ **VARIAS por OP** (mixtas: transferencia + cheque(s)). `forma_pago_detalle` con N filas. **⟳ Revierte la decisión previa de "una sola forma".** |
 | C4 | Cheque | ✅ **Cheque REAL desde chequera** (ya no "solo referencia"). Cada línea de cheque emite un registro en `cheque`, con el **Nro dentro del rango** de la `chequera`, y se enlaza vía `forma_pago_detalle.id_cheque`. La chequera viene del **seed** (ABM de Chequera queda para §G, más adelante). |
 | C5 | Cuenta bancaria | ✅ **Multi-cuenta.** La cuenta de cada pago vive en `forma_pago_detalle.id_cuenta` (se quitó de la cabecera). Una OP puede pagar desde 2 cuentas distintas. |
+| C6 | Moneda y tipo de cambio *(sesión 2026-07-25)* | ✅ **Fuera de la cabecera.** La deuda (`factura_compra`/`cuenta_pagar`) **no tiene moneda** → es **Gs implícito**, así que la cabecera no necesita `id_moneda`: la moneda de cada pago la define **la cuenta bancaria** de esa forma de pago. Y como cada instrumento puede liquidarse a una cotización distinta, el **tipo de cambio pasó a `forma_pago_detalle.forma_pag_tipo_cambio`**. Se **quitaron** `id_moneda` y `ord_pag_tipo_cambio` de `orden_pago_cabecera`. ⚠️ El nombre `forma_pag_tipo_cambio` se eligió por convención — **confirmar contra Power Architect**. |
 
 **✅ Ajustes de esquema aplicados (Power Architect, 2026-07-21):**
 - ✅ `orden_pago_detalle.id_orden_pago_det` **serial** (N facturas por OP). Mantiene `id_cta_pagar` + `id_fact_comp_cab` (FK compuesta) + `orden_pag_det_monto`.
@@ -193,6 +200,9 @@ Acá se **consume el "saldo a favor"** de las NC (Enfoque 1 con neteo). Por eso 
 - ✅ `orden_pago_cabecera`: se **quitaron** `id_cheque` y `id_cuenta` (ambos migran al detalle).
 - ✅ `conciliacion_bancaria_detalle.id_forma_pago_det` → **NULLABLE** (los ítems de débito/crédito no tienen forma de pago).
 - ✅ Seed cargado en `Inserts inciales.sql`: `cuenta` (Itaú/Ueno Gs, Itaú Ahorro USD), `tipo_cheque` (A la vista / Diferido), `chequera` (Itaú 1000001–1000050, Ueno 2000001–2000050).
+- ✅ **(2026-07-25)** `orden_pago_cabecera`: se **quitaron** `id_moneda` y `ord_pag_tipo_cambio`;
+  `forma_pago_detalle`: se **agregó** `forma_pag_tipo_cambio` (DOUBLE PRECISION, nullable). Ver C6.
+  ⚠️ Falta confirmar el nombre de esa columna contra Power Architect.
 
 **Los pasos transaccionales de `guardarOrdenPagoCompleta(...)`** (todo en UNA tx — el Service es dueño de la conexión). ✅ **Implementado** (ver §C.1 para el detalle de participantes/mensajes):
 ```
@@ -260,7 +270,7 @@ Nota: la conciliación referencia **`id_forma_pago_det`** (nivel cuenta/instrume
 > reversa total" son los dos puntos que motivaron esta sección.
 
 **Participantes (lifelines) comunes:**
-`Servlet` (`OrdenPagoServlet`, pendiente) · `OrdenPagoService` (dueño de la transacción) ·
+`Servlet` (`OrdenPagoServlet`, ✅ implementado) · `OrdenPagoService` (dueño de la transacción) ·
 `OrdenPagoDAO` · `OrdenPagoDetalleDAO` · `FormaPagoDetalleDAO` · `ChequeDAO` · `ChequeraDAO` ·
 `CuentaPagarDAO` · `ProvisionCuentaPagarDAO` · `BD` (PostgreSQL).
 Regla transversal: **el Service abre la conexión, hace `setAutoCommit(false)` y es el único que hace
@@ -395,33 +405,65 @@ Service → BD : commit()                                       [fin TX OK]
 > cheque anulado deja su número consumido (comportamiento bancario correcto: un talonario no reusa
 > números). Si en el futuro se quisiera reusar, habría que excluir los anulados del `MAX`.
 
-**Componentes a crear:**
-- `OrdenPagoDAO` — **reescribir**: quitar el CRUD aislado de cabecera; insert de cabecera sin `id_cheque`/`id_cuenta`; parte de la tx.
-- `OrdenPagoDetalleDAO` — insert N filas (con FK compuesta a `cuenta_pagar`).
-- `FormaPagoDetalleDAO` — insert N formas (con `id_cheque` nullable).
-- `ChequeDAO` — insert cheque + `proximoNumero(idChequera)`; `ChequeraDAO` — leer chequera/rango.
-- `CuentaPagarDAO` — **método nuevo** `descontarSaldo(idCtaPagar, idFactComp, importe)` + recálculo de estado con `calcularEstadoPorSaldo` (misma tx).
-- `OrdenPagoService` — dueño de la tx, orquesta los 5 pasos. `FormaPagoCabeceraService` (combo Cheque/Transferencia), `TipoChequeService`, `ChequeraService` para los combos.
-- `OrdenPagoServlet` (Session+Token, calcado de Provisión/Factura) + `ordenPago.jsp` (prototipo).
-  Reusar `CuentaService`/`MonedaService`/`EntidadFinancieraService` (combos) y `ProvisionCuentaPagarService` (Buscar Provisión).
-- Registrar `/OrdenPagoServlet` en `AuthorizationFilter` (módulo `tesoreria`) + link en `menuLateral.jsp`.
+**Componentes — ✅ todos creados:**
+- ✅ `OrdenPagoDAO` — reescrito: insert de cabecera sin `id_cheque`/`id_cuenta`/`id_moneda`/`ord_pag_tipo_cambio`, parte de la tx; + `obtenerProximoNumero()` (correlativo `ord_pag_numero` = `MAX + 1`, para mostrarlo al abrir la OP) y `anularOrdenPago`.
+- ✅ `OrdenPagoDetalleDAO` — insert N filas (con FK compuesta a `cuenta_pagar`) + `listarPorOrden` hidratando factura/monto/saldo/plazo.
+- ✅ `FormaPagoDetalleDAO` — insert N formas (con `id_cheque` y `forma_pag_tipo_cambio` nullables) + `listarPorOrden` **hidratando la cuenta bancaria y el cheque** (la pantalla muestra entidad financiera y N° de cheque emitido).
+- ✅ `ChequeDAO` — `insertarCheque`, `anularCheque` y `getCheque` (para ver una OP guardada); `ChequeraDAO` — `getChequera`/`listarChequeras`/`proximoNumeroCheque` (con validación de rango).
+- ✅ `CuentaPagarDAO` — `descontarSaldo(idCtaPagar, idFactComp, importe)` + `restaurarSaldoPorAnulacionOP(...)`, con recálculo de estado vía `calcularEstadoPorSaldo` (misma tx).
+- ✅ `OrdenPagoService` — dueño de la tx, orquesta los 5 pasos (+ `anularOrdenPagoCompleta` y `obtenerProximoNumero`).
+- ✅ **Combos:** `FormaPagoCabeceraDAO` + `FormaPagoCabeceraService` (Cheque/Transferencia), `TipoChequeDAO` + `TipoChequeService`, `ChequeraService` — los tres **creados en esta etapa** (no existían). Se reusan `SucursalService`, `CuentaService` (cuenta bancaria, que ya trae moneda y entidad financiera) y `ProvisionCuentaPagarService` con el nuevo `listarProvisionesPendientes()` (solo provisiones `'Pendiente'`, vía `ProvisionCuentaPagarDAO.listarProvisionesPorEstado`).
+- ✅ `OrdenPagoServlet` (Session+Token, calcado de `FacturaCompraServlet`) + `ordenPago.jsp`.
+- ✅ `/OrdenPagoServlet` registrado en `AuthorizationFilter` (módulo `tesoreria`) + link de `menuLateral.jsp` apuntado al servlet (antes iba directo al `.jsp`, salteando el filter de permisos).
 
-**⚠️ Entidades (POJOs) a alinear ANTES de codear los DAOs** (ver §11):
-- `OrdenPago` — **quitar** `idCheque` y `idCuenta` (columnas eliminadas de la cabecera).
-- `OrdenPagoDetalle` — **agregar** `idOrdenPagoDet` (nuevo serial PK).
-- `FormaPagoDetalle` — **quitar** `transferencia` y `cheque` (montos eliminados); **agregar** referencia a `Cheque` (FK `id_cheque` nullable).
-- `Cheque`, `Chequera`, `FormaPagoCabecera` — ✅ ya alineadas.
+**Entidades (POJOs) — ✅ alineadas y verificadas** (detalle en §11):
+- ✅ `OrdenPago` — sin `idCheque`/`idCuenta` (y sin `idMoneda`/`tipoCambio`, por C6).
+- ✅ `OrdenPagoDetalle` — con `idOrdenPagoDet` (serial PK).
+- ✅ `FormaPagoDetalle` — sin los montos `transferencia`/`cheque`; con referencia a `Cheque` (FK nullable) y `tipoCambio` (C6).
+- ✅ `Cheque`, `Chequera`, `FormaPagoCabecera` — ya estaban alineadas.
 
 > Al poblar `orden_pago_detalle`, **`tienePagosAplicados` empieza a funcionar de verdad**: el guard de
 > "no editar/anular factura con pagos aplicados" (ver `NOTA_CREDITO_DEBITO_PLAN.md` §8.4) detecta el pago.
 
-> **📍 DÓNDE NOS QUEDAMOS (para retomar):** Provisión terminada y probada. **Esquema de la OP LISTO**
-> y **BACKEND de la OP TERMINADO** (2026-07-24): POJOs alineados y verificados, DAOs + `OrdenPagoService`
-> transaccional con **guard anti doble-pago**, **consumo de provisión** y **anulación con reversa total**
-> (ver §C.1, flujos para diagrama de secuencia). **Próximo paso:** construir la capa web —
-> `OrdenPagoServlet` (Session+Token) + `ordenPago.jsp` (prototipo), registrar en `AuthorizationFilter`
-> y menú. Recordar: al emitir cheque, el servlet debe **setear `usuario` desde la sesión** (el Service lo
-> valida). Falta compilar/probar de punta a punta (no hay JDK en el entorno actual del análisis).
+**Capa web — `OrdenPagoServlet` (✅ 2026-07-26):** Session+Token calcado de `FacturaCompraServlet`
+(clase `OrdenPagoState` serializable en sesión bajo `ordenPago_<token>`, switch-case con métodos
+delegados, `leerDatosFormulario()` en cada acción para no perder la cabecera cargada). Implementa el
+contrato documentado en el encabezado de `ordenPago.jsp`:
+
+| Acción | Qué hace |
+|---|---|
+| `ListarModal` *(default)* | Lista OPs + provisiones **pendientes** para los modales de búsqueda. |
+| `Nuevo` | Token nuevo, fecha de hoy, estado `'Pendiente'`, N° de OP = `obtenerProximoNumero()`, carga combos. |
+| `CargarProvision` | Trae las facturas de la provisión como detalle (solo lectura), fija proveedor y `ord_pag_monto` = Σ, y **limpia las formas ya cargadas** (cambia el total). Si llega **sin token** arranca un documento nuevo (el botón "Buscar Provisión" está habilitado en la pantalla recién abierta). Rechaza provisiones que no estén `'Pendiente'`. |
+| `CambiarTipoPago` | Relee la cabecera y vuelve a la vista (submit del `onchange`). |
+| `AgregarForma` | Valida tipo/cuenta/monto (+ chequera y tipo de cheque si es cheque), arma la `FormaPagoDetalle` y, en las líneas de cheque, el `Cheque` con **`usuario` de la sesión**. Si falla, repuebla `formaEnEditor` y setea `abrirModalForma` para reabrir el modal con lo cargado. |
+| `EliminarForma` | Quita la forma por `index`. |
+| `Generar` | Valida provisión/sucursal/tipo de pago/formas y **Σ formas == total**, completa monto/estado/fecha/N°/recibo, re-asegura el `usuario` de cada cheque y delega en `guardarOrdenPagoCompleta`. |
+| `Anular` | Delega en `anularOrdenPagoCompleta` (reversa total). |
+| `Cancelar` | Descarta el estado de la sesión. |
+
+Decisiones tomadas al implementarlo:
+- **Al agregar** una forma se bloquea que Σ **supere** el total (el Service exige igualdad exacta al
+  generar; así el error aparece antes y no al final).
+- **`ord_pag_nro_recibo`** es `NOT NULL` pero el recibo lo da el proveedor y no siempre existe
+  (compras al contado) → **0 = sin recibo**.
+- **`forma_pag_estado`** nace en `'Pendiente'` = pendiente de conciliación bancaria (§F la cierra).
+- Cambiar de provisión o generar/anular **invalida el documento en sesión** (se limpia el token).
+
+> **📍 DÓNDE NOS QUEDAMOS (para retomar):** Provisión terminada y probada. **Orden de Pago COMPLETA**
+> — esquema, POJOs, DAOs, `OrdenPagoService` transaccional (guard anti doble-pago, consumo de provisión,
+> anulación con reversa total — ver §C.1), `ordenPago.jsp` y `OrdenPagoServlet`, más el registro en
+> `AuthorizationFilter` y el menú. **Próximo paso: compilar y probar de punta a punta** (en el entorno
+> WSL del análisis no hay `java` en el PATH; en Windows están JDK 8 en `C:\Program Files\Java\jdk1.8.0_202`,
+> Adoptium 17/21 y Maven en `C:\Program Files\apache-maven-3.9.14`). Antes de probar, verificar que el
+> seed tenga filas en **`forma_pago_cabecera`** (cheque/transferencia), `tipo_cheque` y `chequera` — sin
+> eso los combos del carrito salen vacíos — y **confirmar `forma_pag_tipo_cambio` contra Power Architect**.
+> Después de probar: **Débitos/Créditos (§D)**.
+
+> **Idea no implementada:** prefijar el "Tipo de pago" (`ord_pag_tipo_pago`) desde
+> `fact_comp_tipo_factura` de las facturas de la provisión (`'fondoFijo'` → reposición FF, si no otros
+> gastos), como sugiere el comentario de la columna en el esquema. Hoy lo elige el usuario; requeriría
+> traer el tipo de factura en el detalle de la provisión.
 
 ---
 
@@ -489,8 +531,8 @@ existan OP, débitos y créditos (por eso va al final).
 
 1. ✅ **Referenciales bancarios** (A) — moneda, tipo entidad, entidad financiera, tipo cuenta, **cuenta**. *(HECHO.)*
 2. ✅ **Provisión de cuenta a pagar** (B) — con **neteo del saldo a favor** de NC. *(HECHO — cierra el circuito de NC/ND.)*
-3. ⏳ **Orden de pago** (C) — descuento de saldo + una forma de pago (cheque solo referencia). *(PRÓXIMO — bloqueado hasta confirmar C3/C4 y ajustar PK de `orden_pago_detalle`.)*
-4. **Débitos / Créditos** (D) — ABM de movimientos bancarios.
+3. ✅ **Orden de pago** (C) — descuento de saldo + **N formas de pago mixtas** con cheque real desde chequera. *(HECHA — falta la prueba end-to-end.)*
+4. ⏳ **Débitos / Créditos** (D) — ABM de movimientos bancarios. *(PRÓXIMO.)*
 5. **Fondo Fijo + rendición** (E) — reutiliza B y C.
 6. **Conciliación bancaria** (F) — el objetivo (jala OPs + débitos + créditos del período).
 7. *(Fase posterior)* **Lado cobros/caja** (§9).
@@ -510,7 +552,7 @@ existan OP, débitos y créditos (por eso va al final).
 - [x] `ProvisionCuentaPagarServlet` (Session+Token) + `provision.jsp`; valida **neto ≥ 0**
 - [x] Registrar `/ProvisionCuentaPagarServlet` en `AuthorizationFilter` (módulo `tesoreria`)
 
-**C. Orden de pago** — 🔨 EN CONSTRUCCIÓN (esquema ✅ listo; **backend ✅ hecho**; falta capa web)
+**C. Orden de pago** — ✅ IMPLEMENTADA (esquema + backend + capa web); **falta probarla end-to-end**
 - [x] ✅ Esquema en Power Architect: seriales `id_orden_pago_det` / `id_forma_pago_det`, `id_cheque` movido a `forma_pago_detalle`, `id_cheque`/`id_cuenta` fuera de la cabecera, `conciliacion_bancaria_detalle.id_forma_pago_det` nullable
 - [x] ✅ Seed de `cuenta` / `tipo_cheque` / `chequera` en `Inserts inciales.sql`
 - [x] ✅ **Alinear POJOs** (§11): `OrdenPago` (sin idCheque/idCuenta), `OrdenPagoDetalle` (con idOrdenPagoDet), `FormaPagoDetalle` (con `Cheque`) — verificado contra el esquema
@@ -519,8 +561,13 @@ existan OP, débitos y créditos (por eso va al final).
 - [x] ✅ `CuentaPagarDAO.descontarSaldo(...)` + `restaurarSaldoPorAnulacionOP(...)`, recálculo con `calcularEstadoPorSaldo`
 - [x] ✅ `OrdenPagoService` (dueño de la tx). **NO** inserta conciliación. Incluye **guard anti doble-pago** (paso 0, provisión `FOR UPDATE`) + **consumo de provisión** (paso 5, `'Procesada'`) + **`anularOrdenPagoCompleta`** con reversa total. Ver §C.1. Validación de cheque (chequera/tipo/usuario) evita NPE de emisión.
 - [x] ✅ `ordenPago.jsp` — vista calcada de `facturaCompra.jsp`/`provision.jsp` (form único + JS, Session+Token). Cabecera SIN Banco/Cuenta/Cheque (movidos al carrito); **bloque "Formas de Pago" tipo carrito** (Tipo Cheque/Transferencia, cuenta bancaria, monto, referencia + campos de cheque condicionales: chequera/tipo/fechas, con N° auto al generar); detalle de facturas SOLO LECTURA; "Tipo de pago" (`ord_pag_tipo_pago`) con **tooltip**; validación visual Σ formas == Importe Total; modales Buscar OP / Buscar Provisión / confirmaciones. **El contrato de atributos/acciones que espera el servlet está documentado en el encabezado del JSP.**
-- [ ] `OrdenPagoServlet` (Session+Token) — implementar según el contrato del `ordenPago.jsp`: acciones `Nuevo, CargarOrdenPago, CargarProvision, CambiarTipoPago, AgregarForma, EliminarForma, Generar, Anular, Cancelar`; poblar combos (sucursal/moneda/cuentas/formaPago/chequeras/tipoCheque); validar **sin efectivo**, **provisión previa**, **Σ formas = monto OP**, **N° cheque en rango**. Al emitir cheque, **setear `usuario` desde la sesión** (lo exige el Service).
-- [ ] Registrar `/OrdenPagoServlet` en `AuthorizationFilter` (módulo `tesoreria`) + link en `menuLateral.jsp`
+- [x] ✅ **(2026-07-25)** Moneda/tipo de cambio fuera de la cabecera: `id_moneda` y `ord_pag_tipo_cambio` eliminados, `forma_pag_tipo_cambio` agregado en el detalle de formas — aplicado en esquema, entidades, DAOs y vista (ver C6)
+- [x] ✅ **Combos que no existían**: `FormaPagoCabeceraDAO`+`Service`, `TipoChequeDAO`+`Service`, `ChequeraService`; + `OrdenPagoDAO.obtenerProximoNumero()`, `ProvisionCuentaPagarDAO.listarProvisionesPorEstado()` / `Service.listarProvisionesPendientes()`, `ChequeDAO.getCheque()` y la hidratación de cuenta/cheque en `FormaPagoDetalleDAO.listarPorOrden()`
+- [x] ✅ `OrdenPagoServlet` (Session+Token) — implementado según el contrato del `ordenPago.jsp`: acciones `ListarModal, Nuevo, CargarOrdenPago, CargarProvision, CambiarTipoPago, AgregarForma, EliminarForma, Generar, Anular, Cancelar`; combos poblados (sucursal/cuentas/formaPago/chequeras/tipoCheque); valida **provisión previa `'Pendiente'`**, **Σ formas = monto OP** (y que no lo supere al agregar), y **setea `usuario` desde la sesión** en cada cheque. El "sin efectivo" lo garantiza el catálogo `forma_pago_cabecera` y el **N° de cheque en rango** lo valida `ChequeraDAO`
+- [x] ✅ Registrado `/OrdenPagoServlet` en `AuthorizationFilter` (módulo `tesoreria`) + link en `menuLateral.jsp` (antes apuntaba al `.jsp` directo, salteando el filter)
+- [ ] **Probar end-to-end** (compilar el WAR, desplegar en GlassFish/Payara): generar una OP mixta (transferencia + cheque), verificar el descuento de `cta_pag_saldo`, el cheque emitido con N° del rango, la provisión en `'Procesada'`, y la anulación revirtiendo todo
+- [ ] Verificar el seed de `forma_pago_cabecera` (cheque/transferencia) — sin filas, el combo "Tipo" del carrito sale vacío
+- [ ] Confirmar el nombre `forma_pag_tipo_cambio` contra Power Architect
 
 **D. Débitos / Créditos**
 - [ ] `DebitoDAO`/`CreditoDAO` + Services + Servlets + JSPs (ABM)
@@ -533,7 +580,7 @@ existan OP, débitos y créditos (por eso va al final).
 - [ ] `ConciliacionBancariaDAO` (+detalle), Service, Servlet, JSP
 
 **Transversal**
-- [ ] Actualizar los links de "Módulo Tesorería" en `menuLateral.jsp` (hoy apuntan a `.html` placeholders)
+- [ ] Actualizar los links restantes de "Módulo Tesorería" en `menuLateral.jsp` (los de Cuentas Bancarias, Provisión y Orden de Pago ya apuntan a sus servlets; el resto sigue en `.html` placeholders)
 - [ ] Permisos del módulo `tesoreria` en cada servlet nuevo
 
 ---
@@ -575,27 +622,28 @@ recaudación a depositar → **crédito bancario** → conciliación. Se planifi
 | 6 | Conciliación bancaria | OP, Débitos, Créditos |
 | 7 | (Cobros/Caja) | Ventas |
 
-Con **Referenciales** y **Provisión** ya terminados y el **esquema de la OP listo**, el camino corto hacia la
-**conciliación bancaria** pedida es: **Referenciales → Provisión → Orden de Pago → Débitos/Créditos →
+Con **Referenciales**, **Provisión** y **Orden de Pago** ya implementados (las fases 1 a 3), lo que resta
+del camino corto hacia la **conciliación bancaria** pedida es: **Débitos/Créditos → Fondo Fijo →
 Conciliación**, reutilizando en cada paso el patrón transaccional Session+Token de Compras.
 
 ---
 
 ## 11. Alineación de entidades (POJOs) con la BD nueva
 
-Verificación tras los ajustes de esquema del 2026-07-21 (Power Architect). Las entidades del flujo OP→Conciliación:
+Verificación tras los ajustes de esquema del 2026-07-21 (Power Architect) y del 2026-07-25 (C6).
+**✅ Alineación completada** (2026-07-24/25) — todas las entidades del flujo OP→Conciliación:
 
-| POJO | Estado | Acción requerida |
+| POJO | Estado | Cómo quedó |
 |---|---|---|
-| `OrdenPago` | ⚠️ **Desalineado** | **Quitar** `idCheque` y `idCuenta` (campos + constructor + getters/setters) — esas columnas se eliminaron de `orden_pago_cabecera`. |
-| `OrdenPagoDetalle` | ⚠️ **Incompleto** | **Agregar** `idOrdenPagoDet` (Long) — nuevo serial PK `id_orden_pago_det`. Ya mapea `monto`/`cuentaPagar`/`facturaCompra`/`ordenPago`. |
-| `FormaPagoDetalle` | ⚠️ **Desalineado** | **Quitar** `transferencia` y `cheque` (Long, montos que ya no existen); **agregar** una referencia `Cheque cheque` (o `Long idCheque`) para la FK `id_cheque` nullable. Conserva `monto`/`estado`/`referencia`/`cuenta`/`fecha`/`formaPagoCabecera`/`ordenPago`. |
+| `OrdenPago` | ✅ **Alineado** | Se **quitaron** `idCheque` e `idCuenta` (columnas eliminadas de la cabecera) y también `idMoneda`/`tipoCambio` (C6). Queda: `idOrdenPago`, `numero`, `fechaEmision`, `monto`, `estado`, `idProvisionCtaPagar`, `numeroRecibo`, `sucursal`, `tipoPago`, `proveedor`. |
+| `OrdenPagoDetalle` | ✅ **Alineado** | Se **agregó** `idOrdenPagoDet` (serial PK `id_orden_pago_det`), más `monto`/`cuentaPagar`/`facturaCompra`/`ordenPago`. |
+| `FormaPagoDetalle` | ✅ **Alineado** | Se **quitaron** los montos `transferencia`/`cheque`; se **agregó** la referencia `Cheque cheque` (FK `id_cheque` nullable) y `Double tipoCambio` (C6). Conserva `monto`/`estado`/`referencia`/`cuenta`/`fecha`/`formaPagoCabecera`/`ordenPago`. |
 | `Cheque` | ✅ **Alineado** | Coincide 1:1 con `cheque` (numero, fechaEmision, estado, chequera, aLaOrden, observacion, tipoCheque, fechaPago, fechaVencimiento, usuario). |
 | `Chequera` | ✅ **Alineado** | Coincide con `chequera` (cuenta, serie, desdeNumero, hastaNumero). |
 | `FormaPagoCabecera` | ✅ **Alineado** | Coincide con `forma_pago_cabecera` (idFormaPagoCabecera, descripcion). |
 | `CuentaPagar` | ✅ **Alineado** | Con `plazo` ya agregado (sesión previa). |
 
-> **Los DAOs viejos también quedan desalineados** (referencian columnas eliminadas): `OrdenPagoDAO`
-> (usa `id_cheque`/`id_cuenta` en sus SQL — se reescribe completo en §C) y cualquier query sobre
-> `forma_pago_detalle` que use `forma_pag_cheque`/`forma_pag_transferencia`. Al no existir aún
-> `FormaPagoDetalleDAO`, solo hay que crearlo alineado.
+> **DAOs:** `OrdenPagoDAO` fue **reescrito** (sus SQL ya no usan `id_cheque`/`id_cuenta`/`id_moneda`/
+> `ord_pag_tipo_cambio`) y `FormaPagoDetalleDAO` se creó alineado (`id_cheque` y
+> `forma_pag_tipo_cambio` nullables). No quedan queries contra
+> `forma_pag_cheque`/`forma_pag_transferencia`.

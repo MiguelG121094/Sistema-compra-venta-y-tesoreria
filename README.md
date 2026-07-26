@@ -227,7 +227,8 @@ El sistema **no implementa contabilidad** (asientos, plan de cuentas, balances).
            ▼
 ┌─────────────────────┐
 │   ORDEN DE PAGO     │  ← Instrucción de pago
-│     (Aprobada)      │     Forma: Cheque/Transfer/Efectivo
+│     (Aprobada)      │     Formas: Cheque y/o Transferencia
+│                     │     (sin efectivo — eso va por Fondo Fijo)
 └──────────┬──────────┘
            │ Se ejecuta el pago
            ▼
@@ -329,8 +330,8 @@ Sistema-compra-venta-y-tesoreria/
 | Presupuesto | ✅ | ✅ | ✅ | ✅ | ✅ | **Completo** |
 | Orden de Compra | ✅ | ✅ | ✅ | ✅ | ✅ | **Completo** |
 | Factura de Compra | ✅ | ✅ | ✅ | ✅ | ✅ | **Completo** (con triggers stock + Libro IVA + Cuenta a Pagar) |
-| Nota Crédito Compra | ✅ | ✅ | ✅ | ❌ | ⚠️ | Parcial (vista `notaCreditoDebito.jsp`, sin servlet — ver [plan](NOTA_CREDITO_DEBITO_PLAN.md)) |
-| Nota Débito Compra | ✅ | ✅ | ✅ | ❌ | ⚠️ | Parcial (vista `notaCreditoDebito.jsp`, sin servlet — ver [plan](NOTA_CREDITO_DEBITO_PLAN.md)) |
+| Nota Crédito Compra | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ Completo (`NotaCreditoDebitoServlet` + `notaCreditoDebito.jsp`; falta validar cantidad devuelta ≤ comprada — ver [plan](NOTA_CREDITO_DEBITO_PLAN.md)) |
+| Nota Débito Compra | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ Completo (mismo servlet/vista que la Nota de Crédito) |
 | Nota Remisión Compra | ✅ | ❌ | ❌ | ❌ | ⚠️ | Parcial (vista inicial) |
 | Cuenta a Pagar | ✅ | ✅ | ✅ | ❌ | ❌ | Backend listo (integrado con Factura Compra) |
 
@@ -353,7 +354,12 @@ Sistema-compra-venta-y-tesoreria/
 | Cobro | ✅ | ✅ | ✅ | Backend listo |
 | Cuenta a Cobrar | ✅ | ✅ | ✅ | Backend listo |
 | Cuenta a Pagar | ✅ | ✅ | ✅ | Backend listo (sincronizado con Factura Compra) |
-| Orden de Pago | ✅ | ✅ | ✅ | Backend listo |
+| Cuenta bancaria (+ moneda, tipo de cuenta, entidad financiera) | ✅ | ✅ | ✅ | ✅ **Completo** — ABM con `CuentaServlet` + `cuenta.jsp` |
+| Provisión de Cuenta a Pagar | ✅ | ✅ | ✅ | ✅ **Completo** — `ProvisionCuentaPagarServlet` + `provision.jsp` (netea el saldo a favor de las NC) |
+| Orden de Pago (+ formas de pago, cheque, chequera) | ✅ | ✅ | ✅ | ✅ **Completo** — `OrdenPagoServlet` + `ordenPago.jsp`; descuenta el saldo, emite cheques y anula con reversa total. **Pendiente de prueba end-to-end** |
+| Débitos / Créditos bancarios | ✅ | ❌ | ❌ | Próximo (alimentan la conciliación) |
+| Fondo Fijo + Rendición | ✅ | ❌ | ❌ | Pendiente |
+| Conciliación Bancaria | ✅ | ❌ | ❌ | Pendiente (objetivo final del módulo) |
 | Timbrado | ✅ | ✅ | ✅ | Backend listo |
 | Libro IVA Compra | ✅ | ✅ | ✅ | Backend listo (integrado en Factura Compra) |
 
