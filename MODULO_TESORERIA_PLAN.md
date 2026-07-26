@@ -199,7 +199,7 @@ en la cabecera, y Moneda/Tipo de cambio que ya no van ahí). Es como Factura/Pro
 - ✅ `forma_pago_detalle.id_forma_pago_det` **serial**; se **quitaron** `forma_pag_cheque` y `forma_pag_transferencia` (queda solo `forma_pag_monto` + `id_forma_pago_cab` para el tipo); se **agregó** `id_cheque` **NULLABLE** (FK → `cheque`).
 - ✅ `orden_pago_cabecera`: se **quitaron** `id_cheque` y `id_cuenta` (ambos migran al detalle).
 - ✅ `conciliacion_bancaria_detalle.id_forma_pago_det` → **NULLABLE** (los ítems de débito/crédito no tienen forma de pago).
-- ✅ Seed cargado en `Inserts inciales.sql`: `cuenta` (Itaú/Ueno Gs, Itaú Ahorro USD), `tipo_cheque` (A la vista / Diferido), `chequera` (Itaú 1000001–1000050, Ueno 2000001–2000050).
+- ✅ Seed cargado en `Inserts inciales.sql`: `cuenta` (Itaú/Ueno Gs, Itaú Ahorro USD), `tipo_cheque` (A la vista / Diferido), `chequera` (Itaú 1000001–1000050, Ueno 2000001–2000050) y **`forma_pago_cabecera`** (`Cheque` = id 1, `Transferencia` = id 2 — sin efectivo). ⚠️ La descripción **`'Cheque'`** se compara por texto para decidir si la línea emite un cheque real (`OrdenPagoServlet.esFormaCheque` y el `toggleCamposCheque()` del JSP, que exige exactamente `'cheque'` en minúsculas): si se renombra, hay que ajustar ambos.
 - ✅ **(2026-07-25)** `orden_pago_cabecera`: se **quitaron** `id_moneda` y `ord_pag_tipo_cambio`;
   `forma_pago_detalle`: se **agregó** `forma_pag_tipo_cambio` (DOUBLE PRECISION, nullable). Ver C6.
   ⚠️ Falta confirmar el nombre de esa columna contra Power Architect.
@@ -455,9 +455,10 @@ Decisiones tomadas al implementarlo:
 > anulación con reversa total — ver §C.1), `ordenPago.jsp` y `OrdenPagoServlet`, más el registro en
 > `AuthorizationFilter` y el menú. **Próximo paso: compilar y probar de punta a punta** (en el entorno
 > WSL del análisis no hay `java` en el PATH; en Windows están JDK 8 en `C:\Program Files\Java\jdk1.8.0_202`,
-> Adoptium 17/21 y Maven en `C:\Program Files\apache-maven-3.9.14`). Antes de probar, verificar que el
-> seed tenga filas en **`forma_pago_cabecera`** (cheque/transferencia), `tipo_cheque` y `chequera` — sin
-> eso los combos del carrito salen vacíos — y **confirmar `forma_pag_tipo_cambio` contra Power Architect**.
+> Adoptium 17/21 y Maven en `C:\Program Files\apache-maven-3.9.14`). El seed de `forma_pago_cabecera`,
+> `tipo_cheque`, `chequera` y `cuenta` ya está en `Inserts inciales.sql`, así que los combos del carrito
+> tienen datos; **si la base ya estaba creada, hay que correr solo los INSERT nuevos de
+> `forma_pago_cabecera`**. Queda **confirmar `forma_pag_tipo_cambio` contra Power Architect**.
 > Después de probar: **Débitos/Créditos (§D)**.
 
 > **Idea no implementada:** prefijar el "Tipo de pago" (`ord_pag_tipo_pago`) desde
@@ -566,7 +567,7 @@ existan OP, débitos y créditos (por eso va al final).
 - [x] ✅ `OrdenPagoServlet` (Session+Token) — implementado según el contrato del `ordenPago.jsp`: acciones `ListarModal, Nuevo, CargarOrdenPago, CargarProvision, CambiarTipoPago, AgregarForma, EliminarForma, Generar, Anular, Cancelar`; combos poblados (sucursal/cuentas/formaPago/chequeras/tipoCheque); valida **provisión previa `'Pendiente'`**, **Σ formas = monto OP** (y que no lo supere al agregar), y **setea `usuario` desde la sesión** en cada cheque. El "sin efectivo" lo garantiza el catálogo `forma_pago_cabecera` y el **N° de cheque en rango** lo valida `ChequeraDAO`
 - [x] ✅ Registrado `/OrdenPagoServlet` en `AuthorizationFilter` (módulo `tesoreria`) + link en `menuLateral.jsp` (antes apuntaba al `.jsp` directo, salteando el filter)
 - [ ] **Probar end-to-end** (compilar el WAR, desplegar en GlassFish/Payara): generar una OP mixta (transferencia + cheque), verificar el descuento de `cta_pag_saldo`, el cheque emitido con N° del rango, la provisión en `'Procesada'`, y la anulación revirtiendo todo
-- [ ] Verificar el seed de `forma_pago_cabecera` (cheque/transferencia) — sin filas, el combo "Tipo" del carrito sale vacío
+- [x] ✅ Seed de `forma_pago_cabecera` (`Cheque` / `Transferencia`) agregado a `Inserts inciales.sql` — sin esas filas el combo "Tipo" del carrito salía vacío
 - [ ] Confirmar el nombre `forma_pag_tipo_cambio` contra Power Architect
 
 **D. Débitos / Créditos**

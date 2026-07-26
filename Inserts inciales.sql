@@ -374,3 +374,13 @@ INSERT INTO public.tipo_cheque (tipo_cheque_descripcion) VALUES('Diferido');    
 --   Define el RANGO de numeros de cheque disponibles por cuenta.
 INSERT INTO public.chequera (id_cuenta, chequera_serie, chequera_desde_nro, chequera_hasta_nro) VALUES(1, 1, 1000001, 1000050);  -- id 1: Itau, cheques 1000001..1000050
 INSERT INTO public.chequera (id_cuenta, chequera_serie, chequera_desde_nro, chequera_hasta_nro) VALUES(2, 1, 2000001, 2000050);  -- id 2: Ueno, cheques 2000001..2000050
+
+-- FORMA DE PAGO CABECERA (forma_pago_descripcion)
+--   Catalogo del combo "Tipo" del carrito de formas de pago de la Orden de Pago.
+--   En la OP NO se paga con efectivo (para eso esta el fondo fijo, que se repone con una OP,
+--   o se emite un cheque y se efectiviza): solo cheque y transferencia.
+--   OJO: la descripcion 'Cheque' se compara por texto para decidir si la linea emite un cheque
+--   real (OrdenPagoServlet.esFormaCheque y el toggleCamposCheque de ordenPago.jsp, que exige
+--   exactamente 'cheque' en minusculas). Si se renombra, hay que ajustar ambos.
+INSERT INTO public.forma_pago_cabecera (forma_pago_descripcion) VALUES('Cheque');         -- id 1: emite un cheque de la chequera
+INSERT INTO public.forma_pago_cabecera (forma_pago_descripcion) VALUES('Transferencia');  -- id 2: no emite instrumento (id_cheque NULL)
