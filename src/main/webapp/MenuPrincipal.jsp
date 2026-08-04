@@ -86,7 +86,7 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                             <a class="nav-link text-white py-1" href="PresupuestoServlet?menu=Presupuesto&accion=ListarModal">Presupuesto del proveedor</a>
                                             <a class="nav-link text-white py-1" href="OrdenCompraServlet?menu=OrdenCompra&accion=ListarModal">Orden de compra</a>
                                             <a class="nav-link text-white py-1" href="FacturaCompraServlet?menu=FacturaCompra&accion=ListarModal">Factura compra</a>
-                                            <a class="nav-link text-white py-1" href="notaCreditoDebito.jsp">Nota de Crédito - Débito</a>
+                                            <a class="nav-link text-white py-1" href="NotaCreditoDebitoServlet?menu=NotaCreditoDebito&accion=ListarModal">Nota de Crédito - Débito</a>
                                             <a class="nav-link text-white py-1" href="notaRemision.jsp">Nota de Remisión</a>
                                             <!--<a class="nav-link text-white py-1" href="password.html">Forgot Password</a>-->
                                         </nav>
@@ -101,15 +101,15 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                     <div class="card-footer d-flex align-items-center justify-content-between"
                                          data-bs-toggle="collapse" data-bs-target="#TesoreriaPagesCollapse"
                                          style="cursor: pointer;">
-                                        <a class="small text-white stretched-link" href="#">View Details</a>
+                                        <a class="small text-white stretched-link" href="#">Ver detalle </a>
                                         <div class="small text-white"><i class="fas fa-angle-right"></i></div>
                                     </div>
                                     <div class="collapse" id="TesoreriaPagesCollapse"
                                          style="position: absolute; top: 100%; left: 0; right: 0; z-index: 1000; background-color: #ffc107; border-radius: 0 0 0.375rem 0.375rem;">
                                         <nav class="sb-sidenav-menu-nested nav flex-column p-2">
-                                            <a class="nav-link text-white py-1" href="login.html">Login</a>
-                                            <a class="nav-link text-white py-1" href="register.html">Register</a>
-                                            <a class="nav-link text-white py-1" href="password.html">Forgot Password</a>
+                                            <a class="nav-link text-white py-1" href="ProvisionCuentaPagarServlet?menu=ProvisionCuentaPagar&accion=ListarModal">Provisión de Cta. a Pagar</a>
+                                            <a class="nav-link text-white py-1" href="OrdenPagoServlet?menu=OrdenPago&accion=ListarModal">Orden de Pago</a>
+                                            <a class="nav-link text-white py-1" href="password.html">Conciliación Bancaria</a>
                                         </nav>
                                     </div>
                                 </div>
