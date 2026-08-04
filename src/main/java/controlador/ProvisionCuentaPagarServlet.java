@@ -226,6 +226,13 @@ public class ProvisionCuentaPagarServlet extends HttpServlet {
 
         guardarEstado(session, nuevoToken, estado);
         cargarDatosParaVista(request, estado, nuevoToken);
+
+        // Tooltip de ayuda sobre el botón "Buscar Proveedor": el proveedor es el primer paso
+        // (define qué cuentas a pagar se pueden provisionar). Mismo mecanismo que el tooltip de
+        // la sucursal en PedidoCompraServlet/pedidoCompra.jsp.
+        request.setAttribute("mostrarTooltip", true);
+        request.setAttribute("mensajeTooltip", "Seleccione un proveedor para cargar su lista de cuentas a pagar");
+
         forward(request, response, JSP_PROVISION);
     }
 

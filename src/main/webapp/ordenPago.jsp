@@ -258,7 +258,7 @@
                                                                 <div class="col-md-2">
                                                                     <label class="form-label mb-1">Monto</label>
                                                                     <input type="text" inputmode="numeric" class="form-control mask-miles" id="montoForma" name="montoForma"
-                                                                           placeholder="Monto" value="${formaEnEditor.monto}">
+                                                                           placeholder="Monto" value="${empty formaEnEditor ? montoSugerido : formaEnEditor.monto}">
                                                                 </div>
                                                                 <div class="col-md-2">
                                                                     <label class="form-label mb-1">Tipo de cambio</label>

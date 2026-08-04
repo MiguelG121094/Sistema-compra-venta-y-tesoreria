@@ -86,7 +86,7 @@
                                     <div class="row mb-3">
                                         <div class="col-md-1">
                                             <div class="mb-3 mb-md-0 h-100">
-                                                <button type="button" data-bs-toggle="modal" data-bs-target="#modalBuscarProveedor"
+                                                <button type="button" id="btnBuscarProveedor" data-bs-toggle="modal" data-bs-target="#modalBuscarProveedor"
                                                         style="overflow: hidden; text-overflow: ellipsis;" title="Buscar Proveedor"
                                                         class="btn btn-outline-primary w-100 h-100 btn-responsive"
                                                         <c:if test="${empty token or not esNuevo}">disabled</c:if>>Buscar Proveedor</button>
@@ -402,6 +402,28 @@
                 $('#tablaProvisiones').DataTable({ language: { url: "DataTables 2/es-ES.json" } });
             });
         </script>
+
+        <!-- Tooltip de ayuda sobre "Buscar Proveedor" al abrir una provisión nueva
+             (lo dispara el servlet: request.setAttribute("mostrarTooltip", true) + "mensajeTooltip",
+             igual que el de la sucursal en pedidoCompra.jsp) -->
+        <c:if test="${mostrarTooltip}">
+            <script>
+                document.addEventListener("DOMContentLoaded", function () {
+                    var btn = document.getElementById('btnBuscarProveedor');
+                    if (!btn) { return; }
+                    var tooltip = new bootstrap.Tooltip(btn, {
+                        title: "${mensajeTooltip}",
+                        placement: "top"
+                    });
+                    tooltip.show();
+
+                    // ocultar el tooltip después de 3 segundos
+                    setTimeout(function () {
+                        tooltip.hide();
+                    }, 3000);
+                });
+            </script>
+        </c:if>
 
         <!-- Mensajes Toastr -->
         <c:if test="${not empty Message}">

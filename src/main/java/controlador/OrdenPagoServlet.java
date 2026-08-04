@@ -142,8 +142,17 @@ public class OrdenPagoServlet extends HttpServlet {
         request.setAttribute("idOrdenPagoExistente", estado.idOrdenPagoExistente);
 
         // Totales para la vista (la validación dura la repite el Service)
-        request.setAttribute("totalOrden", calcularTotalDetalle(estado.listaDetalle));
-        request.setAttribute("sumaFormas", calcularSumaFormas(estado.listaFormasPago));
+        long totalOrden = calcularTotalDetalle(estado.listaDetalle);
+        long sumaFormas = calcularSumaFormas(estado.listaFormasPago);
+        request.setAttribute("totalOrden", totalOrden);
+        request.setAttribute("sumaFormas", sumaFormas);
+
+        // Monto sugerido para el editor del modal: lo que falta para cubrir el total (con el
+        // carrito vacío es el total de la provisión). Si ya está cubierto no se sugiere nada.
+        long falta = totalOrden - sumaFormas;
+        if (falta > 0) {
+            request.setAttribute("montoSugerido", falta);
+        }
 
         // Listas para modales y combos
         request.setAttribute("listaSucursales", estado.listaSucursales);
@@ -525,6 +534,11 @@ public class OrdenPagoServlet extends HttpServlet {
         String fechaPagoStr = request.getParameter("fechaPagoCheque");
         String fechaVenciStr = request.getParameter("fechaVenciCheque");
 
+        // Snapshot de lo que el usuario cargó en el editor: si alguna validación falla, el modal se
+        // reabre con estos datos en vez de quedar en blanco (el JSP lo lee de formaEnEditor).
+        estado.formaEnEditor = construirFormaEnEditor(idFormaPagoCabStr, idCuentaStr, montoStr,
+                tipoCambioStr, referencia, idChequeraStr, idTipoChequeStr, fechaPagoStr, fechaVenciStr);
+
         // El total a pagar lo fija la provisión: sin provisión no hay contra qué validar las formas.
         if (estado.ordenPago.getIdProvisionCtaPagar() == null || estado.listaDetalle.isEmpty()) {
             mostrarMensaje(request, "Primero debe seleccionar la provisión a pagar", "alert-warning");
@@ -597,13 +611,11 @@ public class OrdenPagoServlet extends HttpServlet {
         // Línea de cheque: el Service emitirá el cheque real desde la chequera al generar.
         if (esFormaCheque(formaCab)) {
             if (idChequeraStr == null || idChequeraStr.isEmpty()) {
-                estado.formaEnEditor = forma;
                 errorEnEditorForma(request, response, session, estado, token,
                     "La forma de pago con cheque debe indicar la chequera");
                 return;
             }
             if (idTipoChequeStr == null || idTipoChequeStr.isEmpty()) {
-                estado.formaEnEditor = forma;
                 errorEnEditorForma(request, response, session, estado, token,
                     "La forma de pago con cheque debe indicar el tipo de cheque");
                 return;
@@ -612,7 +624,6 @@ public class OrdenPagoServlet extends HttpServlet {
             Chequera chequera = chequeraService.getChequera(Long.parseLong(idChequeraStr));
             TipoCheque tipoCheque = tipoChequeService.getTipoCheque(Long.parseLong(idTipoChequeStr));
             if (chequera == null || tipoCheque == null) {
-                estado.formaEnEditor = forma;
                 errorEnEditorForma(request, response, session, estado, token,
                     "Chequera o tipo de cheque inválidos");
                 return;
@@ -642,6 +653,81 @@ public class OrdenPagoServlet extends HttpServlet {
 
         mostrarMensaje(request, "Forma de pago agregada", "alert-success");
         volverAVista(request, response, session, estado, token);
+    }
+
+    /**
+     * Rearma la forma de pago "en el editor" con lo que vino del modal, tolerando datos faltantes o
+     * inválidos (a diferencia de la forma que se agrega al carrito, esta NO se persiste: sirve para
+     * repoblar el modal cuando una validación falla). Solo necesita los ids: la vista compara ids
+     * para marcar el {@code selected} de cada combo.
+     */
+    private FormaPagoDetalle construirFormaEnEditor(String idFormaPagoCabStr, String idCuentaStr,
+            String montoStr, String tipoCambioStr, String referencia, String idChequeraStr,
+            String idTipoChequeStr, String fechaPagoStr, String fechaVenciStr) {
+
+        FormaPagoDetalle editor = new FormaPagoDetalle();
+
+        Long idFormaPagoCab = parsearIdONulo(idFormaPagoCabStr);
+        if (idFormaPagoCab != null) {
+            editor.setFormaPagoCabecera(new FormaPagoCabecera(idFormaPagoCab));
+        }
+        Long idCuenta = parsearIdONulo(idCuentaStr);
+        if (idCuenta != null) {
+            editor.setCuenta(new Cuenta(idCuenta));
+        }
+        if (montoStr != null && montoStr.trim().matches("\\d+")) {
+            editor.setMonto(Long.parseLong(montoStr.trim()));
+        }
+        if (tipoCambioStr != null && !tipoCambioStr.trim().isEmpty()) {
+            try {
+                editor.setTipoCambio(Double.parseDouble(tipoCambioStr.trim().replace(',', '.')));
+            } catch (NumberFormatException e) {
+                // Tipo de cambio invalido: se descarta para el re-render (el aviso lo da la validación)
+            }
+        }
+        if (referencia != null && !referencia.trim().isEmpty()) {
+            editor.setReferencia(referencia.trim());
+        }
+
+        // Datos del cheque: solo se arma si vino alguno (si no, los campos del modal quedan vacíos)
+        Long idChequera = parsearIdONulo(idChequeraStr);
+        Long idTipoCheque = parsearIdONulo(idTipoChequeStr);
+        boolean hayFechas = (fechaPagoStr != null && !fechaPagoStr.isEmpty())
+                || (fechaVenciStr != null && !fechaVenciStr.isEmpty());
+        if (idChequera != null || idTipoCheque != null || hayFechas) {
+            Cheque cheque = new Cheque();
+            if (idChequera != null) {
+                cheque.setChequera(new Chequera(idChequera));
+            }
+            if (idTipoCheque != null) {
+                cheque.setTipoCheque(new TipoCheque(idTipoCheque));
+            }
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+            try {
+                if (fechaPagoStr != null && !fechaPagoStr.isEmpty()) {
+                    cheque.setFechaPago(sdf.parse(fechaPagoStr));
+                }
+                if (fechaVenciStr != null && !fechaVenciStr.isEmpty()) {
+                    cheque.setFechaVencimiento(sdf.parse(fechaVenciStr));
+                }
+            } catch (ParseException e) {
+                LOGGER.log(Level.WARNING, "Error al parsear fecha del cheque en construirFormaEnEditor", e);
+            }
+            editor.setCheque(cheque);
+        }
+        return editor;
+    }
+
+    /** Id de un combo: null si no vino o no es numérico (los combos vacíos mandan ""). */
+    private Long parsearIdONulo(String valor) {
+        if (valor == null || valor.trim().isEmpty()) {
+            return null;
+        }
+        try {
+            return Long.parseLong(valor.trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     /**
