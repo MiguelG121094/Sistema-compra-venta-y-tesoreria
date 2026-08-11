@@ -207,12 +207,127 @@ que la aplicación queda en `https://192.168.1.50:8181/Taller3ro`.
 
 Con esto ya no hace falta el flag y el QR queda con una URL estable.
 
-### 3.4 Firewall
+### 3.4 Acceso al servidor desde la red
 
-El celular tiene que poder llegar al puerto de Payara. En Windows, la primera vez hay que
-permitir el puerto (8080, o 8181 con HTTPS) en el Firewall de Windows para redes privadas.
-Si el QR carga pero el estado queda en "reconectando...", casi siempre es el firewall
-bloqueando la conexión WebSocket.
+**El servidor no necesita ninguna configuración especial.** Desplegando desde NetBeans, el
+listener HTTP de GlassFish/Payara escucha en `0.0.0.0`, o sea en todas las interfaces de red,
+no sólo en `localhost`. Que uno lo abra como `localhost` es simplemente la dirección que usa
+la propia máquina; el servidor igual atiende por la IP de la red.
+
+Cuando el celular no llega, el bloqueo casi nunca está en GlassFish sino en el sistema
+operativo o en el router.
+
+#### La prueba que define todo
+
+Desde el celular, conectado al mismo Wi-Fi, abrir en el navegador:
+
+```
+http://192.168.1.50:8080/Taller3ro/
+```
+
+- **Carga el login del sistema** → la red está bien. Seguir con el flag de Chrome (3.2).
+- **No carga** → recorrer el diagnóstico de abajo en orden. No tiene sentido tocar el flag
+  ni el QR hasta que esto funcione.
+
+#### Diagnóstico paso a paso
+
+**Paso 1 — Confirmar que GlassFish está escuchando en toda la red**
+
+En la PC del servidor, en `cmd`:
+
+```
+netstat -ano | findstr :8080
+```
+
+| Resultado | Significado |
+|---|---|
+| `0.0.0.0:8080` | Correcto: escucha en todas las interfaces. Pasar al paso 2. |
+| `127.0.0.1:8080` | Sólo local. Hay que corregir el listener (ver más abajo). |
+| No aparece nada | GlassFish no está corriendo o no arrancó bien. Revisar la salida de NetBeans. |
+
+Si quedó atado a `127.0.0.1`, se corrige en la consola de administración
+(`http://localhost:4848`) → *Configurations → server-config → Network Config → Network
+Listeners → http-listener-1* → campo **Address**, poner `0.0.0.0` y reiniciar el dominio.
+Es raro que pase, pero conviene descartarlo primero porque es de un vistazo.
+
+**Paso 2 — Abrir el puerto en el Firewall de Windows**
+
+Es la causa más frecuente por lejos. La primera vez que arranca GlassFish, Windows muestra
+el cartel de *"¿Permitir que Java acceda a la red?"*. Si se canceló, o se dejó marcada sólo
+la casilla de "Redes públicas", el puerto queda bloqueado para el resto de la red.
+
+Abrir PowerShell **como administrador** y ejecutar:
+
+```powershell
+New-NetFirewallRule -DisplayName "GlassFish 8080" -Direction Inbound `
+    -Protocol TCP -LocalPort 8080 -Action Allow -Profile Private
+```
+
+Para verificar que quedó creada:
+
+```powershell
+Get-NetFirewallRule -DisplayName "GlassFish 8080" | Format-List DisplayName, Enabled, Direction, Action
+```
+
+> Con HTTPS (3.3) el puerto a habilitar es el **8181**, no el 8080. Si se usan los dos,
+> hay que crear las dos reglas.
+
+**Paso 3 — Verificar que la red esté clasificada como "Privada"**
+
+Si Windows clasificó el Wi-Fi como *Pública*, bloquea las conexiones entrantes de forma
+mucho más agresiva y la regla del paso 2 (creada con `-Profile Private`) no se aplica.
+
+```powershell
+Get-NetConnectionProfile
+```
+
+El campo `NetworkCategory` tiene que decir `Private`. Si dice `Public`, se cambia en
+*Configuración → Red e Internet → Wi-Fi → Propiedades → Perfil de red → Red privada*.
+
+**Paso 4 — Descartar el aislamiento de clientes del router**
+
+Si el firewall ya está abierto y la red es privada pero el celular sigue sin llegar, puede
+ser *AP isolation* (aislamiento de clientes): el router impide que los dispositivos se vean
+entre sí aunque estén en el mismo Wi-Fi.
+
+Es lo habitual en **redes de invitados** y frecuente en redes de oficina. Cómo confirmarlo:
+
+1. Desde el celular, hacer ping a la IP del servidor (con cualquier app de ping) o intentar
+   abrir cualquier otro servicio de esa máquina.
+2. Si nada de la PC responde pero ambos tienen internet, es aislamiento de clientes.
+
+Se desactiva en la configuración del router (suele llamarse *AP Isolation*, *Client
+Isolation* o *Aislamiento de AP*). Si es una red de invitados, la solución simple es pasar
+ambos dispositivos a la red principal.
+
+**Paso 5 — Confirmar que el celular está en el Wi-Fi y no en datos móviles**
+
+Suena obvio, pero es un clásico: con la pantalla apagada un rato, algunos Android cortan el
+Wi-Fi y siguen por datos. Desde datos móviles la IP `192.168.x.x` no existe.
+
+Verificar el ícono de Wi-Fi y, si hace falta, desactivar los datos móviles mientras se prueba.
+
+**Paso 6 — Revisar que la IP no haya cambiado**
+
+Si el router asigna direcciones por DHCP, la IP del servidor puede cambiar al reiniciar la
+PC. Eso rompe a la vez el flag de Chrome, el QR y cualquier acceso guardado.
+
+Volver a correr `ipconfig` (3.1) y comparar. Para que deje de pasar, conviene reservarle la
+IP a esa máquina en el router o configurarle IP estática — sobre todo pensando en el pasaje
+a servidor local.
+
+#### Síntoma particular: carga la página pero queda en "reconectando..."
+
+Si `scannerMovil.jsp` abre bien pero el estado nunca pasa a "conectado", el problema no es
+de acceso general sino específicamente de la conexión WebSocket. Causas posibles:
+
+- El firewall dejó pasar la petición HTTP inicial pero bloquea la conexión persistente.
+  Revisar que la regla del paso 2 sea de protocolo TCP y sin restricción de programa.
+- Hay un proxy o antivirus con inspección de red en el medio, que corta las conexiones
+  WebSocket. Probar desactivando temporalmente la inspección HTTP del antivirus.
+- Se está entrando por HTTPS pero el WebSocket intenta salir por `ws://` (o al revés). La
+  página elige el esquema automáticamente, así que esto sólo pasa si hay un proxy inverso
+  en el medio que termina el TLS.
 
 ---
 
@@ -316,8 +431,9 @@ Endurecimiento cuando haga falta, en orden de conveniencia:
 | Síntoma | Causa más probable |
 |---|---|
 | El botón "Iniciar escaneo" muestra el aviso de cámara no disponible | Falta el flag de Chrome del punto 3.2, o el origen quedó mal escrito (puerto, barra final). |
-| El QR abre la página pero queda en "reconectando..." | Firewall bloqueando el puerto, o el celular está en otra red (Wi-Fi vs datos móviles). |
-| El celular abre `localhost` y no carga nada | Quedó `localhost` en "Dirección del servidor". Poner la IP real del equipo. |
+| Desde el celular no carga nada del sistema | Acceso de red bloqueado. Recorrer el diagnóstico paso a paso de **3.4** (firewall, perfil de red, aislamiento del router). |
+| El QR abre la página pero queda en "reconectando..." | Específico del WebSocket: firewall, antivirus con inspección de red o proxy en el medio. Ver el final de **3.4**. |
+| El celular abre `localhost` y no carga nada | Quedó `localhost` en "Dirección del servidor". Poner la IP real del equipo (3.1). |
 | Escanea, suena el beep, pero no llega a la PC | La pantalla de la PC se cerró o recargó. El celular debería mostrar el aviso en rojo. |
 | El mismo producto entra varias veces | Subir `MS_ANTIREBOTE` en `scannerMovil.jsp`. |
 | Lee lento o confunde códigos | Reducir `FORMATOS` a los que usa el catálogo (punto 5). |
