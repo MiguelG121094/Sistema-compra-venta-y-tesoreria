@@ -109,7 +109,8 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                                                 <td align="center" valign="middle" class="text-center">${PedCompra.getUsuario().getPersona().getNombre()}
                                                                     ${PedCompra.getUsuario().getPersona().getApellido()}</td>
                                                                 <td align="center" valign="middle" class="text-center">${PedCompra.getSucursal().getDescripcion()}</td>
-                                                                <td align="center" valign="middle" class="text-center">${PedCompra.getFecha()}</td>
+                                                                <td align="center" valign="middle" class="text-center">
+                                                                        <fmt:formatDate value="${PedCompra.getFecha()}" pattern="dd/MM/yyyy" /></td>
                                                                 <td align="center" valign="middle" class="text-center">${PedCompra.getEstado()}</td>
                                                                 <td align="center" valign="middle" class="text-center">${PedCompra.getListaArticulos()}</td>
                                                                 <td align="center" valign="middle" class="text-center">
@@ -178,7 +179,8 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                                                 <td align="center" valign="middle" class="text-center">${PresupuestosConDet.getUsuario().getPersona().getNombre()}
                                                                     ${PresupuestosConDet.getUsuario().getPersona().getApellido()}</td>
                                                                 <td align="center" valign="middle" class="text-center">${PresupuestosConDet.getProveedor().getRazonSocial()}</td>
-                                                                <td align="center" valign="middle" class="text-center">${PresupuestosConDet.getFecha()}</td>
+                                                                <td align="center" valign="middle" class="text-center">
+                                                                    <fmt:formatDate value="${PresupuestosConDet.getFecha()}" pattern="dd/MM/yyyy" /></td>
                                                                 <td align="center" valign="middle" class="text-center">${PresupuestosConDet.getEstado()}</td>
                                                                 <td align="center" valign="middle" class="text-center">${PresupuestosConDet.getListaArticulos()}</td>
                                                                 <td align="center" valign="middle" class="text-center">

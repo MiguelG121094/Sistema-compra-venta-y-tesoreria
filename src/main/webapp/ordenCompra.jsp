@@ -108,7 +108,8 @@ usuario inicio sesion, se debe agregar esta validacion en cada una de las vistas
                                                                 <td align="center" valign="middle" class="text-center">${PresupuestosConDet.getIdPresupuesto()}</td>
                                                                 <td align="center" valign="middle" class="text-center">${PresupuestosConDet.getPedidoCompra().getIdPedido()}</td>
                                                                 <td align="center" valign="middle" class="text-center">${PresupuestosConDet.getProveedor().getRazonSocial()}</td>
-                                                                <td align="center" valign="middle" class="text-center">${PresupuestosConDet.getFecha()}</td>
+                                                                <td align="center" valign="middle" class="text-center">
+                                                                    <fmt:formatDate value="${PresupuestosConDet.getFecha()}" pattern="dd/MM/yyyy" /></td>
                                                                 <td align="center" valign="middle" class="text-center">${PresupuestosConDet.getEstado()}</td>
                                                                 <td align="center" valign="middle" class="text-center">${PresupuestosConDet.getListaArticulos()}</td>
                                                                 <td align="center" valign="middle" class="text-center">
@@ -175,7 +176,8 @@ usuario inicio sesion, se debe agregar esta validacion en cada una de las vistas
                                                                 <td align="center" valign="middle" class="text-center">${OrdenCompraConDet.getPedidoCompra().getIdPedido()}</td>
                                                                 <td align="center" valign="middle" class="text-center">${OrdenCompraConDet.getProveedor().getRazonSocial()}</td>
                                                                 <td align="center" valign="middle" class="text-center">${OrdenCompraConDet.getSucursal().getDescripcion()}</td>
-                                                                <td align="center" valign="middle" class="text-center">${OrdenCompraConDet.getFecha()}</td>
+                                                                <td align="center" valign="middle" class="text-center">
+                                                                    <fmt:formatDate value="${OrdenCompraConDet.getFecha()}" pattern="dd/MM/yyyy" /></td>
                                                                 <td align="center" valign="middle" class="text-center">${OrdenCompraConDet.getEstado()}</td>
                                                                 <td align="center" valign="middle" class="text-center">${OrdenCompraConDet.getListaArticulos()}</td>
                                                                 <td align="center" valign="middle" class="text-center">

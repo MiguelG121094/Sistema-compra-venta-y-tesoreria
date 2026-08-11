@@ -413,7 +413,7 @@
                     if (!btn) { return; }
                     var tooltip = new bootstrap.Tooltip(btn, {
                         title: "${mensajeTooltip}",
-                        placement: "top"
+                        placement: "auto"
                     });
                     tooltip.show();
 
