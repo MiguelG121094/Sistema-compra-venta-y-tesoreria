@@ -151,11 +151,11 @@
 
         <script src="scanner/qrcode.min.js"></script>
         <script>
-            /* ==========================================================================
+            <%--/* ==========================================================================
                NOTA JSP: en un .jsp NO se pueden usar template literals de JavaScript,
                porque la secuencia ${...} la intercepta el motor de EL del servidor antes
                de que el navegador vea el archivo. Por eso todo se concatena con "+".
-               ========================================================================== */
+               ========================================================================== */--%>
 
             var TOKEN = "<%= token %>";
             var CONTEXT_PATH = "${pageContext.request.contextPath}";

@@ -68,8 +68,8 @@
         </div>
 
         <script>
-            /* Recordatorio: en .jsp no se pueden usar template literals de JS, porque ${...}
-               lo consume el motor de EL del servidor. Todo va concatenado con "+". */
+            <%--/* Recordatorio: en .jsp no se pueden usar template literals de JS, porque ${...}
+               lo consume el motor de EL del servidor. Todo va concatenado con "+". */--%>
 
             var TOKEN = "<%= tokenLimpio %>";
             var CONTEXT_PATH = "${pageContext.request.contextPath}";
