@@ -41,6 +41,16 @@ public class AuthFilter implements Filter {
             return;
         }
 
+        /* Escaneo desde el celular: la página que se abre en el teléfono y el WebSocket que
+           la comunica con la PC quedan fuera del login, porque el operador no va a loguearse
+           en el celular. La credencial es el token de la URL, que sólo se obtiene escaneando
+           el QR de una pantalla ya abierta por un usuario autenticado.
+           Alcance y endurecimiento: ver SCANNER_MOVIL.md (sección Seguridad). */
+        if (path.endsWith("scannerMovil.jsp") || path.contains("/ws/scan/")) {
+            chain.doFilter(request, response);
+            return;
+        }
+
         if (!loggedIn && !loginRequest && !registerRequest) {
             res.sendRedirect("login.jsp");
         } else {
