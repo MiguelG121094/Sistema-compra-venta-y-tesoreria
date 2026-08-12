@@ -83,6 +83,11 @@
                sin esto, un solo producto entraria decenas de veces. */
             var MS_ANTIREBOTE = 2000;
 
+            /* Latido: le avisa al servidor que seguimos vivos. Sin esto el celular quieto
+               (el operador buscando el proximo producto) se pasaria del timeout de
+               inactividad y se estaria reconectando todo el tiempo. */
+            var MS_LATIDO = 8000;
+
             var video = document.getElementById("video");
             var estado = document.getElementById("estado");
             var zonaError = document.getElementById("zonaError");
@@ -91,7 +96,7 @@
             var elContador = document.getElementById("contador");
             var btnIniciar = document.getElementById("btnIniciar");
 
-            var ws = null, reintento = null, stream = null;
+            var ws = null, reintento = null, stream = null, latido = null;
             var ultimoValor = "", ultimoMomento = 0, total = 0;
             var audioCtx = null;
 
@@ -135,6 +140,7 @@
 
                 ws.onopen = function () {
                     pintarEstado("conectado", "text-bg-success");
+                    latir();
                 };
 
                 ws.onmessage = function (evento) {
@@ -158,9 +164,21 @@
                    la conexion se cae en silencio. Reintento indefinido cada 2 segundos. */
                 ws.onclose = function () {
                     pintarEstado("reconectando...", "text-bg-warning");
+                    clearInterval(latido);
                     clearTimeout(reintento);
                     reintento = setTimeout(conectar, 2000);
                 };
+            }
+
+            /* clearInterval antes de crear el nuevo: cada reconexion pasa por aca y sin
+               esto quedarian varios intervalos latiendo en paralelo. */
+            function latir() {
+                clearInterval(latido);
+                latido = setInterval(function () {
+                    if (ws && ws.readyState === WebSocket.OPEN) {
+                        ws.send('{"tipo":"latido"}');
+                    }
+                }, MS_LATIDO);
             }
 
             function enviarCodigo(valor, formato) {

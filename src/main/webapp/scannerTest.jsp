@@ -12,7 +12,77 @@
 --%>
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
 <%@page import="java.util.UUID"%>
+<%@page import="java.util.List"%>
+<%@page import="java.util.ArrayList"%>
+<%@page import="java.util.LinkedHashSet"%>
+<%@page import="java.util.Set"%>
+<%@page import="java.util.Enumeration"%>
+<%@page import="java.net.DatagramSocket"%>
 <%@page import="java.net.InetAddress"%>
+<%@page import="java.net.Inet4Address"%>
+<%@page import="java.net.NetworkInterface"%>
+<%!
+    /**
+     * La IP del adaptador por el que este equipo sale a la red.
+     *
+     * NO usamos InetAddress.getLocalHost(): devuelve lo que el sistema resuelva para el
+     * nombre del equipo, sin ningun criterio de que adaptador sirve. En una PC con VMware,
+     * VirtualBox o WSL suele contestar la IP de una red virtual (192.168.154.1 y parecidas),
+     * que existe solo dentro de la maquina y a la que el celular no llega nunca.
+     *
+     * El truco: connect() sobre UDP no manda ni un byte, solo consulta la tabla de ruteo
+     * para decidir por que interfaz saldria. Devuelve entonces la IP del adaptador que
+     * tiene puerta de enlace, que es exactamente el criterio que sirve. No hace falta que
+     * haya internet ni que 8.8.8.8 conteste: alcanza con que exista una ruta por defecto.
+     */
+    private String ipDeSalida() {
+        DatagramSocket sonda = null;
+        try {
+            sonda = new DatagramSocket();
+            sonda.connect(InetAddress.getByName("8.8.8.8"), 53);
+            InetAddress local = sonda.getLocalAddress();
+            if (local instanceof Inet4Address
+                    && !local.isAnyLocalAddress() && !local.isLoopbackAddress()) {
+                return local.getHostAddress();
+            }
+        } catch (Exception e) {
+            // Sin ruta por defecto, o el socket no se pudo abrir: queda la lista de abajo.
+        } finally {
+            if (sonda != null) {
+                sonda.close();
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Todas las IPv4 de red local del equipo, para poder elegir a mano cuando lo de arriba
+     * no acierta. Van las virtuales tambien: no hay forma confiable de reconocerlas por el
+     * nombre, y mostrarlas ordenadas con la buena primero es mas util que ocultarlas.
+     */
+    private List<String> ipsLocales() {
+        List<String> ips = new ArrayList<String>();
+        try {
+            Enumeration<NetworkInterface> adaptadores = NetworkInterface.getNetworkInterfaces();
+            while (adaptadores.hasMoreElements()) {
+                NetworkInterface adaptador = adaptadores.nextElement();
+                if (!adaptador.isUp() || adaptador.isLoopback()) {
+                    continue;   // descartados y sin uso no interesan
+                }
+                Enumeration<InetAddress> direcciones = adaptador.getInetAddresses();
+                while (direcciones.hasMoreElements()) {
+                    InetAddress dir = direcciones.nextElement();
+                    if (dir instanceof Inet4Address && dir.isSiteLocalAddress()) {
+                        ips.add(dir.getHostAddress());
+                    }
+                }
+            }
+        } catch (Exception e) {
+            // Sin permisos para enumerar: el campo queda editable a mano igual.
+        }
+        return ips;
+    }
+%>
 <%
     /* Token de emparejamiento: es lo unico que vincula esta pantalla con el celular.
        8 caracteres, igual que el token del patron Session+Token del resto del sistema. */
@@ -23,15 +93,25 @@
        (para el, localhost es el propio telefono). Por eso el valor es editable en pantalla. */
     String hostSugerido = request.getServerName();
     if ("localhost".equals(hostSugerido) || "127.0.0.1".equals(hostSugerido)) {
-        try {
-            hostSugerido = InetAddress.getLocalHost().getHostAddress();
-        } catch (Exception e) {
-            hostSugerido = "";   // que lo complete el usuario a mano
-        }
+        hostSugerido = ipDeSalida();
     }
-    String origenSugerido = hostSugerido.isEmpty()
+
+    String esquema = request.getScheme() + "://";
+    String puerto = ":" + request.getServerPort();
+
+    String origenSugerido = (hostSugerido == null || hostSugerido.isEmpty())
             ? ""
-            : request.getScheme() + "://" + hostSugerido + ":" + request.getServerPort();
+            : esquema + hostSugerido + puerto;
+
+    /* Alternativas para el desplegable, con la sugerida primero. LinkedHashSet: mantiene
+       ese orden y de paso saca la repetida cuando la sugerida ya venia en la enumeracion. */
+    Set<String> origenesPosibles = new LinkedHashSet<String>();
+    if (!origenSugerido.isEmpty()) {
+        origenesPosibles.add(origenSugerido);
+    }
+    for (String ip : ipsLocales()) {
+        origenesPosibles.add(esquema + ip + puerto);
+    }
 %>
 <!DOCTYPE html>
 <html lang="es">
@@ -72,11 +152,24 @@
                                     Direccion del servidor <span class="text-muted">(la que ve el celular)</span>
                                 </label>
                                 <input type="text" class="form-control" id="origen"
+                                       list="origenesPosibles" autocomplete="off"
                                        value="<%= origenSugerido %>"
                                        placeholder="http://192.168.1.50:8080">
+                                <%-- Si el equipo tiene VMware, VirtualBox o WSL, aca aparecen
+                                     tambien sus redes virtuales, que NO sirven. La primera de
+                                     la lista es la del adaptador con salida a la red. --%>
+                                <datalist id="origenesPosibles">
+                                    <% for (String posible : origenesPosibles) { %>
+                                    <option value="<%= posible %>"></option>
+                                    <% } %>
+                                </datalist>
                                 <div class="form-text">
                                     No puede ser <code>localhost</code>: para el celular, eso apunta a si mismo.
                                     Usa la IP del equipo en la red. Se recuerda para la proxima vez.
+                                    <% if (origenesPosibles.size() > 1) { %>
+                                    Si la sugerida no funciona, desplega el campo: hay
+                                    <%= origenesPosibles.size() %> direcciones en este equipo.
+                                    <% } %>
                                 </div>
                             </div>
 
@@ -220,6 +313,13 @@
 
             var ws = null;
             var reintento = null;
+            var latido = null;
+
+            /* Latido. El servidor da la pantalla por muerta si deja de recibirlo, y asi el
+               celular se entera de que no hay nadie escuchando en vez de recibir un ack
+               positivo contra una conexion que ya no existe. Tiene que ser bastante mas
+               frecuente que MS_LATIDO_VENCIDO en ScanEndpoint. */
+            var MS_LATIDO = 8000;
 
             function conectar() {
                 var proto = (location.protocol === "https:") ? "wss://" : "ws://";
@@ -227,6 +327,7 @@
 
                 ws.onopen = function () {
                     pintarEstado("conectado", "text-bg-success");
+                    latir();
                 };
 
                 ws.onmessage = function (evento) {
@@ -246,6 +347,7 @@
                    el operador escanea y no pasa nada, sin ninguna pista de por que. */
                 ws.onclose = function () {
                     pintarEstado("reconectando...", "text-bg-warning");
+                    clearInterval(latido);
                     clearTimeout(reintento);
                     reintento = setTimeout(conectar, 2000);
                 };
@@ -253,6 +355,17 @@
                 ws.onerror = function () {
                     pintarEstado("error", "text-bg-danger");
                 };
+            }
+
+            /* clearInterval antes de crear el nuevo: cada reconexion pasa por aca y sin
+               esto quedarian varios intervalos latiendo en paralelo. */
+            function latir() {
+                clearInterval(latido);
+                latido = setInterval(function () {
+                    if (ws && ws.readyState === WebSocket.OPEN) {
+                        ws.send('{"tipo":"latido"}');
+                    }
+                }, MS_LATIDO);
             }
 
             function pintarEstado(texto, clase) {

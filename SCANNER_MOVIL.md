@@ -10,6 +10,10 @@ licencia y no agrega dependencias Maven: JSR-356 WebSocket ya viene en GlassFish
 Estado actual: **pantalla de prueba aislada**, para validar el circuito y descubrir qué
 formatos de código usa el catálogo antes de integrarlo a un módulo real.
 
+> **Plataforma.** Payara 5 / Java EE 8: el endpoint usa `javax.websocket` (JSR-356). Al
+> pasar a Payara 6 o superior (Jakarta EE 9+) hay que renombrar los imports `javax.*` a
+> `jakarta.*` en `ScanEndpoint`; el resto del código no cambia.
+
 ---
 
 ## 1. Cómo funciona
@@ -49,13 +53,44 @@ Puntos de diseño que conviene conocer:
   campos al mensaje se toca sólo el JavaScript.
 - **Un receptor por token, varios emisores.** Si la PC recarga la página, la conexión nueva
   reemplaza a la vieja. Pueden emparejarse varios celulares contra la misma pantalla.
-- **Confirmación de entrega.** Si la pantalla de la PC se cerró, el celular recibe un ack
+- **Confirmación de entrega.** Si la pantalla de la PC no está, el celular recibe un ack
   negativo y avisa en rojo con un sonido distinto. Sin eso el operador escanearía veinte
   ítems contra una conexión muerta sin enterarse.
+- **Latido.** `isOpen()` no alcanza para saber si la pantalla sigue ahí: cuando la PC se
+  queda sin red o se suspende sin cerrar el TCP, la sesión figura abierta durante minutos
+  y el ack diría que sí cuando el código en realidad se perdió. Por eso los dos navegadores
+  mandan `{"tipo":"latido"}` cada 8 segundos y el servidor descarta la pantalla que dejó de
+  latir. Ver el alcance exacto en **1.1**.
 - **Anti-rebote.** La cámara ve el mismo código unas 30 veces por segundo. Se ignora un
   valor repetido dentro de los 2 segundos (constante `MS_ANTIREBOTE`).
 - **Reconexión automática.** El celular se bloquea, cambia de Wi-Fi o el navegador suspende
   la pestaña; ambos extremos reintentan cada 2 segundos y muestran el estado en pantalla.
+
+### 1.1 Las tres constantes del latido
+
+Se mueven juntas y el orden entre ellas es lo que importa:
+
+| Constante | Dónde | Valor | Qué pasa si se toca |
+|---|---|---|---|
+| `MS_LATIDO` | los dos JSP | 8 s | Cada cuánto late el navegador. Bajarlo no mejora nada; subirlo obliga a subir las otras dos. |
+| `MS_LATIDO_VENCIDO` | `ScanEndpoint` | 75 s | Sin latido por más de esto, la pantalla se da por muerta y se cierra. |
+| `MS_TIMEOUT_INACTIVIDAD` | `ScanEndpoint` | 90 s | `setMaxIdleTimeout`: corte del contenedor para sesiones sin nada de tráfico. Libera las abandonadas. |
+
+**Por qué 75 segundos y no 25**, que sería lo natural con un latido de 8: Chrome estrangula
+los timers de las pestañas en segundo plano y, después de 5 minutos oculta, un `setInterval`
+pasa a correr **una vez por minuto**. Con una tolerancia corta, una pantalla minimizada pero
+perfectamente viva quedaría marcada como muerta y estaría reconectándose todo el tiempo. El
+margen tiene que quedar por encima de ese minuto, y el timeout del contenedor por encima del
+margen.
+
+**Lo que esto deja afuera.** Si la PC muere de forma sucia, hay una ventana de hasta 75
+segundos en la que el celular todavía recibe `ack ok:true` y el código se pierde. Es un
+techo conocido en vez del comportamiento anterior, que podía durar minutos, pero no es cero.
+Llevarlo a cero requiere el otro enfoque: que el ack positivo lo emita **la pantalla** al
+recibir el código y el servidor sólo lo reenvíe. Ahí no hay constante de tiempo que
+sintonizar y además es inmune al estrangulamiento, porque los mensajes entrantes de un
+WebSocket no se estrangulan como los timers. Vale la pena si el escaneo llega a usarse en
+una carga larga y desatendida.
 
 ---
 
@@ -96,20 +131,31 @@ En la PC donde corre Payara, en `cmd`:
 ipconfig
 ```
 
-Buscar el adaptador en uso — *Adaptador de LAN inalámbrica Wi-Fi* o *Adaptador de Ethernet* —
-y tomar el campo **Dirección IPv4**. Normalmente algo como `192.168.1.50`.
+`ipconfig` suele listar media docena de adaptadores y varios tienen Dirección IPv4. La regla
+para elegir entre todos, en una línea:
 
-**Cuáles NO sirven.** Con WSL instalado, `ipconfig` lista varios adaptadores virtuales:
+> **Sirve el único adaptador que tiene "Puerta de enlace predeterminada" con un valor.**
+
+Esa es la marca de que el adaptador tiene salida hacia afuera de la máquina. Todos los demás
+son redes que la PC inventó para sí misma: tienen IP, pero no llevan a ninguna parte.
+
+**Cuáles NO sirven**, aunque aparezcan con IPv4:
 
 | Descartar | Por qué |
 |---|---|
-| `vEthernet (WSL)`, típicamente `172.x.x.x` | Red virtual interna de Windows; el celular no llega ahí. |
-| `vEthernet (Default Switch)` | Igual, virtual. |
+| `VMware Network Adapter VMnet1` / `VMnet8`, típicamente `192.168.x.1` | Redes de las máquinas virtuales de VMware. **Empiezan con `192.168.` igual que la buena**, así que sólo se distinguen por la puerta de enlace vacía. |
+| `VirtualBox Host-Only Network`, `192.168.56.x` | Igual, de VirtualBox. |
+| `vEthernet (WSL)` / `vEthernet (Default Switch)`, típicamente `172.x.x.x` | Redes virtuales de Windows (WSL, Hyper-V). |
 | `127.0.0.1` | Es la propia máquina. |
 | Cualquiera marcado *Desconectado* | Sin uso. |
 
-La correcta es casi siempre la que empieza con **`192.168.`**, la del adaptador por el que
-la PC tiene internet.
+Pista extra: si la IP del adaptador **termina en `.1`**, casi siempre es una red virtual. El
+`.1` suele ser el router de la red; que tu PC *sea* el `.1` significa que esa red la creó
+ella misma. La de la PC en la red real es un número cualquiera asignado por el router
+(`192.168.3.23`, `192.168.1.50`).
+
+> Cuidado con la regla vieja de "la que empieza con `192.168.`": VMware y VirtualBox usan
+> ese mismo rango. Sin mirar la puerta de enlace no alcanza.
 
 **Verificar antes de seguir.** Desde el celular, en el mismo Wi-Fi, abrir:
 
@@ -118,8 +164,8 @@ http://192.168.1.50:8080/Taller3ro/
 ```
 
 Si carga el login del sistema, la IP es correcta y el firewall deja pasar. Si no carga, no
-tiene sentido configurar el flag: primero hay que resolver eso (ver 3.4, o confirmar que el
-celular está en el Wi-Fi y no con datos móviles).
+tiene sentido configurar el flag: primero hay que resolver eso (ver el **Anexo A**, o
+confirmar que el celular está en el Wi-Fi y no con datos móviles).
 
 **Ese mismo valor va en dos lugares, idéntico:**
 
@@ -207,7 +253,165 @@ que la aplicación queda en `https://192.168.1.50:8181/Taller3ro`.
 
 Con esto ya no hace falta el flag y el QR queda con una URL estable.
 
-### 3.4 Acceso al servidor desde la red
+**El certificado queda atado a la IP.** `mkcert 192.168.1.50` emite el certificado *para esa
+dirección*. Si el router la reasigna por DHCP, Chrome deja de validarlo y hay que reemitir el
+certificado y recargar el keystore — no alcanza con actualizar el QR. Es el argumento más
+fuerte para fijarle IP estática al servidor o reservársela en el router **antes** de emitirlo.
+Si el servidor va a tener nombre de red, conviene emitirlo para el nombre en vez de la IP.
+
+### 3.4 Si el celular no llega al servidor
+
+Todo lo anterior asume que el teléfono ya carga el sistema por la IP de la red. Cuando no
+carga nada, el problema es de acceso —firewall, perfil de red, aislamiento del router— y el
+diagnóstico paso a paso está en el **Anexo A**, al final del documento.
+
+---
+
+## 4. Uso
+
+1. **En la PC**, ya logueado, abrir:
+
+   ```
+   http://localhost:8080/Taller3ro/scannerTest.jsp
+   ```
+
+2. Revisar **"Dirección del servidor"**: la IP por la que el celular ve al servidor, con
+   puerto — `http://192.168.1.50:8080`.
+
+   La pantalla la completa sola con la del adaptador que tiene salida a la red, que es la
+   correcta en la enorme mayoría de los casos. Si no funciona, el campo es un desplegable:
+   tiene todas las direcciones del equipo para elegir a mano. **Nunca puede quedar
+   `localhost`**, que para el teléfono es el propio teléfono. El valor elegido se guarda en
+   el navegador para la próxima vez.
+
+   Cómo identificar la correcta entre varias y cuáles descartar: **sección 3.1**. Tiene que
+   ser exactamente la misma que cargaste en el flag de Chrome.
+
+3. El QR se regenera automáticamente. **Escanearlo con la cámara del celular** (la app de
+   cámara de Android ya detecta QR y ofrece abrir el link).
+
+4. En el celular, tocar **"Iniciar escaneo"** y dar permiso de cámara.
+
+5. Apuntar a un producto. Debería sonar un beep, vibrar, y el código aparecer en la tabla
+   de la PC.
+
+Si el QR no se puede escanear, el link también está en texto abajo, con botón de copiar.
+
+---
+
+## 5. Qué mirar en esta prueba
+
+La pantalla muestra una columna **"Formato"** con el tipo de código detectado. Ése es el
+objetivo del ejercicio: escanear varios productos del catálogo y anotar qué formatos
+aparecen realmente.
+
+Hoy están habilitados todos estos, a propósito, para descubrirlo:
+
+```
+ean_13, ean_8, upc_a, upc_e, code_128, code_39, itf, qr_code
+```
+
+Lo esperable en productos comerciales es **`ean_13`** (y `upc_a` en importados de EE.UU.).
+Una vez confirmado, conviene reducir la lista a los que se usan de verdad: el lector se
+vuelve más rápido y baja mucho la chance de una lectura errónea. Se edita la constante
+`FORMATOS` en `scannerMovil.jsp`.
+
+---
+
+## 6. Integrarlo a un módulo real
+
+El trabajo está pensado para que el traslado sea casi mecánico:
+
+1. **Reusar el token del patrón Session+Token.** En `scannerTest.jsp` el token se genera al
+   vuelo; en un módulo real se usa el token de 8 caracteres del documento en edición (el que
+   ya maneja `FacturaCompraServlet`). Así el escaneo cae exactamente en la factura abierta,
+   sin ningún concepto nuevo de emparejamiento.
+
+2. **Copiar el bloque de WebSocket** de `scannerTest.jsp` — está delimitado entre los
+   comentarios `BLOQUE WEBSOCKET` / `FIN BLOQUE WEBSOCKET`.
+
+3. **Reescribir sólo `procesarCodigo(valor, formato)`**, que está marcada como
+   `PUNTO DE INTEGRACION`. En vez de agregar una fila a la tabla de prueba, debe buscar el
+   artículo por código de barras y agregarlo al detalle del documento.
+
+Para el paso 3 hace falta una columna de código de barras en `articulo` (si todavía no
+existe) y una búsqueda por ese campo en el DAO correspondiente.
+
+Esa columna necesita **índice único**. Único porque si dos artículos comparten código el
+escaneo carga cualquiera de los dos sin avisar nada — es una falla silenciosa y muy molesta
+de diagnosticar después, cuando el error ya está en documentos emitidos. Índice porque la
+búsqueda corre una vez por cada código escaneado, en el medio de la carga. Va a permitir
+nulos: no todos los artículos del catálogo van a tener código cargado, y en la mayoría de
+los motores varios `NULL` conviven sin violar el `UNIQUE`.
+
+`ScanEndpoint` no necesita ningún cambio: ya rutea por token, sea cual sea su origen.
+
+---
+
+## 7. Seguridad
+
+**Estado actual — adecuado para LAN y para esta etapa de prueba, no para exponer a internet.**
+
+`scannerMovil.jsp` y `/ws/scan/` están exceptuados del login en `AuthFilter`, porque el
+operador no va a loguearse en el teléfono. La credencial de hecho es el token, que sólo se
+obtiene escaneando el QR de una pantalla abierta por un usuario ya autenticado.
+
+La limitación concreta: **quien conozca o adivine un token puede inyectar códigos** en esa
+pantalla. Con tokens de 8 caracteres hexadecimales, en una red local, el riesgo es bajo —
+pero el sistema no lo impide.
+
+Endurecimiento cuando haga falta, en orden de conveniencia:
+
+1. **Validar la `HttpSession` en el handshake** con un `ServerEndpointConfig.Configurator`
+   que implemente `modifyHandshake()`, y verificar ahí que el token pertenece a una sesión
+   viva y logueada. Es lo que cierra el agujero de raíz.
+2. **Caducar los tokens**: hoy viven mientras la pantalla esté abierta. Conviene además
+   invalidarlos a los N minutos sin uso.
+3. **No exponer el puerto fuera de la LAN.** Si en algún momento se publica, HTTPS deja de
+   ser opcional: sin `wss://` los códigos viajan en texto plano.
+
+---
+
+## 8. Problemas frecuentes
+
+| Síntoma | Causa más probable |
+|---|---|
+| El botón "Iniciar escaneo" muestra el aviso de cámara no disponible | Falta el flag de Chrome del punto 3.2, o el origen quedó mal escrito (puerto, barra final). |
+| Desde el celular no carga nada del sistema | Acceso de red bloqueado. Recorrer el diagnóstico paso a paso del **Anexo A** (firewall, perfil de red, aislamiento del router). |
+| El QR abre la página pero queda en "reconectando..." | Específico del WebSocket: firewall, antivirus con inspección de red o proxy en el medio. Ver el final del **Anexo A**. |
+| El celular abre `localhost` y no carga nada | Quedó `localhost` en "Dirección del servidor". Poner la IP real del equipo (3.1). |
+| El celular abre una IP que existe pero no responde nada | La sugerida es de una red virtual (VMware, VirtualBox, WSL). Desplegar el campo "Dirección del servidor" y elegir la del adaptador con puerta de enlace (3.1). |
+| Escanea, suena el beep, pero no llega a la PC | La pantalla de la PC se cerró o recargó. El celular debería mostrar el aviso en rojo. |
+| El mismo producto entra varias veces | Subir `MS_ANTIREBOTE` en `scannerMovil.jsp`. |
+| Lee lento o confunde códigos | Reducir `FORMATOS` a los que usa el catálogo (punto 5). |
+| Códigos de barras finos no se leen | Mejorar la luz y acercar. Los EAN-13 impresos chicos necesitan buen enfoque; si es sistemático, subir el `width/height` ideal en `abrirCamara()`. |
+| El celular se apaga solo mientras escanea | Es el bloqueo de pantalla de Android. La reconexión automática lo cubre, pero conviene subir el tiempo de espera del teléfono. |
+| La pantalla de la PC pasa sola a "reconectando..." cada tanto | El latido no está llegando a tiempo: red inestable, o la pestaña estuvo mucho rato en segundo plano. Si es sistemático, subir `MS_LATIDO_VENCIDO` y `MS_TIMEOUT_INACTIVIDAD` en `ScanEndpoint`, en ese orden (1.1). |
+
+---
+
+## 9. Alternativa considerada y descartada
+
+**Barcode to PC** (app de terceros: celular + app de escritorio, inyecta el código como si se
+tecleara) resolvía esto sin programar nada. Se descartó porque **es de pago**: la versión
+gratuita da 300 escaneos en total, y después requiere licencia por equipo.
+
+Aparte del costo, el enfoque de emulación de teclado tiene dos límites que esta solución no
+tiene: el código va a donde esté el foco del cursor (si el operador hace clic en otra ventana,
+se escribe ahí) y hay que instalar y mantener la app de escritorio en cada PC.
+
+**Vale la pena tener presente** que un lector de código de barras Bluetooth barato hace lo
+mismo que la emulación de teclado, sin licencia ni celular, y lee más rápido. Si el flujo se
+reduce a "escanear dentro de un campo que ya existe", puede ser la opción más económica y
+robusta. El celular conviene cuando se necesita movilidad real o mostrarle algo al operador
+en la pantalla del teléfono.
+
+---
+
+## Anexo A — Acceso al servidor desde la red
+
+Cómo lograr que el celular llegue al servidor. Sólo hace falta leerlo si el teléfono no
+carga el sistema; si ya carga, el punto 3 alcanza.
 
 **El servidor no necesita ninguna configuración especial.** Desplegando desde NetBeans, el
 listener HTTP de GlassFish/Payara escucha en `0.0.0.0`, o sea en todas las interfaces de red,
@@ -217,7 +421,7 @@ la propia máquina; el servidor igual atiende por la IP de la red.
 Cuando el celular no llega, el bloqueo casi nunca está en GlassFish sino en el sistema
 operativo o en el router.
 
-#### La prueba que define todo
+### La prueba que define todo
 
 Desde el celular, conectado al mismo Wi-Fi, abrir en el navegador:
 
@@ -229,7 +433,7 @@ http://192.168.1.50:8080/Taller3ro/
 - **No carga** → recorrer el diagnóstico de abajo en orden. No tiene sentido tocar el flag
   ni el QR hasta que esto funcione.
 
-#### Diagnóstico paso a paso
+### Diagnóstico paso a paso
 
 **Paso 1 — Confirmar que GlassFish está escuchando en toda la red**
 
@@ -310,13 +514,14 @@ Verificar el ícono de Wi-Fi y, si hace falta, desactivar los datos móviles mie
 **Paso 6 — Revisar que la IP no haya cambiado**
 
 Si el router asigna direcciones por DHCP, la IP del servidor puede cambiar al reiniciar la
-PC. Eso rompe a la vez el flag de Chrome, el QR y cualquier acceso guardado.
+PC. Eso rompe a la vez el flag de Chrome, el QR, cualquier acceso guardado y —si ya se pasó
+a HTTPS— el certificado de mkcert, que se emite para una dirección concreta (3.3).
 
 Volver a correr `ipconfig` (3.1) y comparar. Para que deje de pasar, conviene reservarle la
 IP a esa máquina en el router o configurarle IP estática — sobre todo pensando en el pasaje
 a servidor local.
 
-#### Síntoma particular: carga la página pero queda en "reconectando..."
+### Síntoma particular: carga la página pero queda en "reconectando..."
 
 Si `scannerMovil.jsp` abre bien pero el estado nunca pasa a "conectado", el problema no es
 de acceso general sino específicamente de la conexión WebSocket. Causas posibles:
@@ -328,132 +533,3 @@ de acceso general sino específicamente de la conexión WebSocket. Causas posibl
 - Se está entrando por HTTPS pero el WebSocket intenta salir por `ws://` (o al revés). La
   página elige el esquema automáticamente, así que esto sólo pasa si hay un proxy inverso
   en el medio que termina el TLS.
-
----
-
-## 4. Uso
-
-1. **En la PC**, ya logueado, abrir:
-
-   ```
-   http://localhost:8080/Taller3ro/scannerTest.jsp
-   ```
-
-2. En **"Dirección del servidor"**, poner la IP por la que el celular ve al servidor, con
-   puerto: `http://192.168.1.50:8080`.
-
-   > La pantalla intenta adivinarla, pero **no puede quedar `localhost`**: para el teléfono,
-   > `localhost` es el propio teléfono. El valor se guarda en el navegador para la próxima vez.
-
-   Cómo identificar la IP correcta y cuáles descartar: **sección 3.1**. Tiene que ser
-   exactamente la misma que cargaste en el flag de Chrome.
-
-3. El QR se regenera automáticamente. **Escanearlo con la cámara del celular** (la app de
-   cámara de Android ya detecta QR y ofrece abrir el link).
-
-4. En el celular, tocar **"Iniciar escaneo"** y dar permiso de cámara.
-
-5. Apuntar a un producto. Debería sonar un beep, vibrar, y el código aparecer en la tabla
-   de la PC.
-
-Si el QR no se puede escanear, el link también está en texto abajo, con botón de copiar.
-
----
-
-## 5. Qué mirar en esta prueba
-
-La pantalla muestra una columna **"Formato"** con el tipo de código detectado. Ése es el
-objetivo del ejercicio: escanear varios productos del catálogo y anotar qué formatos
-aparecen realmente.
-
-Hoy están habilitados todos estos, a propósito, para descubrirlo:
-
-```
-ean_13, ean_8, upc_a, upc_e, code_128, code_39, itf, qr_code
-```
-
-Lo esperable en productos comerciales es **`ean_13`** (y `upc_a` en importados de EE.UU.).
-Una vez confirmado, conviene reducir la lista a los que se usan de verdad: el lector se
-vuelve más rápido y baja mucho la chance de una lectura errónea. Se edita la constante
-`FORMATOS` en `scannerMovil.jsp`.
-
----
-
-## 6. Integrarlo a un módulo real
-
-El trabajo está pensado para que el traslado sea casi mecánico:
-
-1. **Reusar el token del patrón Session+Token.** En `scannerTest.jsp` el token se genera al
-   vuelo; en un módulo real se usa el token de 8 caracteres del documento en edición (el que
-   ya maneja `FacturaCompraServlet`). Así el escaneo cae exactamente en la factura abierta,
-   sin ningún concepto nuevo de emparejamiento.
-
-2. **Copiar el bloque de WebSocket** de `scannerTest.jsp` — está delimitado entre los
-   comentarios `BLOQUE WEBSOCKET` / `FIN BLOQUE WEBSOCKET`.
-
-3. **Reescribir sólo `procesarCodigo(valor, formato)`**, que está marcada como
-   `PUNTO DE INTEGRACION`. En vez de agregar una fila a la tabla de prueba, debe buscar el
-   artículo por código de barras y agregarlo al detalle del documento.
-
-Para el paso 3 hace falta una columna de código de barras en `articulo` (si todavía no
-existe) y una búsqueda por ese campo en el DAO correspondiente.
-
-`ScanEndpoint` no necesita ningún cambio: ya rutea por token, sea cual sea su origen.
-
----
-
-## 7. Seguridad
-
-**Estado actual — adecuado para LAN y para esta etapa de prueba, no para exponer a internet.**
-
-`scannerMovil.jsp` y `/ws/scan/` están exceptuados del login en `AuthFilter`, porque el
-operador no va a loguearse en el teléfono. La credencial de hecho es el token, que sólo se
-obtiene escaneando el QR de una pantalla abierta por un usuario ya autenticado.
-
-La limitación concreta: **quien conozca o adivine un token puede inyectar códigos** en esa
-pantalla. Con tokens de 8 caracteres hexadecimales, en una red local, el riesgo es bajo —
-pero el sistema no lo impide.
-
-Endurecimiento cuando haga falta, en orden de conveniencia:
-
-1. **Validar la `HttpSession` en el handshake** con un `ServerEndpointConfig.Configurator`
-   que implemente `modifyHandshake()`, y verificar ahí que el token pertenece a una sesión
-   viva y logueada. Es lo que cierra el agujero de raíz.
-2. **Caducar los tokens**: hoy viven mientras la pantalla esté abierta. Conviene además
-   invalidarlos a los N minutos sin uso.
-3. **No exponer el puerto fuera de la LAN.** Si en algún momento se publica, HTTPS deja de
-   ser opcional: sin `wss://` los códigos viajan en texto plano.
-
----
-
-## 8. Problemas frecuentes
-
-| Síntoma | Causa más probable |
-|---|---|
-| El botón "Iniciar escaneo" muestra el aviso de cámara no disponible | Falta el flag de Chrome del punto 3.2, o el origen quedó mal escrito (puerto, barra final). |
-| Desde el celular no carga nada del sistema | Acceso de red bloqueado. Recorrer el diagnóstico paso a paso de **3.4** (firewall, perfil de red, aislamiento del router). |
-| El QR abre la página pero queda en "reconectando..." | Específico del WebSocket: firewall, antivirus con inspección de red o proxy en el medio. Ver el final de **3.4**. |
-| El celular abre `localhost` y no carga nada | Quedó `localhost` en "Dirección del servidor". Poner la IP real del equipo (3.1). |
-| Escanea, suena el beep, pero no llega a la PC | La pantalla de la PC se cerró o recargó. El celular debería mostrar el aviso en rojo. |
-| El mismo producto entra varias veces | Subir `MS_ANTIREBOTE` en `scannerMovil.jsp`. |
-| Lee lento o confunde códigos | Reducir `FORMATOS` a los que usa el catálogo (punto 5). |
-| Códigos de barras finos no se leen | Mejorar la luz y acercar. Los EAN-13 impresos chicos necesitan buen enfoque; si es sistemático, subir el `width/height` ideal en `abrirCamara()`. |
-| El celular se apaga solo mientras escanea | Es el bloqueo de pantalla de Android. La reconexión automática lo cubre, pero conviene subir el tiempo de espera del teléfono. |
-
----
-
-## 9. Alternativa considerada y descartada
-
-**Barcode to PC** (app de terceros: celular + app de escritorio, inyecta el código como si se
-tecleara) resolvía esto sin programar nada. Se descartó porque **es de pago**: la versión
-gratuita da 300 escaneos en total, y después requiere licencia por equipo.
-
-Aparte del costo, el enfoque de emulación de teclado tiene dos límites que esta solución no
-tiene: el código va a donde esté el foco del cursor (si el operador hace clic en otra ventana,
-se escribe ahí) y hay que instalar y mantener la app de escritorio en cada PC.
-
-**Vale la pena tener presente** que un lector de código de barras Bluetooth barato hace lo
-mismo que la emulación de teclado, sin licencia ni celular, y lee más rápido. Si el flujo se
-reduce a "escanear dentro de un campo que ya existe", puede ser la opción más económica y
-robusta. El celular conviene cuando se necesita movilidad real o mostrarle algo al operador
-en la pantalla del teléfono.

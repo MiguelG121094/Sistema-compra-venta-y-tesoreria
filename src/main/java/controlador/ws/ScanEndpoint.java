@@ -1,9 +1,11 @@
 package controlador.ws;
 
+import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import javax.websocket.CloseReason;
 import javax.websocket.OnClose;
 import javax.websocket.OnError;
 import javax.websocket.OnMessage;
@@ -34,6 +36,11 @@ import javax.websocket.server.ServerEndpoint;
  * <p><b>El servidor no interpreta el codigo.</b> El celular manda un JSON ya armado y
  * este endpoint lo reenvia tal cual a la PC. Asi no hace falta ninguna libreria JSON
  * del lado del servidor: si maniana queres agregar campos al mensaje, tocas solo el JS.
+ * La unica excepcion es reconocer el latido, que se descarta en vez de reenviarse.
+ *
+ * <p><b>Latido.</b> Ambos navegadores mandan {@code {"tipo":"latido"}} cada pocos
+ * segundos. Sirve para no confiar en {@code isOpen()}, que sigue dando true cuando la
+ * conexion murio sucia; ver {@link #pantallaViva(String)}.
  *
  * <p><b>Integracion futura.</b> En esta pantalla de prueba el token se genera al vuelo.
  * Cuando esto se monte sobre un modulo real (ej. Factura de Compra), el token a usar es
@@ -55,6 +62,33 @@ public class ScanEndpoint {
     /** Claves con las que guardamos datos en la Session del WebSocket. */
     private static final String PROP_TOKEN = "token";
     private static final String PROP_ROL = "rol";
+    private static final String PROP_LATIDO = "latido";
+
+    /**
+     * Cada cuanto manda latido el navegador. Es informativo: el valor real esta en el JS
+     * (constante MS_LATIDO de scannerTest.jsp y scannerMovil.jsp) y los tres tienen que
+     * moverse juntos.
+     */
+    private static final long MS_LATIDO = 8_000;
+
+    /**
+     * Sin latido por mas de esto, damos la pantalla por muerta aunque isOpen() diga lo
+     * contrario.
+     *
+     * <p><b>Por que 75 s y no 25.</b> Chrome estrangula los timers de las pestanias en
+     * segundo plano: despues de 5 minutos oculta, un setInterval pasa a correr una vez
+     * por minuto. Con una tolerancia corta, una pantalla minimizada pero perfectamente
+     * viva quedaria marcada como muerta y estaria reconectandose todo el tiempo. El
+     * margen tiene que quedar por encima de ese minuto.
+     */
+    private static final long MS_LATIDO_VENCIDO = 75_000;
+
+    /**
+     * Corte del contenedor para sesiones sin nada de trafico. Es la red de seguridad que
+     * libera las sesiones abandonadas; el control fino lo hace {@link #MS_LATIDO_VENCIDO}.
+     * Tiene que ser mayor que ese, o cortaria antes pestanias estranguladas pero vivas.
+     */
+    private static final long MS_TIMEOUT_INACTIVIDAD = 90_000;
 
     /**
      * token -> sesion de la pantalla de la PC que espera codigos.
@@ -81,6 +115,11 @@ public class ScanEndpoint {
         // reciben la Session pero NO los @PathParam, asi que hay que dejarlos anotados aca.
         sesion.getUserProperties().put(PROP_TOKEN, token);
         sesion.getUserProperties().put(PROP_ROL, rol);
+        sesion.getUserProperties().put(PROP_LATIDO, System.currentTimeMillis());
+
+        // Sin esto una sesion que murio sucia (PC sin red, celular suspendido) queda
+        // ocupando lugar en los mapas hasta que se caiga el TCP, que puede tardar minutos.
+        sesion.setMaxIdleTimeout(MS_TIMEOUT_INACTIVIDAD);
 
         if (ROL_PC.equals(rol)) {
             PANTALLAS.put(token, sesion);
@@ -95,7 +134,7 @@ public class ScanEndpoint {
 
             // Le decimos al celular si ya hay una pantalla esperandolo, para que
             // muestre "emparejado" o "esperando a la PC" sin tener que escanear a ciegas.
-            boolean hayPantalla = estaViva(PANTALLAS.get(token));
+            boolean hayPantalla = pantallaViva(token) != null;
             enviar(sesion, "{\"tipo\":\"estado\",\"emparejado\":" + hayPantalla + "}");
             avisarEstadoALaPantalla(token);
         }
@@ -109,16 +148,25 @@ public class ScanEndpoint {
      */
     @OnMessage
     public void onMessage(String mensaje, Session sesion) {
+        // Cualquier mensaje entrante vale como senial de vida, incluido el latido.
+        sesion.getUserProperties().put(PROP_LATIDO, System.currentTimeMillis());
+
         String token = (String) sesion.getUserProperties().get(PROP_TOKEN);
         String rol = (String) sesion.getUserProperties().get(PROP_ROL);
 
-        // La pantalla no deberia mandar nada; si lo hace, lo ignoramos.
+        // El latido no es un dato: no se reenvia ni se confirma. Ya cumplio su funcion
+        // arriba, con la marca de tiempo.
+        if (esLatido(mensaje)) {
+            return;
+        }
+
+        // La pantalla no deberia mandar nada mas que latidos; si lo hace, lo ignoramos.
         if (ROL_PC.equals(rol)) {
             return;
         }
 
-        Session pantalla = PANTALLAS.get(token);
-        if (!estaViva(pantalla)) {
+        Session pantalla = pantallaViva(token);
+        if (pantalla == null) {
             // Sin esta respuesta el operador escanearia 20 items contra una pantalla
             // cerrada sin enterarse. El celular usa el ack para avisar en rojo.
             enviar(sesion, "{\"tipo\":\"ack\",\"ok\":false,\"msg\":\"La pantalla de la PC no esta conectada\"}");
@@ -162,10 +210,55 @@ public class ScanEndpoint {
 
     // ---------------------------------------------------------------------- auxiliares
 
-    /** Le informa a la pantalla cuantos celulares tiene emparejados en este momento. */
-    private void avisarEstadoALaPantalla(String token) {
+    /**
+     * La pantalla de ese token, o null si no hay ninguna o si dejo de dar seniales de vida.
+     *
+     * <p><b>Por que no alcanza isOpen().</b> Si la PC se queda sin red, se suspende o se
+     * cuelga sin cerrar el TCP, la sesion sigue figurando abierta durante minutos: el
+     * celular recibiria {@code ack ok:true} mientras el codigo se pierde, que es
+     * exactamente lo que el ack existe para evitar. Por eso ademas exigimos un latido
+     * reciente, que el navegador manda cada {@link #MS_LATIDO} ms.
+     */
+    private Session pantallaViva(String token) {
         Session pantalla = PANTALLAS.get(token);
         if (!estaViva(pantalla)) {
+            return null;
+        }
+        Long ultimoLatido = (Long) pantalla.getUserProperties().get(PROP_LATIDO);
+        if (ultimoLatido == null
+                || (System.currentTimeMillis() - ultimoLatido) > MS_LATIDO_VENCIDO) {
+            descartarPantalla(token, pantalla);
+            return null;
+        }
+        return pantalla;
+    }
+
+    /**
+     * Da de baja una pantalla que dejo de latir: la saca del mapa y cierra la sesion zombi.
+     * Cerrarla ademas de sacarla hace que el navegador, si en realidad seguia vivo del otro
+     * lado, reciba el onclose y se reconecte solo.
+     */
+    private void descartarPantalla(String token, Session pantalla) {
+        PANTALLAS.remove(token, pantalla);
+        try {
+            pantalla.close(new CloseReason(CloseReason.CloseCodes.GOING_AWAY, "sin latido"));
+        } catch (IOException e) {
+            System.out.println("[ScanEndpoint] no se pudo cerrar la pantalla sin latido: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Unico caso en que el servidor mira el contenido de un mensaje: distinguir el latido
+     * del dato. El codigo escaneado sigue viajando sin que nadie lo interprete aca.
+     */
+    private boolean esLatido(String mensaje) {
+        return mensaje != null && mensaje.contains("\"tipo\":\"latido\"");
+    }
+
+    /** Le informa a la pantalla cuantos celulares tiene emparejados en este momento. */
+    private void avisarEstadoALaPantalla(String token) {
+        Session pantalla = pantallaViva(token);
+        if (pantalla == null) {
             return;
         }
         Set<Session> celulares = MOVILES.get(token);
