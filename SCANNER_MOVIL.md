@@ -61,8 +61,11 @@ Puntos de diseño que conviene conocer:
   y el ack diría que sí cuando el código en realidad se perdió. Por eso los dos navegadores
   mandan `{"tipo":"latido"}` cada 8 segundos y el servidor descarta la pantalla que dejó de
   latir. Ver el alcance exacto en **1.1**.
-- **Anti-rebote.** La cámara ve el mismo código unas 30 veces por segundo. Se ignora un
-  valor repetido dentro de los 2 segundos (constante `MS_ANTIREBOTE`).
+- **Anti-rebote.** La cámara ve el mismo código varias veces por segundo mientras el
+  operador apunta a la etiqueta. El código queda bloqueado **mientras esté a la vista**, y
+  se libera 2 segundos después de dejar de verse (constante `MS_ANTIREBOTE`). Medir desde
+  el último avistaje y no desde la última carga es lo que evita que el mismo producto entre
+  cada 2 segundos con el teléfono quieto.
 - **Reconexión automática.** El celular se bloquea, cambia de Wi-Fi o el navegador suspende
   la pestaña; ambos extremos reintentan cada 2 segundos y muestran el estado en pantalla.
 
@@ -99,8 +102,8 @@ una carga larga y desatendida.
 | Archivo | Rol |
 |---|---|
 | `src/main/java/controlador/ws/ScanEndpoint.java` | Endpoint WebSocket. Empareja por token y reenvía. Payara lo publica solo por la anotación `@ServerEndpoint`, no hay que registrar nada. |
-| `src/main/webapp/scannerTest.jsp` | Pantalla de la PC. Genera el token, muestra el QR y lista los códigos recibidos. Requiere login. |
-| `src/main/webapp/scannerMovil.jsp` | Página que se abre en el celular. Cámara, lectura y envío. **Exceptuada del login.** |
+| `src/main/webapp/scannerTest.jsp` | Pantalla de la PC. Genera el token, muestra el QR, lista los códigos recibidos y permite desvincular. Requiere login. |
+| `src/main/webapp/scannerMovil.jsp` | Página que se abre en el celular. Cámara, lectura, envío y botón de detener. **Exceptuada del login.** |
 | `src/main/webapp/scanner/qrcode.min.js` | Generador de QR (qrcodejs, MIT, 20 KB). |
 | `src/main/webapp/scanner/zxing.min.js` | Lector alternativo (ZXing, Apache 2.0, 330 KB). Se descarga **sólo** si el navegador no trae `BarcodeDetector`. |
 | `src/main/java/controlador/AuthFilter.java` | Modificado: 5 líneas que exceptúan `scannerMovil.jsp` y `/ws/scan/` del login. |
@@ -297,6 +300,26 @@ diagnóstico paso a paso está en el **Anexo A**, al final del documento.
 
 Si el QR no se puede escanear, el link también está en texto abajo, con botón de copiar.
 
+### 4.1 Terminar
+
+**En el celular, "Detener"** (el mismo botón de "Iniciar escaneo", que cambia). Apaga la
+cámara, corta la conexión y deja el botón listo para arrancar de nuevo. Conviene usarlo al
+terminar: si no, la cámara sigue encendida hasta que se cierre la pestaña — calienta el
+teléfono, gasta batería y sigue leyendo lo que tenga enfrente mientras el operador camina
+con él en la mano.
+
+**En la PC, "Desvincular celulares"** corta a los emparejados y genera un token nuevo sin
+recargar la página. Los teléfonos avisan en rojo *"desvinculado por la PC"* y dejan de
+reintentar; para volver a usarlos hay que escanear el QR nuevo. Sirve cuando el operador se
+va con el teléfono, cuando hay que pasarle el escaneo a otro equipo, o ante la duda de qué
+teléfono quedó conectado. Si hay celulares emparejados, pide confirmación.
+
+> Cerrar o recargar la pantalla de la PC produce el mismo corte, sólo que además pierde la
+> tabla de códigos recibidos. El botón existe para no tener que hacer eso.
+
+Después de desvincular, la propia pantalla se reconecta sola con el token nuevo: el estado
+pasa un par de segundos por "reconectando..." y vuelve a "conectado". Es lo normal.
+
 ---
 
 ## 5. Qué mirar en esta prueba
@@ -308,13 +331,32 @@ aparecen realmente.
 Hoy están habilitados todos estos, a propósito, para descubrirlo:
 
 ```
-ean_13, ean_8, upc_a, upc_e, code_128, code_39, itf, qr_code
+ean_13, ean_8, upc_a, upc_e, code_128, code_39, itf
 ```
 
 Lo esperable en productos comerciales es **`ean_13`** (y `upc_a` en importados de EE.UU.).
 Una vez confirmado, conviene reducir la lista a los que se usan de verdad: el lector se
 vuelve más rápido y baja mucho la chance de una lectura errónea. Se edita la constante
 `FORMATOS` en `scannerMovil.jsp`.
+
+**`qr_code` está fuera de la lista a propósito**, aunque el escaneo empiece con un QR. Ese
+QR lo lee la app de cámara de Android para abrir la página, no este lector. Ningún producto
+se identifica por QR, pero hay QR por todos lados: promociones impresas en el envase y, sobre
+todo, **el propio QR de emparejamiento en la pantalla de la PC**, que está justo enfrente del
+operador y entra en el encuadre con sólo levantar un poco el teléfono. Con `qr_code` habilitado
+eso se cargaba como si fuera un código de producto.
+
+### 5.1 Varios códigos en el mismo encuadre
+
+`BarcodeDetector.detect()` devuelve **todos** los códigos que ve, no uno. Pasa más seguido de
+lo que parece: envases con el EAN y un QR al lado, o dos productos vecinos en góndola.
+
+Se elige el que tenga el centro más cerca del centro de la imagen, que es donde el operador
+está apuntando y donde la interfaz dibuja la mira. Antes se tomaba el primero de la lista,
+que no sigue ningún orden útil.
+
+Consecuencia práctica: **encuadrar importa**. Si entran dos productos, gana el que esté en
+la mira, no el de mejor contraste ni el que el sistema haya detectado primero.
 
 ---
 
@@ -366,7 +408,10 @@ Endurecimiento cuando haga falta, en orden de conveniencia:
    que implemente `modifyHandshake()`, y verificar ahí que el token pertenece a una sesión
    viva y logueada. Es lo que cierra el agujero de raíz.
 2. **Caducar los tokens**: hoy viven mientras la pantalla esté abierta. Conviene además
-   invalidarlos a los N minutos sin uso.
+   invalidarlos a los N minutos sin uso. Lo que ya existe es la **revocación manual**: el
+   botón "Desvincular celulares" (4.1) corta a los emparejados y rota el token en el acto.
+   No reemplaza a la caducidad automática, pero le da al operador una forma de cortar sin
+   perder la pantalla.
 3. **No exponer el puerto fuera de la LAN.** Si en algún momento se publica, HTTPS deja de
    ser opcional: sin `wss://` los códigos viajan en texto plano.
 
@@ -382,10 +427,15 @@ Endurecimiento cuando haga falta, en orden de conveniencia:
 | El celular abre `localhost` y no carga nada | Quedó `localhost` en "Dirección del servidor". Poner la IP real del equipo (3.1). |
 | El celular abre una IP que existe pero no responde nada | La sugerida es de una red virtual (VMware, VirtualBox, WSL). Desplegar el campo "Dirección del servidor" y elegir la del adaptador con puerta de enlace (3.1). |
 | Escanea, suena el beep, pero no llega a la PC | La pantalla de la PC se cerró o recargó. El celular debería mostrar el aviso en rojo. |
-| El mismo producto entra varias veces | Subir `MS_ANTIREBOTE` en `scannerMovil.jsp`. |
+| El mismo producto entra varias veces seguidas | Subir `MS_ANTIREBOTE` en `scannerMovil.jsp`: es el tiempo que el código tiene que estar fuera de cámara antes de poder entrar de nuevo. |
+| Entra un código con formato `qr_code` | Había un QR en el encuadre: el del envase, o el de emparejamiento en la pantalla de la PC. Ya no debería pasar, `qr_code` salió de `FORMATOS` (punto 5). |
+| Entra el código del producto de al lado | Apuntar con el código dentro de la mira: cuando hay varios en la imagen gana el más centrado (5.1). |
+| Entra un código que no existe, con formato `itf` o `code_39` | Lectura fantasma. Son los dos formatos sin dígito verificador obligatorio; si el catálogo no los usa, sacarlos de `FORMATOS` (punto 5). |
 | Lee lento o confunde códigos | Reducir `FORMATOS` a los que usa el catálogo (punto 5). |
 | Códigos de barras finos no se leen | Mejorar la luz y acercar. Los EAN-13 impresos chicos necesitan buen enfoque; si es sistemático, subir el `width/height` ideal en `abrirCamara()`. |
 | El celular se apaga solo mientras escanea | Es el bloqueo de pantalla de Android. La reconexión automática lo cubre, pero conviene subir el tiempo de espera del teléfono. |
+| El teléfono se calienta o se queda sin batería | Quedó la cámara encendida. Tocar **"Detener"** al terminar en vez de dejar la pestaña abierta (4.1). |
+| El celular dice "desvinculado por la PC" | Alguien tocó "Desvincular celulares" en la pantalla. Escanear el QR nuevo para volver a emparejar (4.1). |
 | La pantalla de la PC pasa sola a "reconectando..." cada tanto | El latido no está llegando a tiempo: red inestable, o la pestaña estuvo mucho rato en segundo plano. Si es sistemático, subir `MS_LATIDO_VENCIDO` y `MS_TIMEOUT_INACTIVIDAD` en `ScanEndpoint`, en ese orden (1.1). |
 
 ---

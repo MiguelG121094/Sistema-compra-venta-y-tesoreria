@@ -65,6 +65,13 @@ public class ScanEndpoint {
     private static final String PROP_LATIDO = "latido";
 
     /**
+     * Motivo de cierre con el que la pantalla revoca a un celular. El JS de scannerMovil.jsp
+     * compara contra esta misma cadena para distinguirlo de una caida de red: una caida se
+     * reconecta sola, un desvinculado no debe hacerlo.
+     */
+    private static final String MOTIVO_DESVINCULADO = "desvinculado";
+
+    /**
      * Cada cuanto manda latido el navegador. Es informativo: el valor real esta en el JS
      * (constante MS_LATIDO de scannerTest.jsp y scannerMovil.jsp) y los tres tienen que
      * moverse juntos.
@@ -160,9 +167,12 @@ public class ScanEndpoint {
             return;
         }
 
-        // La pantalla no deberia mandar nada mas que latidos; si lo hace, lo ignoramos.
         if (ROL_PC.equals(rol)) {
-            return;
+            // Lo unico que la pantalla puede pedir: cortar los celulares de este token.
+            if (mensaje != null && mensaje.contains("\"tipo\":\"desvincular\"")) {
+                desvincularMoviles(token);
+            }
+            return;   // cualquier otra cosa que mande la pantalla se ignora
         }
 
         Session pantalla = pantallaViva(token);
@@ -231,6 +241,32 @@ public class ScanEndpoint {
             return null;
         }
         return pantalla;
+    }
+
+    /**
+     * Cierra los celulares emparejados con ese token.
+     *
+     * <p>Lo dispara el boton "Desvincular" de la pantalla, que ademas genera un token nuevo.
+     * Sin este cierre los celulares seguirian conectados al token viejo hasta que venza el
+     * timeout, escaneando contra una pantalla que ya no los escucha.
+     *
+     * <p>El motivo del cierre viaja en el CloseReason y no en un mensaje aparte: un mensaje
+     * enviado justo antes de cerrar puede no llegar a salir, mientras que el motivo del
+     * cierre le llega al navegador si o si, en el evento onclose.
+     */
+    private void desvincularMoviles(String token) {
+        Set<Session> celulares = MOVILES.get(token);
+        if (celulares == null) {
+            return;
+        }
+        for (Session celular : celulares) {
+            try {
+                celular.close(new CloseReason(
+                        CloseReason.CloseCodes.NORMAL_CLOSURE, MOTIVO_DESVINCULADO));
+            } catch (IOException e) {
+                System.out.println("[ScanEndpoint] no se pudo desvincular un celular: " + e.getMessage());
+            }
+        }
     }
 
     /**

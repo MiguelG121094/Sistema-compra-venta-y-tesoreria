@@ -188,7 +188,7 @@
                             <hr>
                             <div class="d-flex justify-content-between align-items-center">
                                 <span class="text-muted small">Token de esta pantalla</span>
-                                <code><%= token %></code>
+                                <code id="tokenActual"><%= token %></code>
                             </div>
                             <div class="d-flex justify-content-between align-items-center mt-2">
                                 <span class="text-muted small">Conexion</span>
@@ -197,6 +197,18 @@
                             <div class="d-flex justify-content-between align-items-center mt-2">
                                 <span class="text-muted small">Celulares emparejados</span>
                                 <span id="estadoMoviles" class="badge text-bg-secondary">0</span>
+                            </div>
+
+                            <%-- Corta los celulares emparejados y genera un token nuevo. Util
+                                 cuando el operador se va con el telefono o hay que pasarle el
+                                 escaneo a otro equipo. --%>
+                            <button class="btn btn-outline-danger btn-sm w-100 mt-3" type="button"
+                                    id="btnDesvincular">
+                                Desvincular celulares
+                            </button>
+                            <div class="form-text">
+                                Corta los celulares conectados y genera un c&oacute;digo nuevo.
+                                Para volver a usarlos hay que escanear el QR otra vez.
                             </div>
                         </div>
                     </div>
@@ -257,9 +269,11 @@
             var inputUrlMovil = document.getElementById("urlMovil");
             var estadoWs = document.getElementById("estadoWs");
             var estadoMoviles = document.getElementById("estadoMoviles");
+            var tokenActual = document.getElementById("tokenActual");
             var tabla = document.getElementById("tablaCodigos");
             var contador = document.getElementById("contador");
             var totalRecibidos = 0;
+            var movilesConectados = 0;
             var qr = null;
 
             // ----------------------------------------------------------- QR de emparejamiento
@@ -307,6 +321,45 @@
                 document.execCommand("copy");   // sirve tambien sin HTTPS, a diferencia del clipboard API
             });
 
+            /* Token nuevo desde el navegador, con el mismo formato que genera el JSP al
+               cargar la pagina: 8 caracteres hexadecimales. */
+            function nuevoToken() {
+                var t = "";
+                while (t.length < 8) {
+                    t += Math.floor(Math.random() * 16).toString(16);
+                }
+                return t;
+            }
+
+            /* Desvincular: corta los celulares emparejados y cambia el token, sin recargar.
+               El aviso al servidor va ANTES de cerrar nuestra conexion, porque es el servidor
+               el que cierra a los celulares: desde aca no se puede tocar la conexion de otro. */
+            document.getElementById("btnDesvincular").addEventListener("click", function () {
+                if (movilesConectados > 0 &&
+                        !confirm("Hay " + movilesConectados + " celular(es) emparejado(s). Van a " +
+                                 "quedar desvinculados y habra que escanear el QR nuevo. Continuar?")) {
+                    return;
+                }
+
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send('{"tipo":"desvincular"}');
+                }
+
+                TOKEN = nuevoToken();
+                tokenActual.textContent = TOKEN;
+                refrescarQr();
+
+                movilesConectados = 0;
+                estadoMoviles.textContent = "0";
+                estadoMoviles.className = "badge text-bg-secondary";
+
+                /* Cerramos la nuestra tambien: el onclose la levanta sola un par de segundos
+                   despues, y conectar() lee TOKEN recien en ese momento, o sea ya con el nuevo. */
+                if (ws) {
+                    ws.close();
+                }
+            });
+
             refrescarQr();
 
             // ================= BLOQUE WEBSOCKET (esto es lo que se copia a un modulo real) =====
@@ -336,6 +389,7 @@
                     if (msg.tipo === "codigo") {
                         procesarCodigo(msg.valor, msg.formato);
                     } else if (msg.tipo === "estado" && typeof msg.moviles === "number") {
+                        movilesConectados = msg.moviles;
                         estadoMoviles.textContent = msg.moviles;
                         estadoMoviles.className = "badge " +
                                 (msg.moviles > 0 ? "text-bg-success" : "text-bg-secondary");

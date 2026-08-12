@@ -76,8 +76,13 @@
 
             /* Formatos habilitados. Arrancamos amplio a proposito para descubrir que usa
                el catalogo; una vez que sepas cuales aparecen, dejar solo esos hace que el
-               lector sea mas rapido y tenga menos falsos positivos. */
-            var FORMATOS = ["ean_13", "ean_8", "upc_a", "upc_e", "code_128", "code_39", "itf", "qr_code"];
+               lector sea mas rapido y tenga menos falsos positivos.
+
+               qr_code va FUERA a proposito: ningun producto se identifica por QR, pero hay
+               QR por todas partes (promociones en el envase, y el propio QR de emparejamiento
+               en la pantalla de la PC, que esta justo enfrente del operador). Habilitarlo solo
+               servia para colar codigos que no son del producto. */
+            var FORMATOS = ["ean_13", "ean_8", "upc_a", "upc_e", "code_128", "code_39", "itf"];
 
             /* Ventana anti-rebote. La camara ve el mismo codigo ~30 veces por segundo:
                sin esto, un solo producto entraria decenas de veces. */
@@ -99,6 +104,12 @@
             var ws = null, reintento = null, stream = null, latido = null;
             var ultimoValor = "", ultimoMomento = 0, total = 0;
             var audioCtx = null;
+
+            /* escaneando: gobierna el boton, que es un interruptor Iniciar/Detener.
+               detenidoManual: distingue "lo paro el operador" de "se cayo la conexion".
+               Sin esa distincion, el onclose reconectaria enseguida lo que se acaba de cortar.
+               lectorZxing: solo se usa en el camino alternativo, para poder frenarlo. */
+            var escaneando = false, detenidoManual = false, lectorZxing = null;
 
             // ------------------------------------------------------------------ utilidades UI
 
@@ -162,10 +173,28 @@
 
                 /* El celular se bloquea, cambia de Wi-Fi o el navegador suspende la pestania:
                    la conexion se cae en silencio. Reintento indefinido cada 2 segundos. */
-                ws.onclose = function () {
-                    pintarEstado("reconectando...", "text-bg-warning");
+                ws.onclose = function (evento) {
                     clearInterval(latido);
                     clearTimeout(reintento);
+
+                    // Si lo corto el operador con Detener, no hay nada que reconectar.
+                    if (detenidoManual) {
+                        return;
+                    }
+
+                    /* La PC nos revoco con el boton Desvincular. Reconectar seria inutil:
+                       ese token ya no existe. Cortamos todo y lo decimos claro, porque si
+                       no el operador se queda mirando un "reconectando..." eterno. */
+                    if (evento && evento.reason === "desvinculado") {
+                        detenerEscaneo();
+                        pintarEstado("desvinculado por la PC", "text-bg-danger");
+                        mostrarError("<strong>La pantalla de la PC te desvincul&oacute;.</strong><br>" +
+                                     "Escane&aacute; el QR nuevo para volver a emparejar.");
+                        avisar(false);
+                        return;
+                    }
+
+                    pintarEstado("reconectando...", "text-bg-warning");
                     reintento = setTimeout(conectar, 2000);
                 };
             }
@@ -184,8 +213,14 @@
             function enviarCodigo(valor, formato) {
                 var ahora = Date.now();
 
-                // Anti-rebote: mismo valor dentro de la ventana -> se ignora.
+                /* Anti-rebote. La ventana se mide desde la ultima vez que VIMOS el codigo,
+                   no desde la ultima que lo aceptamos: mientras el operador apunta a la
+                   etiqueta el detector la ve varias veces por segundo, y si no reiniciamos
+                   la espera en cada avistaje el producto vuelve a entrar cada 2 segundos
+                   con el telefono quieto. En la practica: el codigo queda bloqueado mientras
+                   este a la vista, y se libera MS_ANTIREBOTE despues de dejar de verlo. */
                 if (valor === ultimoValor && (ahora - ultimoMomento) < MS_ANTIREBOTE) {
+                    ultimoMomento = ahora;
                     return;
                 }
                 ultimoValor = valor;
@@ -222,6 +257,34 @@
                 });
             }
 
+            /* detect() devuelve TODOS los codigos del encuadre, no uno. Tomar el primero es
+               tomar cualquiera: un envase puede traer el EAN y un QR de promocion, o pueden
+               entrar dos productos vecinos en la imagen. Elegimos el mas cercano al centro,
+               que es donde el operador esta apuntando y donde la interfaz dibuja la mira. */
+            function elegirCodigo(codigos) {
+                if (codigos.length === 1) {
+                    return codigos[0];
+                }
+                var centroX = video.videoWidth / 2;
+                var centroY = video.videoHeight / 2;
+                var mejor = null, menorDistancia = Infinity;
+
+                for (var i = 0; i < codigos.length; i++) {
+                    var caja = codigos[i].boundingBox;
+                    if (!caja) {
+                        continue;   // sin caja no hay con que comparar
+                    }
+                    var dx = (caja.x + caja.width / 2) - centroX;
+                    var dy = (caja.y + caja.height / 2) - centroY;
+                    var distancia = dx * dx + dy * dy;   // sin raiz cuadrada: solo comparamos
+                    if (distancia < menorDistancia) {
+                        menorDistancia = distancia;
+                        mejor = codigos[i];
+                    }
+                }
+                return mejor || codigos[0];
+            }
+
             /* Camino principal: BarcodeDetector nativo de Chrome Android. Es el mas rapido
                porque la deteccion la hace el sistema operativo, no JavaScript. */
             function escanearConDetectorNativo() {
@@ -233,7 +296,8 @@
                     }
                     detector.detect(video).then(function (codigos) {
                         if (codigos.length > 0) {
-                            enviarCodigo(codigos[0].rawValue, codigos[0].format);
+                            var elegido = elegirCodigo(codigos);
+                            enviarCodigo(elegido.rawValue, elegido.format);
                         }
                     }).catch(function () {
                         /* Un frame suelto puede fallar (por ejemplo justo al rotar la
@@ -252,8 +316,9 @@
                 var tag = document.createElement("script");
                 tag.src = "scanner/zxing.min.js";
                 tag.onload = function () {
-                    var lector = new ZXing.BrowserMultiFormatReader();
-                    lector.decodeFromVideoDevice(undefined, video, function (resultado) {
+                    // Guardamos la referencia: es lo unico que permite frenarlo despues.
+                    lectorZxing = new ZXing.BrowserMultiFormatReader();
+                    lectorZxing.decodeFromVideoDevice(undefined, video, function (resultado) {
                         if (resultado) {
                             enviarCodigo(resultado.getText(), "zxing");
                         }
@@ -266,11 +331,53 @@
                 document.head.appendChild(tag);
             }
 
-            // ----------------------------------------------------------------------- arranque
+            // ------------------------------------------------------------- arrancar y detener
 
-            btnIniciar.addEventListener("click", function () {
+            function pintarBoton(texto, clase) {
+                btnIniciar.textContent = texto;
+                btnIniciar.className = "btn " + clase + " btn-lg w-100 mt-3";
+            }
+
+            /* Apaga todo: camara, deteccion y WebSocket.
+               La camara es lo importante. Sin esto queda encendida hasta que se cierre la
+               pestania: calienta el telefono, gasta bateria y sigue leyendo lo que tenga
+               enfrente mientras el operador camina con el en la mano. */
+            function detenerEscaneo() {
+                escaneando = false;
+
+                if (lectorZxing) {
+                    lectorZxing.reset();   // ZXing abre su propio stream: lo suyo lo cierra el
+                    lectorZxing = null;
+                }
+
+                /* stream en null es ademas lo que corta el ciclo del detector nativo, que
+                   revisa esa variable en cada vuelta antes de pedir el frame siguiente. */
+                if (stream) {
+                    stream.getTracks().forEach(function (pista) {
+                        pista.stop();
+                    });
+                    stream = null;
+                }
+                video.srcObject = null;
+
+                /* Cerramos tambien el WebSocket: si no, la PC lo sigue contando como
+                   emparejado y el operador ve un celular conectado que ya no escanea. */
+                detenidoManual = true;
+                clearInterval(latido);
+                clearTimeout(reintento);
+                if (ws) {
+                    ws.close();
+                    ws = null;
+                }
+
+                pintarEstado("detenido", "text-bg-secondary");
+                pintarBoton("Iniciar escaneo", "btn-success");
+                btnIniciar.disabled = false;
+            }
+
+            function iniciarEscaneo() {
                 btnIniciar.disabled = true;
-                btnIniciar.textContent = "Escaneando...";
+                btnIniciar.textContent = "Abriendo camara...";
 
                 /* El AudioContext debe crearse dentro de un gesto del usuario, si no el
                    navegador lo deja suspendido y nunca suena el beep. Por eso el boton. */
@@ -294,7 +401,18 @@
                     return;
                 }
 
+                /* Si venimos de un Detener, el WebSocket quedo cerrado a proposito y hay
+                   que levantarlo de nuevo antes de empezar a leer. */
+                detenidoManual = false;
+                if (!ws || ws.readyState === WebSocket.CLOSING || ws.readyState === WebSocket.CLOSED) {
+                    conectar();
+                }
+
                 abrirCamara().then(function () {
+                    escaneando = true;
+                    btnIniciar.disabled = false;
+                    pintarBoton("Detener", "btn-danger");
+
                     if ("BarcodeDetector" in window) {
                         escanearConDetectorNativo();
                     } else {
@@ -306,6 +424,14 @@
                     btnIniciar.disabled = false;
                     btnIniciar.textContent = "Reintentar";
                 });
+            }
+
+            btnIniciar.addEventListener("click", function () {
+                if (escaneando) {
+                    detenerEscaneo();
+                } else {
+                    iniciarEscaneo();
+                }
             });
 
             if (!TOKEN) {
