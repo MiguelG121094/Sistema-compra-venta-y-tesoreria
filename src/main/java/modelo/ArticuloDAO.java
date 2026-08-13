@@ -71,6 +71,33 @@ public class ArticuloDAO {
         }
         return articuloList;
     }
+
+    /**
+     * Deja en el catálogo el precio al que se compró el artículo por última vez.
+     *
+     * <p>Lo llama la Factura de Compra dentro de su transacción, por cada línea con artículo.
+     * Así {@code art_precio_compra} deja de ser un valor que alguien mantiene a mano y pasa a
+     * reflejar siempre la última compra real, que es lo que se muestra como referencia al cargar
+     * un presupuesto.
+     *
+     * <p>Ignora los llamados sin artículo (líneas de gasto/fondo fijo) o sin precio válido, para
+     * no pisar el precio del catálogo con un cero.
+     *
+     * <p><b>Alcance:</b> anular una factura <i>no</i> restaura el precio anterior — habría que
+     * guardar un histórico para eso. Es un precio de referencia, no un dato contable: si la
+     * última compra se anula, el catálogo queda mostrando ese precio hasta la próxima compra.
+     */
+    public void actualizarPrecioCompra(Long idArticulo, Long precioCompra) throws SQLException {
+        if (idArticulo == null || precioCompra == null || precioCompra <= 0) {
+            return;
+        }
+        String sql = "UPDATE articulo SET art_precio_compra = ? WHERE id_articulo = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, precioCompra);
+            stmt.setLong(2, idArticulo);
+            stmt.executeUpdate();
+        }
+    }
     
 //    public TipoArticulo cargarTipoArticulo(Long id) throws SQLException {
 //        if (id == null) {

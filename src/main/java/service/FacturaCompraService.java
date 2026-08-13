@@ -205,6 +205,9 @@ public class FacturaCompraService {
                 detalleDAO.insertarDetalle(detalle);
             }
 
+            // 2b. Refrescar el precio de compra del catálogo con el de esta factura
+            actualizarPrecioCompraCatalogo(conn, listaDetalle);
+
             // 3. Crear cuenta a pagar
             CuentaPagarDAO cuentaPagarDAO = new CuentaPagarDAO(conn);
             cuentaPagar.setFacturaCompra(new FacturaCompra(idInsertado));
@@ -277,6 +280,9 @@ public class FacturaCompraService {
             detalleDAO.actualizarFacturaCompraDetalles(
                 facturaCompra.getIdFacturaCompra(), listaDetalle);
 
+            // Los precios editados también actualizan el catálogo, igual que al guardar.
+            actualizarPrecioCompraCatalogo(conn, listaDetalle);
+
             if (cuentaPagar != null && cuentaPagar.getIdCuentaPagar() != null) {
                 CuentaPagarDAO cuentaPagarDAO = new CuentaPagarDAO(conn);
                 cuentaPagar.setFacturaCompra(new FacturaCompra(facturaCompra.getIdFacturaCompra()));
@@ -295,6 +301,32 @@ public class FacturaCompraService {
             if (conn != null) {
                 conn.setAutoCommit(true);
                 conn.close();
+            }
+        }
+    }
+
+    /**
+     * Deja en cada artículo el precio al que se lo acaba de comprar.
+     *
+     * <p>Corre sobre la conexión de la transacción de la factura: si la factura falla y se hace
+     * rollback, los precios del catálogo tampoco quedan tocados.
+     *
+     * <p>Sirve para que la carga de un presupuesto muestre el último precio real del artículo sin
+     * tener que consultar el historial de facturas. Las líneas de gasto/fondo fijo no tienen
+     * artículo y el DAO las ignora; si el mismo artículo aparece en dos líneas de la misma
+     * factura, queda el precio de la última.
+     */
+    private void actualizarPrecioCompraCatalogo(Connection conn,
+            List<FacturaCompraDetalle> listaDetalle) throws SQLException {
+
+        if (listaDetalle == null) {
+            return;
+        }
+        ArticuloDAO articuloDAO = new ArticuloDAO(conn);
+        for (FacturaCompraDetalle detalle : listaDetalle) {
+            if (detalle.getArticulo() != null) {
+                articuloDAO.actualizarPrecioCompra(
+                        detalle.getArticulo().getIdArticulo(), detalle.getPrecioCompra());
             }
         }
     }

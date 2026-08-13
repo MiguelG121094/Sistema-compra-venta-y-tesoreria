@@ -50,6 +50,20 @@ public class OrdenPagoService {
         }
     }
 
+    /**
+     * Guard: la provisión ya fue consumida por una orden de pago vigente (no anulada).
+     *
+     * <p>A diferencia de los listados, este método <b>propaga</b> la SQLException en vez de
+     * devolver un valor por defecto. Es el mismo criterio que los guards de Factura de Compra
+     * (ver NOTA_CREDITO_DEBITO_PLAN.md §8.4): si la consulta falla no podemos contestar "no hay
+     * orden de pago", porque eso habilitaría por descuido una anulación destructiva.
+     */
+    public boolean tieneOrdenPagoActivaPorProvision(Long idProvision) throws SQLException {
+        try (Connection conn = Conexion.getConnection()) {
+            return new OrdenPagoDAO(conn).tieneOrdenPagoActivaPorProvision(idProvision);
+        }
+    }
+
     /** Próximo correlativo de OP (ord_pag_numero), para mostrarlo al abrir una orden nueva. */
     public Integer obtenerProximoNumero() throws SQLException {
         try (Connection conn = Conexion.getConnection()) {

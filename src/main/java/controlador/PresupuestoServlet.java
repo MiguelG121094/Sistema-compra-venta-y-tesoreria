@@ -161,6 +161,16 @@ public class PresupuestoServlet extends HttpServlet {
                         presupuesto.setFecha(new Date());
                         presupuesto.setEstado("Pendiente");
                         presupuesto.setUsuario(usuario);
+
+                        /* Limpiar TODO el estado del documento anterior. Sin esto, las variables
+                           que no se resetean aca reaparecen en la primera accion que las reenvie
+                           a la vista (p.ej. GuardarCondicionCompra publica listPedCompDetalle y
+                           presupuestoDetSeleccionado): el usuario toca la condicion de compra y
+                           le vuelve el pedido/articulo del presupuesto que estaba cargando antes. */
+                        listaPedidoCompraDetalle = null;   //detalle del pedido que se habia cargado
+                        pedidoCompraDetalle = null;
+                        presupuestoDetalle = null;         //articulo abierto en el editor de precio
+                        pedidoCompra = new PedidoCompra();
                         request.setAttribute("listPedCompraConDetalle", listaPedidoCompraConDetalle); //mantener lista de pedidos Modal
                         request.setAttribute("listaPresupuestosConDetalle", presupuestosConDetalle); //mantener lista de presupuestos con detalle Modal
                         request.setAttribute("listaProveedores", proveedores); // mantener proveedores Modal

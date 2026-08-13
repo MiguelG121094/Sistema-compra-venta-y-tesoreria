@@ -27,6 +27,7 @@ import modelo.ProvisionCuentaPagar;
 import modelo.ProvisionCuentaPagarDetalle;
 import modelo.Usuario;
 import service.CuentaPagarService;
+import service.OrdenPagoService;
 import service.ProveedorService;
 import service.ProvisionCuentaPagarService;
 
@@ -40,6 +41,7 @@ public class ProvisionCuentaPagarServlet extends HttpServlet {
     private final ProvisionCuentaPagarService provisionService = new ProvisionCuentaPagarService();
     private final CuentaPagarService cuentaPagarService = new CuentaPagarService();
     private final ProveedorService proveedorService = new ProveedorService();
+    private final OrdenPagoService ordenPagoService = new OrdenPagoService();   // guard de anulación
 
     // ==================== ESTADO DEL DOCUMENTO ====================
 
@@ -487,7 +489,19 @@ public class ProvisionCuentaPagarServlet extends HttpServlet {
             forward(request, response, JSP_PROVISION);
             return;
         }
-        // TODO: bloquear si la provisión ya tiene una orden de pago (cuando exista ese módulo).
+        /* Una provisión consumida por una orden de pago NO se puede anular: hay que anular
+           primero la OP. Si no, la OP queda apuntando a una provisión anulada y —peor— al
+           anular esa OP se reactiva la provisión a 'Pendiente' (paso 5 de la reversa), o sea
+           que una provisión anulada volvería a ser pagable. Mismo criterio que "anulá las notas
+           antes que la factura" en FacturaCompraServlet. */
+        if (ordenPagoService.tieneOrdenPagoActivaPorProvision(estado.idProvisionExistente)) {
+            mostrarMensaje(request, "La provisión ya tiene una orden de pago asociada. "
+                    + "Anule primero la orden de pago.", "alert-warning");
+            cargarDatosParaVista(request, estado, token);
+            forward(request, response, JSP_PROVISION);
+            return;
+        }
+
         provisionService.anularProvisionCompleta(estado.idProvisionExistente);
         limpiarEstado(session, token);
         mostrarMensaje(request, "Provisión anulada correctamente", "alert-success");

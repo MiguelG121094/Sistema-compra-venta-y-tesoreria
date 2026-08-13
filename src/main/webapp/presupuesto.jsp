@@ -390,7 +390,7 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                             <input type="text" name="txtIdArticulo" placeholder="Id. Artículo" value="${presupuestoDetSeleccionado.getArticulo().getIdArticulo()}"
                                                    class="form-control" disabled="true">
                                         </div>
-                                        <div class="col-md-4">
+                                        <div class="col-md-3">
                                             <input type="text" placeholder="Descripción" value="${presupuestoDetSeleccionado.getArticulo().getDescripcion()}"
                                                    class="form-control"  disabled="true">
                                         </div>
@@ -399,6 +399,15 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                                    value="${presupuestoDetSeleccionado.getCantidad()}"
                                                    <c:if test="${presupuestoDetSeleccionado.getArticulo().getIdArticulo() == null}">
                                                        <c:out value="disabled='disabled'"/></c:if>  placeholder="Cantidad" class="form-control mask-miles" required="true">
+                                        </div>
+                                        <%-- Referencia de precio: lo que se pagó en la última factura de compra
+                                             de este artículo. La Factura de Compra actualiza art_precio_compra al
+                                             guardar, así que este valor sigue siempre a la última compra real. --%>
+                                        <div class="col-md-2">
+                                            <input type="text" class="form-control bg-light" disabled="true"
+                                                   title="Precio de la última compra de este artículo"
+                                                   placeholder="Últ. compra (Gs.)"
+                                                   value="<c:if test="${not empty presupuestoDetSeleccionado.getArticulo().getPrecioCompra()}"><fmt:formatNumber value="${presupuestoDetSeleccionado.getArticulo().getPrecioCompra()}" pattern="#,###"/></c:if>">
                                         </div>
                                         <div class="col-md-2">
                                             <input type="text" inputmode="numeric" name="txtPrecioCompra" value="${presupuestoDetSeleccionado.getPrecioCompra()}"
@@ -428,6 +437,7 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                                 <th class="text-bg-dark text-center">Id. Articulo</th>
                                                 <th class="text-bg-dark text-center">Descripción</th>
                                                 <th class="text-bg-dark text-center">Cantidad</th>
+                                                <th class="text-bg-dark text-center" title="Precio de la última compra de este artículo">Últ. compra (Gs.)</th>
                                                 <th class="text-bg-dark text-center">Precio de compra (Gs.)</th>
                                                 <th class="text-bg-dark text-center no-search">Acciones</th>
                                             </tr>
@@ -440,6 +450,15 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                                     <td class="text-center">${listaPresuDetalle.getArticulo().getDescripcion()}</td>
                                                     <td class="text-center">
                                                         <fmt:formatNumber value="${listaPresuDetalle.getCantidad()}" pattern="#,###"/></td>
+                                                    <%-- Referencia: última compra real del artículo (art_precio_compra) --%>
+                                                    <td class="text-center text-muted">
+                                                        <c:choose>
+                                                            <c:when test="${not empty listaPresuDetalle.getArticulo().getPrecioCompra()}">
+                                                                <fmt:formatNumber value="${listaPresuDetalle.getArticulo().getPrecioCompra()}" pattern="#,###"/>
+                                                            </c:when>
+                                                            <c:otherwise>-</c:otherwise>
+                                                        </c:choose>
+                                                    </td>
                                                     <td class="text-center">
                                                         <fmt:formatNumber value="${listaPresuDetalle.getPrecioCompra()}" pattern="#,###"/></td>
                                                     <td class="text-center">

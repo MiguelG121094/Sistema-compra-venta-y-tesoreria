@@ -142,4 +142,27 @@ public class OrdenPagoDAO {
             stmt.executeUpdate();
         }
     }
+
+    /**
+     * Indica si la provisión ya fue consumida por una orden de pago vigente (no anulada).
+     *
+     * <p>Es el guard que impide anular una provisión ya pagada, calcado de
+     * {@code CuentaPagarDAO.tienePagosAplicados}. Sin esto la anulación deja la OP apuntando a
+     * una provisión anulada y, peor, al anular después esa OP el paso 5 de
+     * {@code anularOrdenPagoCompleta} la devuelve a 'Pendiente': una provisión anulada vuelve a
+     * quedar pagable. El orden correcto para deshacer es anular la OP y recién después la provisión.
+     */
+    public boolean tieneOrdenPagoActivaPorProvision(Long idProvision) throws SQLException {
+        if (idProvision == null) {
+            return false;
+        }
+        String sql = "SELECT EXISTS (SELECT 1 FROM orden_pago_cabecera "
+                   + "WHERE id_provi_cta_pagar_cabecera = ? AND ord_pag_estado <> 'Anulado')";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, idProvision);
+            try (ResultSet rs = stmt.executeQuery()) {
+                return rs.next() && rs.getBoolean(1);
+            }
+        }
+    }
 }

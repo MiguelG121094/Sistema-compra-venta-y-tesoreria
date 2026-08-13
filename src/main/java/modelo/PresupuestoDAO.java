@@ -119,7 +119,10 @@ public class PresupuestoDAO {
                     "    pc.presu_cab_fecha,\n" +
                     "    pc.presu_cab_estado,\n" +
                     "    STRING_AGG(a.art_descripcion || ' (Cant: ' || pd.presu_det_cantidad || ' Precio: ' || pd.presu_det_precio_compra || ')', ', ') AS articulos,\n" +
-                    "    CASE WHEN EXISTS (SELECT 1 FROM orden_compra_cabecera oc WHERE oc.id_presupuesto_cab = pc.id_presupuesto_cab) THEN true ELSE false END AS tiene_orden_compra\n" +
+                    // Las anuladas/canceladas NO cuentan: si se anula la orden, el presupuesto
+                    // vuelve a estar disponible. Mismo criterio que OrdenCompraDAO.existeOrdenCompraPorPresupuesto.
+                    "    CASE WHEN EXISTS (SELECT 1 FROM orden_compra_cabecera oc WHERE oc.id_presupuesto_cab = pc.id_presupuesto_cab\n" +
+                    "                        AND oc.ord_comp_estado NOT IN ('Anulado', 'Cancelado')) THEN true ELSE false END AS tiene_orden_compra\n" +
                     "FROM presupuesto_cabecera pc\n" +
                     "JOIN usuario u ON pc.id_usuario = u.id_usuario\n" +
                     "JOIN persona p ON u.id_persona = p.id_persona\n" +
