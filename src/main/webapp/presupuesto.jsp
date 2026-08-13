@@ -484,16 +484,20 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                                 </tr>
                                             </c:forEach>
                                         </tbody>
+                                        <%-- El tfoot tiene que tener EXACTAMENTE las mismas columnas que el
+                                             thead: DataTables las cruza y tira "Incorrect column count" si no
+                                             coinciden. Ademas el initComplete usa el texto de cada th del
+                                             footer como placeholder del buscador por columna. --%>
                                         <tfoot>
                                             <tr>
                                                 <th class="text-bg-dark text-center">Id. Articulo</th>
                                                 <th class="text-bg-dark text-center">Descripción</th>
                                                 <th class="text-bg-dark text-center">Cantidad</th>
+                                                <th class="text-bg-dark text-center">Últ. compra (Gs.)</th>
                                                 <th class="text-bg-dark text-center">Precio de compra (Gs.)</th>
                                                 <th class="text-bg-dark text-center no-search">Acciones</th>
                                             </tr>
                                         </tfoot>
-                                        </tbody>
                                     </table>
                                 </div>
                                 <div class="card-footer d-flex justify-content-between align-items-center">
@@ -757,7 +761,9 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                         url: "DataTables 2/es-ES.json",
                     },
                     //Tamaño de las olumnas
-                    columns: [{width: '8%'}, {width: '27%'}, {width: '15%'}, null, null]
+                    //OJO: esta lista debe tener una entrada por columna del thead/tfoot.
+                    //Si se agrega o saca una columna hay que tocar los tres lugares.
+                    columns: [{width: '8%'}, {width: '27%'}, {width: '10%'}, {width: '15%'}, null, null]
                 });
             });
             //Otra manera de inicializar la tabla y ponerle lenguaje
