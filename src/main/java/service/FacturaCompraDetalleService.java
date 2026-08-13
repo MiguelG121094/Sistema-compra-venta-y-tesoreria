@@ -8,6 +8,7 @@ import conexion.Conexion;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Map;
 import modelo.FacturaCompraDetalle;
 import modelo.FacturaCompraDetalleDAO;
 
@@ -24,6 +25,18 @@ public class FacturaCompraDetalleService {
         } catch (SQLException e) {
             System.out.println("Error en FacturaCompraDetalleService: " + e);
             return null;
+        }
+    }
+
+    /**
+     * Cantidad comprada por articulo en la factura (tope para las devoluciones por Nota de
+     * Credito). Propaga la excepcion: es insumo de una validacion, no puede devolver un mapa
+     * vacio ante un error y dejar pasar una devolucion excedida.
+     */
+    public Map<Long, Long> obtenerCantidadesCompradasPorArticulo(Long idFacturaCompra) throws SQLException {
+        try (Connection conn = Conexion.getConnection()) {
+            FacturaCompraDetalleDAO detalleDAO = new FacturaCompraDetalleDAO(conn);
+            return detalleDAO.obtenerCantidadesCompradasPorArticulo(idFacturaCompra);
         }
     }
 

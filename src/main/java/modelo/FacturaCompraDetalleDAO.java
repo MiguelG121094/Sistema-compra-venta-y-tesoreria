@@ -9,8 +9,10 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -105,6 +107,37 @@ public class FacturaCompraDetalleDAO {
             int filasAfectadas = stmt.executeUpdate();
             return filasAfectadas > 0;
         }
+    }
+
+    /**
+     * Cantidad comprada por artículo en una factura, sumando las líneas repetidas.
+     *
+     * <p>Es el tope contra el que se valida una Nota de Crédito: no se puede devolver más de lo
+     * que la factura trae. Ignora las líneas sin artículo (gasto/fondo fijo), que no tienen
+     * cantidad devolvible.
+     *
+     * @return mapa idArticulo → cantidad comprada (vacío si la factura no tiene líneas con artículo)
+     */
+    public Map<Long, Long> obtenerCantidadesCompradasPorArticulo(Long idFacturaCompra) throws SQLException {
+        Map<Long, Long> cantidades = new HashMap<>();
+        if (idFacturaCompra == null) {
+            return cantidades;
+        }
+
+        String sql = "SELECT id_articulo, SUM(fact_comp_cantidad) AS cantidad "
+                   + "FROM factura_compra_detalle "
+                   + "WHERE id_fact_comp_cab = ? AND id_articulo IS NOT NULL "
+                   + "GROUP BY id_articulo";
+
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, idFacturaCompra);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    cantidades.put(rs.getLong("id_articulo"), rs.getLong("cantidad"));
+                }
+            }
+        }
+        return cantidades;
     }
 
     public boolean eliminarDetalle(Long idFacturaCompra, Long idArticulo) throws SQLException {

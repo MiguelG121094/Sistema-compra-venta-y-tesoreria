@@ -2,6 +2,13 @@
 --esquema (Power Architect)  →  Procedimientos y Triggers para BD.sql  →  Inserts inciales.sql
 --El orden importa: al insertar los factura_compra_detalle, el trigger de stock ya 
 --debe existir para que stock se popule solo (art 1 y art 8 en depósito 1; art 6 en depósito 2).
+--
+--Este script se puede correr las veces que haga falta, también sobre una base que ya tiene
+--datos: las funciones usan CREATE OR REPLACE y cada CREATE TRIGGER va precedido de un
+--DROP TRIGGER IF EXISTS. Sin ese DROP la segunda corrida fallaba con "trigger already
+--exists" (PostgreSQL no soporta CREATE OR REPLACE TRIGGER antes de la version 14).
+--Recrear un trigger NO reprocesa las filas existentes: solo afecta lo que se inserte o
+--actualice de ahi en adelante.
 
 
 -- Trigger: sumar al stock cuando se inserta un detalle con articulo + deposito
@@ -24,6 +31,7 @@
   END;
   $$ LANGUAGE plpgsql;
 
+  DROP TRIGGER IF EXISTS trg_factura_compra_detalle_stock_ins ON public.factura_compra_detalle;
   CREATE TRIGGER trg_factura_compra_detalle_stock_ins
   AFTER INSERT ON public.factura_compra_detalle
   FOR EACH ROW
@@ -56,6 +64,7 @@
   END;
   $$ LANGUAGE plpgsql;
 
+  DROP TRIGGER IF EXISTS trg_factura_compra_estado_anular ON public.factura_compra_cabecera;
   CREATE TRIGGER trg_factura_compra_estado_anular
   AFTER UPDATE OF fact_comp_estado ON public.factura_compra_cabecera
   FOR EACH ROW
@@ -91,6 +100,7 @@
   END;
   $$ LANGUAGE plpgsql;
 
+  DROP TRIGGER IF EXISTS trg_nota_credito_compra_detalle_stock_ins ON public.nota_credito_compra_detalle;
   CREATE TRIGGER trg_nota_credito_compra_detalle_stock_ins
   AFTER INSERT ON public.nota_credito_compra_detalle
   FOR EACH ROW
@@ -124,6 +134,7 @@
   END;
   $$ LANGUAGE plpgsql;
 
+  DROP TRIGGER IF EXISTS trg_nota_credito_compra_estado_anular ON public.nota_credito_compra_cabecera;
   CREATE TRIGGER trg_nota_credito_compra_estado_anular
   AFTER UPDATE OF nota_cred_comp_estado ON public.nota_credito_compra_cabecera
   FOR EACH ROW

@@ -330,7 +330,7 @@ Sistema-compra-venta-y-tesoreria/
 | Presupuesto | ✅ | ✅ | ✅ | ✅ | ✅ | **Completo** |
 | Orden de Compra | ✅ | ✅ | ✅ | ✅ | ✅ | **Completo** |
 | Factura de Compra | ✅ | ✅ | ✅ | ✅ | ✅ | **Completo** (con triggers stock + Libro IVA + Cuenta a Pagar) |
-| Nota Crédito Compra | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ Completo (`NotaCreditoDebitoServlet` + `notaCreditoDebito.jsp`; falta validar cantidad devuelta ≤ comprada — ver [plan](NOTA_CREDITO_DEBITO_PLAN.md)) |
+| Nota Crédito Compra | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ Completo (`NotaCreditoDebitoServlet` + `notaCreditoDebito.jsp`, con validación de cantidad devuelta ≤ comprada; falta correr los triggers de stock contra la BD — ver [plan](NOTA_CREDITO_DEBITO_PLAN.md)) |
 | Nota Débito Compra | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ Completo (mismo servlet/vista que la Nota de Crédito) |
 | Nota Remisión Compra | ✅ | ❌ | ❌ | ❌ | ⚠️ | Parcial (vista inicial) |
 | Cuenta a Pagar | ✅ | ✅ | ✅ | ❌ | ❌ | Backend listo (integrado con Factura Compra) |
@@ -358,6 +358,9 @@ Sistema-compra-venta-y-tesoreria/
 | Provisión de Cuenta a Pagar | ✅ | ✅ | ✅ | ✅ **Completo** — `ProvisionCuentaPagarServlet` + `provision.jsp` (netea el saldo a favor de las NC) |
 | Orden de Pago (+ formas de pago, cheque, chequera) | ✅ | ✅ | ✅ | ✅ **Completo** — `OrdenPagoServlet` + `ordenPago.jsp`; descuenta el saldo, emite cheques y anula con reversa total. **Pendiente de prueba end-to-end** |
 | Débitos / Créditos bancarios | ✅ | ❌ | ❌ | Próximo (alimentan la conciliación) |
+| Depósitos bancarios (boletas) | ✅ | ❌ | ❌ | Pendiente — es el mismo ABM que Créditos; requiere subir `creditos.id_cobro` nullable |
+| Gestión de cheques (ABM chequera, entrega, anulación individual) | ✅ | ⚠️ | ❌ | Pendiente — hoy los cheques sólo se emiten/anulan desde la Orden de Pago |
+| Informes | — | — | — | Pendiente — sin planificar (ver `MODULO_TESORERIA_PLAN.md` §H) |
 | Fondo Fijo + Rendición | ✅ | ❌ | ❌ | Pendiente |
 | Conciliación Bancaria | ✅ | ❌ | ❌ | Pendiente (objetivo final del módulo) |
 | Timbrado | ✅ | ✅ | ✅ | Backend listo |

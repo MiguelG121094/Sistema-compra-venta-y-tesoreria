@@ -43,6 +43,27 @@ factura_compra ─► cuenta_pagar ─► PROVISIÓN ─► ORDEN DE PAGO ─►
 > corresponde al ciclo de **ventas**; se documenta como **fase posterior** (§9), fuera del foco
 > inmediato pedido (pagos).
 
+### 1.1 Trazabilidad de requerimientos
+
+Mapeo de los requerimientos del módulo contra lo que existe (revisado 2026-08-13):
+
+| # | Requerimiento | Estado | Dónde |
+|---|---|---|---|
+| 3.1 | Generar provisión de cuentas a pagar | ✅ Completo y probado | §B |
+| 3.2 | Generar órdenes de pago | ✅ Implementado — **falta prueba end-to-end** | §C |
+| 3.3 | Registrar entrega de cheques a proveedores | ❌ No existe | §G2 |
+| 3.4 | Procesos especiales (anular OP / anular cheques) | ⚠️ Parcial: anular OP ✅ (sin probar); anular un cheque suelto ❌ | §C.1 / §G3 |
+| 3.5 | Asignar fondo fijo | ❌ Pendiente | §E |
+| 3.6 | Rendir fondo fijo | ❌ Pendiente | §E |
+| 3.7 | Registrar reposición de fondo fijo | ❌ Pendiente | §E |
+| 3.8 | Cargar débitos y créditos | ❌ Pendiente | §D |
+| 3.9 | Registrar depósitos (boletas bancarias) | ❌ Pendiente — mismo ABM que 3.8; requiere subir `creditos.id_cobro` nullable | §D |
+| 3.10 | Generar conciliación bancaria | ❌ Pendiente (objetivo final) | §F |
+| 3.11 | Generar informes | ❌ Pendiente — **sin planificar hasta ahora** | §H |
+
+Los requerimientos 3.3, 3.4 (mitad), 3.9 y 3.11 **no estaban cubiertos por ninguna sección** de este
+plan; por eso se agregaron §G y §H y se amplió §D.
+
 ---
 
 ## 2. Estado actual
@@ -477,6 +498,21 @@ ABM sobre una `cuenta`. Alimentan la conciliación (son movimientos del banco qu
 
 **Componentes:** `DebitoDAO`/`CreditoDAO` + Services + Servlet(s) + JSP(s). ABM relativamente simple.
 
+**⭐ Acá también entra el registro de depósitos bancarios (requerimiento 3.9).** La boleta de
+depósito **es** una fila de `creditos`: el propio esquema lo dice —
+*"`creditos_nro_comprobante`: comprobante puede ser nro de boleta de deposito"*. O sea que 3.8 y
+3.9 se resuelven con el mismo ABM, no son dos módulos.
+
+> **Bloqueo resuelto en Power Architect, pendiente de subir a la BD (2026-08-13).**
+> `creditos.id_cobro` era **`NOT NULL`**, y un cobro pertenece al ciclo de **ventas**, que todavía
+> no tiene UI: con esa restricción no se podía registrar un depósito sin implementar Cobros antes.
+> Ya está cambiado a **nullable** en Power Architect; **falta regenerar y subir el esquema**. Hasta
+> que eso ocurra, el ABM de créditos no puede insertar un depósito suelto.
+>
+> Con `id_cobro` nullable quedan dos orígenes para un crédito: **con cobro** (depósito de una
+> recaudación de ventas, cuando exista ese módulo) y **sin cobro** (depósito directo, transferencia
+> recibida, capitalización de intereses). El ABM debe dejar el campo vacío por ahora.
+
 ---
 
 ### E. Fondo Fijo + rendición
@@ -510,6 +546,71 @@ existan OP, débitos y créditos (por eso va al final).
 
 ---
 
+### G. Gestión de cheques *(pendiente — antes sólo se mencionaba de pasada)*
+
+> Sección agregada el 2026-08-13. §C la venía referenciando como "§G" (ABM de chequera) pero nunca
+> se había escrito. Cubre además dos requerimientos que no estaban planificados en ningún lado:
+> **3.3 (entrega de cheques)** y la mitad faltante de **3.4 (anulación de cheques)**.
+
+**Tablas:** `cheque`, `chequera`, `tipo_cheque`.
+
+Hoy el cheque nace **dentro de la Orden de Pago**: `OrdenPagoService` lo emite con estado
+`'Emitido'` y número tomado del rango de la chequera, y ahí termina su ciclo de vida. No existe
+ninguna pantalla de cheques. Faltan tres cosas distintas:
+
+**G1. ABM de chequeras.** Hoy las chequeras vienen del **seed** (`Inserts inciales.sql`: Itaú
+1000001–1000050, Ueno 2000001–2000050). Cuando se agote una, no hay forma de cargar otra desde la
+aplicación y la emisión va a fallar con *"Chequera agotada"*. Es el pendiente más urgente de los
+tres, porque bloquea la operación normal.
+
+**G2. Registrar la entrega al proveedor (requerimiento 3.3).** Hoy no se deja constancia de que el
+proveedor retiró el cheque. `chq_estado` es `VARCHAR(20)`, así que el estado `'Entregado'` **no
+necesita cambio de esquema**; pero **no hay columnas para la fecha de entrega ni para quién
+retiró**. Ojo: `chq_a_la_orden` es a nombre de quién se emite el cheque, que no es lo mismo que
+quién lo retiró. Si se quiere dejar constancia real hace falta agregar, por ejemplo,
+`chq_fecha_entrega DATE` y `chq_entregado_a VARCHAR`. **Decisión pendiente:** alcanza con el
+estado, o se agregan las columnas.
+
+**G3. Anulación de un cheque individual (mitad de 3.4).** Hoy los cheques sólo se anulan **en
+cascada**, cuando se anula la OP entera (`anularOrdenPagoCompleta`, paso 3). El caso real —cheque
+mal impreso, extraviado o rechazado, **sin** querer deshacer el pago— no tiene camino. Requiere
+decidir qué pasa con la forma de pago que lo referencia: lo natural es anular ese cheque y emitir
+uno nuevo de reemplazo sobre la misma `forma_pago_detalle`, dejando el anulado como trazabilidad.
+Recordar que el número anulado **no se reutiliza** (`proximoNumeroCheque` usa `MAX(chq_numero)`),
+que es el comportamiento bancario correcto.
+
+**Componentes:** `ChequeServlet` + `cheque.jsp` (ya listados como pendientes en
+`DOCUMENTACION_PROYECTO.md`), `ChequeraDAO` ampliado con alta/baja, `ChequeService`.
+
+> **Rinde bien hacerlo temprano:** una sola pantalla cierra 3.3, completa 3.4 y saca el bloqueo de
+> la chequera agotada.
+
+---
+
+### H. Informes *(pendiente — sin planificar)*
+
+> Sección agregada el 2026-08-13. El requerimiento **3.11 (generar informes)** no figuraba en
+> ningún documento del proyecto.
+
+**Estado: greenfield total.** No hay una sola línea de código de reportes, ni librería en el
+`pom.xml` (hoy sólo `javaee-api` y `postgresql`), ni un diseño de qué informes se esperan.
+
+**A definir antes de poder estimarlo:**
+1. **Qué informes.** Los candidatos naturales del módulo son: libro IVA compras por período,
+   cuentas a pagar por proveedor y vencimiento, órdenes de pago por período, cheques emitidos /
+   pendientes de entrega / a vencer, movimientos por cuenta bancaria, y la propia conciliación.
+2. **Qué formato.** Tres caminos, de menor a mayor esfuerzo: (a) una JSP imprimible con CSS
+   `@media print` — cero dependencias, lo más rápido; (b) exportar a CSV/Excel desde el servlet
+   — sirve para que el contador lo trabaje aparte; (c) PDF con JasperReports o similar — el más
+   prolijo y el único que da un formato fijo, pero agrega dependencia y curva de aprendizaje.
+3. **Si los informes son un módulo aparte** en el sistema de permisos o cada informe cuelga de su
+   módulo (`compra`, `tesoreria`).
+
+**Recomendación:** arrancar por (a) sobre las consultas que ya existen en los DAOs, y reservar el
+PDF para los informes que realmente se impriman y archiven.
+
+---
+
 ## 5. Decisiones de diseño (a cerrar antes de implementar cada parte)
 
 | # | Decisión | Propuesta | Estado |
@@ -533,10 +634,17 @@ existan OP, débitos y créditos (por eso va al final).
 1. ✅ **Referenciales bancarios** (A) — moneda, tipo entidad, entidad financiera, tipo cuenta, **cuenta**. *(HECHO.)*
 2. ✅ **Provisión de cuenta a pagar** (B) — con **neteo del saldo a favor** de NC. *(HECHO — cierra el circuito de NC/ND.)*
 3. ✅ **Orden de pago** (C) — descuento de saldo + **N formas de pago mixtas** con cheque real desde chequera. *(HECHA — falta la prueba end-to-end.)*
-4. ⏳ **Débitos / Créditos** (D) — ABM de movimientos bancarios. *(PRÓXIMO.)*
-5. **Fondo Fijo + rendición** (E) — reutiliza B y C.
-6. **Conciliación bancaria** (F) — el objetivo (jala OPs + débitos + créditos del período).
-7. *(Fase posterior)* **Lado cobros/caja** (§9).
+4. ⏳ **Probar la Orden de Pago de punta a punta** — es el requerimiento 3.2 y todo lo que sigue se
+   apoya en que funcione (el descuento de saldo, el cheque emitido y la reversa al anular). *(PRÓXIMO.)*
+5. **Débitos / Créditos** (D) — ABM de movimientos bancarios; cierra **3.8 y 3.9** de una vez.
+   Requiere haber subido el esquema con `creditos.id_cobro` nullable.
+6. **Gestión de cheques** (G) — una pantalla cierra **3.3**, completa **3.4** y saca el bloqueo de
+   la chequera agotada. Barata en relación a lo que resuelve.
+7. **Fondo Fijo + rendición** (E) — **3.5, 3.6 y 3.7**; reutiliza B y C. Agregar antes las
+   secuencias de `fondo_fijo_rendicion(_detalle)`.
+8. **Conciliación bancaria** (F) — **3.10**, el objetivo (jala OPs + débitos + créditos del período).
+9. **Informes** (H) — **3.11**, cuando esté definido el alcance y el formato.
+10. *(Fase posterior)* **Lado cobros/caja** (§9).
 
 ---
 
@@ -570,15 +678,28 @@ existan OP, débitos y créditos (por eso va al final).
 - [x] ✅ Seed de `forma_pago_cabecera` (`Cheque` / `Transferencia`) agregado a `Inserts inciales.sql` — sin esas filas el combo "Tipo" del carrito salía vacío
 - [ ] Confirmar el nombre `forma_pag_tipo_cambio` contra Power Architect
 
-**D. Débitos / Créditos**
+**D. Débitos / Créditos** *(cierra 3.8 y 3.9)*
+- [ ] **Subir el esquema con `creditos.id_cobro` nullable** (ya cambiado en Power Architect, sin regenerar la BD) — sin esto no se puede registrar un depósito suelto
 - [ ] `DebitoDAO`/`CreditoDAO` + Services + Servlets + JSPs (ABM)
+- [ ] En el ABM de créditos, dejar `id_cobro` vacío: el enlace con cobros llega recién con Ventas
 
-**E. Fondo Fijo**
+**E. Fondo Fijo** *(cierra 3.5, 3.6 y 3.7)*
 - [ ] Revisar secuencia (PK no serial) de `fondo_fijo_rendicion(_detalle)`
 - [ ] `FondoFijoDAO`, `FondoFijoRendicionDAO` (+detalle), Services, Servlet, JSP
 
-**F. Conciliación**
+**F. Conciliación** *(cierra 3.10)*
 - [ ] `ConciliacionBancariaDAO` (+detalle), Service, Servlet, JSP
+
+**G. Gestión de cheques** *(cierra 3.3 y completa 3.4)*
+- [ ] **ABM de chequeras** (G1) — hoy vienen del seed; cuando se agote una, la emisión falla
+- [ ] **Registrar entrega al proveedor** (G2) — decidir si alcanza el estado `'Entregado'` o se agregan `chq_fecha_entrega` / `chq_entregado_a` (hoy esas columnas **no existen**)
+- [ ] **Anular un cheque individual** (G3) — hoy sólo se anulan en cascada al anular la OP
+- [ ] `ChequeServlet` + `cheque.jsp` + `ChequeService`
+
+**H. Informes** *(cierra 3.11)*
+- [ ] Definir **qué informes** y **en qué formato** (JSP imprimible / CSV / PDF) — ver §H
+- [ ] Decidir si son un módulo propio de permisos o cuelgan de `compra`/`tesoreria`
+- [ ] Implementar
 
 **Transversal**
 - [ ] Actualizar los links restantes de "Módulo Tesorería" en `menuLateral.jsp` (los de Cuentas Bancarias, Provisión y Orden de Pago ya apuntan a sus servlets; el resto sigue en `.html` placeholders)
@@ -592,7 +713,9 @@ existan OP, débitos y créditos (por eso va al final).
   rendición la referencian juntos. Cuidado al insertar/consultar.
 - ~~`orden_pago_detalle` con PK solo `id_orden_pago`~~ → ✅ **resuelto**: ahora tiene serial `id_orden_pago_det` (N facturas por OP).
 - **`fondo_fijo_rendicion(_detalle)`** sin secuencia serial en la PK (pendiente para §E).
-- **Cheque desde chequera:** el próximo `chq_numero` debe validarse dentro de `[chequera_desde_nro, chequera_hasta_nro]`; controlar "chequera agotada" (§C).
+- **Cheque desde chequera:** el próximo `chq_numero` debe validarse dentro de `[chequera_desde_nro, chequera_hasta_nro]`; controlar "chequera agotada" (§C). ⚠️ Hoy **no hay ABM de chequeras** (vienen del seed): cuando se agote el rango, la emisión de cheques se corta y no hay forma de cargar una nueva desde la aplicación (§G1).
+- **`creditos.id_cobro`**: era `NOT NULL` y bloqueaba el registro de depósitos sin módulo de Cobros. Ya está nullable en Power Architect, **falta subir el esquema** (§D).
+- **`cheque` no tiene columnas de entrega** (fecha ni receptor): `chq_a_la_orden` es a nombre de quién se emite, no quién retiró (§G2).
 - **Descuento de saldo greenfield**: hoy **nada** descuenta `cta_pag_saldo` al pagar; se diseña desde
   cero en la Orden de Pago, en la **misma transacción** que la OP.
 - **Nombres de constraint** con doble token (`orden_pagoorden_pago_cabecera_fk`) — cosmético, las FKs
@@ -613,19 +736,22 @@ recaudación a depositar → **crédito bancario** → conciliación. Se planifi
 
 ## 10. Resumen
 
-| Fase | Sub-módulo | Depende de |
-|---|---|---|
-| 1 | Referenciales bancarios (cuenta, entidad, moneda…) | — |
-| 2 | Provisión de cuenta a pagar (+ neteo NC) | cuenta_pagar (✅) |
-| 3 | Orden de pago + formas de pago (descuenta saldo) | Provisión, Cuenta bancaria |
-| 4 | Débitos / Créditos | Cuenta bancaria |
-| 5 | Fondo Fijo + rendición | Provisión, Orden de pago |
-| 6 | Conciliación bancaria | OP, Débitos, Créditos |
-| 7 | (Cobros/Caja) | Ventas |
+| Fase | Sub-módulo | Requerimiento | Depende de |
+|---|---|---|---|
+| 1 | Referenciales bancarios (cuenta, entidad, moneda…) | — | — |
+| 2 | Provisión de cuenta a pagar (+ neteo NC) | 3.1 | cuenta_pagar (✅) |
+| 3 | Orden de pago + formas de pago (descuenta saldo) | 3.2 | Provisión, Cuenta bancaria |
+| 4 | Débitos / Créditos (+ depósitos) | 3.8, 3.9 | Cuenta bancaria, `id_cobro` nullable |
+| 5 | Gestión de cheques (ABM chequera, entrega, anulación) | 3.3, 3.4 | Orden de pago |
+| 6 | Fondo Fijo + rendición | 3.5, 3.6, 3.7 | Provisión, Orden de pago |
+| 7 | Conciliación bancaria | 3.10 | OP, Débitos, Créditos |
+| 8 | Informes | 3.11 | Lo que se quiera informar |
+| 9 | (Cobros/Caja) | — | Ventas |
 
-Con **Referenciales**, **Provisión** y **Orden de Pago** ya implementados (las fases 1 a 3), lo que resta
-del camino corto hacia la **conciliación bancaria** pedida es: **Débitos/Créditos → Fondo Fijo →
-Conciliación**, reutilizando en cada paso el patrón transaccional Session+Token de Compras.
+Con **Referenciales**, **Provisión** y **Orden de Pago** ya implementados (fases 1 a 3), lo que resta
+del camino hacia la **conciliación bancaria** es: **probar la OP → Débitos/Créditos → Cheques →
+Fondo Fijo → Conciliación → Informes**, reutilizando en cada paso el patrón transaccional
+Session+Token de Compras.
 
 ---
 

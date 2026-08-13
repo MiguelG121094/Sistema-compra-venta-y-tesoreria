@@ -11,7 +11,9 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Types;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -316,5 +318,42 @@ public class NotaCreditoCompraDAO {
                 return rs.next() && rs.getBoolean(1);
             }
         }
+    }
+
+    /**
+     * Cantidad ya devuelta por artículo en las notas de crédito ANTERIORES de esa factura.
+     *
+     * <p>Es el acumulado contra el que se valida una nota nueva: la factura admite devolver la
+     * cantidad comprada menos lo que ya devolvieron las notas previas. Excluye las notas
+     * anuladas, porque el trigger de stock ya repuso esa mercadería y vuelve a estar devolvible.
+     *
+     * <p>Ver NOTA_CREDITO_DEBITO_PLAN.md §5.3.
+     *
+     * @return mapa idArticulo → cantidad ya devuelta (vacío si no hay notas activas)
+     */
+    public Map<Long, Long> obtenerCantidadesDevueltasPorArticulo(Long idFacturaCompra) throws SQLException {
+        Map<Long, Long> cantidades = new HashMap<>();
+        if (idFacturaCompra == null) {
+            return cantidades;
+        }
+
+        String sql = "SELECT det.id_articulo, SUM(det.nota_cred_comp_cantidad) AS cantidad "
+                   + "FROM nota_credito_compra_detalle det "
+                   + "JOIN nota_credito_compra_cabecera cab "
+                   + "  ON cab.id_nota_cred_comp_cab = det.id_nota_cred_comp_cab "
+                   + "WHERE cab.id_fact_comp_cab = ? "
+                   + "  AND cab.nota_cred_comp_estado <> 'Anulado' "
+                   + "  AND det.id_articulo IS NOT NULL "
+                   + "GROUP BY det.id_articulo";
+
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, idFacturaCompra);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    cantidades.put(rs.getLong("id_articulo"), rs.getLong("cantidad"));
+                }
+            }
+        }
+        return cantidades;
     }
 }

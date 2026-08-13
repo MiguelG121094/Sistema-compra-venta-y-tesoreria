@@ -8,6 +8,7 @@ import conexion.Conexion;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Map;
 import modelo.CuentaPagarDAO;
 import modelo.LibroIvaCompra;
 import modelo.LibroIvaCompraDAO;
@@ -118,6 +119,19 @@ public class NotaCreditoCompraService {
         try (Connection conn = Conexion.getConnection()) {
             NotaCreditoCompraDAO dao = new NotaCreditoCompraDAO(conn);
             return dao.tieneNotaActivaPorFactura(idFacturaCompra);
+        }
+    }
+
+    /**
+     * Cantidad ya devuelta por articulo en las notas de credito activas de esa factura.
+     *
+     * <p>Propaga la excepcion, igual que el guard de arriba: es el insumo de una validacion, y
+     * devolver un mapa vacio ante un error de BD dejaria pasar una devolucion excedida.
+     */
+    public Map<Long, Long> obtenerCantidadesDevueltasPorArticulo(Long idFacturaCompra) throws SQLException {
+        try (Connection conn = Conexion.getConnection()) {
+            NotaCreditoCompraDAO dao = new NotaCreditoCompraDAO(conn);
+            return dao.obtenerCantidadesDevueltasPorArticulo(idFacturaCompra);
         }
     }
 

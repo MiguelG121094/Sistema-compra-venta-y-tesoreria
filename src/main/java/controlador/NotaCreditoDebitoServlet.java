@@ -13,7 +13,9 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -565,6 +567,21 @@ public class NotaCreditoDebitoServlet extends HttpServlet {
             }
         }
 
+        /* Solo la Nota de Crédito devuelve mercadería, y no se puede devolver más de lo que la
+           factura trae, contando lo que ya devolvieron las notas anteriores. Sin este tope el
+           trigger de stock deja existencias negativas. La ND es financiera (intereses, fletes,
+           gastos) y no mueve stock, así que no tiene límite de cantidad.
+           Ver NOTA_CREDITO_DEBITO_PLAN.md §5.3. */
+        if (!"debito".equals(estado.tipoNota)) {
+            String errorCantidad = validarCantidadesDevueltas(estado);
+            if (errorCantidad != null) {
+                mostrarMensaje(request, errorCantidad, "alert-warning");
+                cargarDatosParaVista(request, estado, token);
+                forward(request, response, JSP_NOTA);
+                return;
+            }
+        }
+
         // Referencias de cabecera
         estado.nota.setProveedor(estado.proveedorSeleccionado);
         estado.nota.setFacturaCompra(estado.facturaReferenciada);
@@ -711,6 +728,63 @@ public class NotaCreditoDebitoServlet extends HttpServlet {
             det.setDeposito(depositoService.getDeposito(Long.parseLong(idDepStr)));
         }
         return det;
+    }
+
+    // ==================== VALIDACIÓN DE CANTIDADES DEVUELTAS ====================
+
+    /**
+     * Verifica que la Nota de Crédito no devuelva más mercadería de la que la factura trae.
+     *
+     * <p>El tope por artículo es {@code comprada - ya devuelta en notas anteriores activas}. Se
+     * acumulan las líneas de esta misma nota, porque el mismo artículo puede aparecer repetido.
+     * Las líneas sin artículo son NC financieras (descuento, bonificación): no mueven stock y no
+     * tienen tope.
+     *
+     * <p>Sin esta validación el trigger {@code trg_nota_credito_compra_detalle_stock_ins} resta
+     * igual y deja el stock en negativo. Ver NOTA_CREDITO_DEBITO_PLAN.md §5.3.
+     *
+     * <p><b>Alcance:</b> el tope es por artículo, no por artículo+depósito. Devolver desde un
+     * depósito distinto al que recibió la compra pasa esta validación (y puede dejar negativo el
+     * stock de ese depósito); lo que se garantiza es la regla de negocio "no devolver más de lo
+     * comprado". La ventana entre esta consulta y el guardado tampoco está bloqueada: dos notas
+     * simultáneas sobre la misma factura podrían pasar las dos, igual que el resto de las
+     * validaciones de esta pantalla.
+     *
+     * @return el mensaje de error, o {@code null} si todas las cantidades entran.
+     */
+    private String validarCantidadesDevueltas(NotaState estado) throws SQLException {
+        if (estado.facturaReferenciada == null) {
+            return null;   // ya lo cubre la validación de factura referenciada
+        }
+        Long idFactura = estado.facturaReferenciada.getIdFacturaCompra();
+
+        Map<Long, Long> compradas = facturaCompraDetalleService.obtenerCantidadesCompradasPorArticulo(idFactura);
+        Map<Long, Long> devueltas = notaCreditoService.obtenerCantidadesDevueltasPorArticulo(idFactura);
+
+        // Acumulado de esta nota, para que dos líneas del mismo artículo no pasen por separado.
+        Map<Long, Long> enEstaNota = new HashMap<>();
+
+        for (NotaCreditoCompraDetalle det : estado.listaDetalle) {
+            if (det.getArticulo() == null || det.getCantidad() == null) {
+                continue;   // línea financiera: sin artículo no hay stock que controlar
+            }
+            Long idArticulo = det.getArticulo().getIdArticulo();
+
+            long comprada = compradas.getOrDefault(idArticulo, 0L);
+            long yaDevuelta = devueltas.getOrDefault(idArticulo, 0L);
+            long acumulada = enEstaNota.getOrDefault(idArticulo, 0L) + det.getCantidad();
+            enEstaNota.put(idArticulo, acumulada);
+
+            if (yaDevuelta + acumulada > comprada) {
+                long disponible = comprada - yaDevuelta;
+                String articulo = det.getArticulo().getDescripcion() != null
+                        ? det.getArticulo().getDescripcion() : ("artículo " + idArticulo);
+                return "No se puede devolver esa cantidad de \"" + articulo + "\": la factura tiene "
+                        + comprada + (yaDevuelta > 0 ? " y ya se devolvieron " + yaDevuelta + " en notas anteriores" : "")
+                        + ". Disponible para devolver: " + (disponible > 0 ? disponible : 0) + ".";
+            }
+        }
+        return null;
     }
 
     // ==================== CÁLCULO DE IVA ====================

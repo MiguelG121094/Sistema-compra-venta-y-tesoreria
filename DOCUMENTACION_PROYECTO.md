@@ -303,7 +303,7 @@ Faltan crear las vistas para las nuevas funcionalidades:
 - [x] Sincronización Cuenta a Pagar al editar/anular Factura ✅ (2026-03)
 - [x] Validación de plazo en facturas a crédito ✅ (2026-04)
 - [⚠] Nota de Remisión Compra (vista inicial creada)
-- [x] Nota Crédito Compra ✅ (2026-07 — `NotaCreditoDebitoServlet` + `notaCreditoDebito.jsp`; ajusta `cuenta_pagar` con **saldo negativo permitido** (Enfoque 1 c/ neteo en la provisión), fila propia en el Libro IVA y triggers de stock por devolución. **Falta** validar cantidad devuelta ≤ comprada — ver [plan](NOTA_CREDITO_DEBITO_PLAN.md) §9)
+- [x] Nota Crédito Compra ✅ (2026-07 — `NotaCreditoDebitoServlet` + `notaCreditoDebito.jsp`; ajusta `cuenta_pagar` con **saldo negativo permitido** (Enfoque 1 c/ neteo en la provisión), fila propia en el Libro IVA y triggers de stock por devolución. Validación de **cantidad devuelta ≤ comprada** ✅ 2026-08-13 — ver [plan](NOTA_CREDITO_DEBITO_PLAN.md) §5.3)
 - [x] Nota Débito Compra ✅ (2026-07 — mismo servlet/vista; aumenta el saldo de `cuenta_pagar` y registra su fila en el Libro IVA; no mueve stock)
 
 #### Tesorería *(plan detallado: [MODULO_TESORERIA_PLAN.md](MODULO_TESORERIA_PLAN.md))*
@@ -452,8 +452,8 @@ cerrando el circuito de ajustes sobre una factura de compra ya emitida:
   `CuentaPagarDAO.tienePagosAplicados` (EXISTS sobre pagos) y se agrega el bloqueo **"anulá las notas
   activas antes de editar/anular la factura"** (`tieneNotaActivaPorFactura`).
 
-Pendiente: **validar que la cantidad devuelta no supere la comprada** (acumulando NC previas) al guardar
-la NC, y **correr los triggers de stock contra la base** para verificarlos end-to-end (plan §9).
+Pendiente: **correr los triggers de stock contra la base** para verificarlos end-to-end (plan §9). La
+validación de cantidad devuelta ≤ comprada se implementó el 2026-08-13.
 
 ### 2026-06 — Refactor de esquema para Nota de Crédito/Débito (schema v2 unificado)
 
@@ -740,3 +740,18 @@ Gestión financiera completa: cuentas bancarias, cheques, cobros, pagos, caja, f
 7. **Migrar PedidoCompra, Presupuesto, OrdenCompra al patrón Session+Token** — actualmente usan variables de instancia, lo que genera bug de concurrencia en uso multiusuario (ver `ARQUITECTURA_SERVLETS.md`).
 8. **Eliminar `facturaCompra_old.jsp`** una vez confirmado que no se necesita como referencia.
 9. **Completar Factura de Compra** - Sección de artículos del catálogo (actualmente comentada).
+10. **Correr `Procedimientos y Triggers para BD.sql` contra la base.** Los triggers de stock de la
+    Nota de Crédito están escritos y verificados contra el esquema, pero **nunca se ejecutaron**.
+    El script ya es re-ejecutable (cada `CREATE TRIGGER` lleva su `DROP TRIGGER IF EXISTS`), así que
+    se puede correr sobre la base existente sin recrearla.
+11. **Subir el esquema con `creditos.id_cobro` nullable.** Ya está cambiado en Power Architect pero
+    la BD no se regeneró. Mientras siga `NOT NULL` no se puede registrar un depósito bancario sin
+    tener el módulo de Cobros (que depende de Ventas). Ver `MODULO_TESORERIA_PLAN.md` §D.
+12. **Gestión de cheques** (`ChequeServlet` + `cheque.jsp`): ABM de chequeras — hoy vienen del seed y
+    cuando se agote el rango la emisión se corta —, **registrar la entrega al proveedor** (el cheque
+    no tiene columnas de fecha de entrega ni receptor) y **anular un cheque individual** (hoy sólo se
+    anulan en cascada al anular la orden de pago). Ver `MODULO_TESORERIA_PLAN.md` §G.
+13. **Informes.** No hay nada implementado ni planificado: sin código, sin librería en el `pom.xml` y
+    sin definición de qué informes ni en qué formato. Ver `MODULO_TESORERIA_PLAN.md` §H.
+14. **Probar la Orden de Pago de punta a punta** (descuento de saldo, cheque emitido, anulación con
+    reversa total). Está implementada pero nunca se ejerció contra la base.
