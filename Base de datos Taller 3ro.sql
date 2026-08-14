@@ -389,6 +389,7 @@ CREATE TABLE public.articulo (
                 art_precio_compra INTEGER,
                 art_precio_venta INTEGER NOT NULL,
                 art_estado VARCHAR(20) NOT NULL,
+                art_codigo VARCHAR,
                 CONSTRAINT id_articulo PRIMARY KEY (id_articulo)
 );
 
@@ -615,6 +616,7 @@ CREATE TABLE public.forma_pago_detalle (
 COMMENT ON TABLE public.forma_pago_detalle IS 'una orden de pago se puede pagar de varias formas por eso hay una tabla donde se detalla cual orden de pago se pago con transferenia y cheque';
 COMMENT ON COLUMN public.forma_pago_detalle.id_forma_pago_cab IS 'con el id de la cabecera de forma de pago ya se dice cual es el metodo de pago (cheque o transferencia)';
 COMMENT ON COLUMN public.forma_pago_detalle.forma_pag_referencia IS 'Nro cheque, transferencia, etc';
+COMMENT ON COLUMN public.forma_pago_detalle.forma_pag_tipo_cambio IS 'seria el cambio de dolar a guaranies, en el caso de que la cuenta sea en dolares (el cambio que se uso en ese día, se puede encontrar en la pagina del banco)';
 
 
 ALTER SEQUENCE public.forma_pago_detalle_id_forma_pago_det_seq OWNED BY public.forma_pago_detalle.id_forma_pago_det;
@@ -835,7 +837,7 @@ CREATE TABLE public.creditos (
                 creditos_fecha DATE NOT NULL,
                 creditos_detalle VARCHAR(255) NOT NULL,
                 id_cuenta INTEGER NOT NULL,
-                id_cobro INTEGER NOT NULL,
+                id_cobro INTEGER,
                 credito_monto INTEGER NOT NULL,
                 CONSTRAINT id_creditos PRIMARY KEY (id_creditos)
 );
