@@ -740,18 +740,24 @@ Gestión financiera completa: cuentas bancarias, cheques, cobros, pagos, caja, f
 7. **Migrar PedidoCompra, Presupuesto, OrdenCompra al patrón Session+Token** — actualmente usan variables de instancia, lo que genera bug de concurrencia en uso multiusuario (ver `ARQUITECTURA_SERVLETS.md`).
 8. **Eliminar `facturaCompra_old.jsp`** una vez confirmado que no se necesita como referencia.
 9. **Completar Factura de Compra** - Sección de artículos del catálogo (actualmente comentada).
-10. **Correr `Procedimientos y Triggers para BD.sql` contra la base.** Los triggers de stock de la
-    Nota de Crédito están escritos y verificados contra el esquema, pero **nunca se ejecutaron**.
-    El script ya es re-ejecutable (cada `CREATE TRIGGER` lleva su `DROP TRIGGER IF EXISTS`), así que
-    se puede correr sobre la base existente sin recrearla.
-11. **Subir el esquema con `creditos.id_cobro` nullable.** Ya está cambiado en Power Architect pero
-    la BD no se regeneró. Mientras siga `NOT NULL` no se puede registrar un depósito bancario sin
-    tener el módulo de Cobros (que depende de Ventas). Ver `MODULO_TESORERIA_PLAN.md` §D.
+10. ~~**Correr `Procedimientos y Triggers para BD.sql` contra la base.**~~ ✅ Corridos el 2026-08-17.
+    Recordatorio: recrear un trigger no reprocesa lo ya cargado, así que las NC emitidas antes de esa
+    fecha no movieron stock.
+11. ~~**Subir el esquema con `creditos.id_cobro` nullable.**~~ ✅ Subido el 2026-08-17; ya se puede
+    registrar un depósito bancario sin módulo de Cobros. Ver `MODULO_TESORERIA_PLAN.md` §D.
 12. **Gestión de cheques** (`ChequeServlet` + `cheque.jsp`): ABM de chequeras — hoy vienen del seed y
     cuando se agote el rango la emisión se corta —, **registrar la entrega al proveedor** (el cheque
     no tiene columnas de fecha de entrega ni receptor) y **anular un cheque individual** (hoy sólo se
     anulan en cascada al anular la orden de pago). Ver `MODULO_TESORERIA_PLAN.md` §G.
 13. **Informes.** No hay nada implementado ni planificado: sin código, sin librería en el `pom.xml` y
     sin definición de qué informes ni en qué formato. Ver `MODULO_TESORERIA_PLAN.md` §H.
-14. **Probar la Orden de Pago de punta a punta** (descuento de saldo, cheque emitido, anulación con
-    reversa total). Está implementada pero nunca se ejerció contra la base.
+14. ~~**Probar la Orden de Pago de punta a punta.**~~ ✅ Probada el 2026-08-17: el circuito corre y la
+    provisión pasa a `'Procesada'`. También se confirmó el nombre `forma_pag_tipo_cambio` contra
+    Power Architect.
+15. **Migrar los importes de `INTEGER` a `BIGINT`.** Decisión 2026-08-17: se mantienen en `INTEGER`
+    por ahora, pero el techo son ~2.147 millones de Gs y conviene migrar antes de tener volumen real
+    de datos. Ver `MODULO_TESORERIA_PLAN.md` §8.
+16. **Concurrencia en Pedido, Presupuesto y Orden de Compra.** Decisión 2026-08-17: se mantiene el
+    patrón de variables de instancia por ahora, asumiendo uso mono-usuario. Si el sistema pasa a
+    usarse por más de una persona a la vez, migrar a Session+Token deja de ser opcional: los datos
+    se mezclan entre usuarios. Ver `ARQUITECTURA_SERVLETS.md`.

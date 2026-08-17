@@ -11,9 +11,9 @@
 > transaccionales de NC y ND, con los triggers de stock de §5.3 escritos. La validación de
 > **cantidad devuelta ≤ comprada** también está implementada (2026-08-13, ver §5.3).
 >
-> **Lo que falta** (ver checklist §9): **correr los triggers de stock de NC contra la base** y las
-> pruebas de §9. Los nombres de columna de esos triggers ya fueron verificados uno por uno contra
-> el esquema (2026-08-13) y coinciden; falta ejecutarlos y probarlos con una NC real.
+> **Los triggers de stock ya están corridos contra la base** (2026-08-17): el módulo quedó completo.
+> Lo que resta son las **pruebas funcionales** de §9 (NC parcial, NC > saldo, neteo en provisión,
+> anulación con reversa).
 
 ---
 
@@ -736,12 +736,12 @@ o anulación de una factura que solo tiene una nota de crédito.
 - [x] ~~Provisión: relajar el filtro de cuentas a pagar para **incluir saldos negativos**; validar **neto ≥ 0**; permitir `prov_cta_pag_monto` negativo en el detalle~~ ✅ resuelto con `CuentaPagarDAO.listarCuentasPagarPorProveedor` (saldo `<> 0`, sin `Anulado`) + validación de neto ≥ 0 en `ProvisionCuentaPagarServlet`; la vista preserva el signo negativo en la máscara de miles. Ver `MODULO_TESORERIA_PLAN.md` §B.
 - [x] ~~**Corregir la heurística de "pagos aplicados" en `FacturaCompraServlet`** (`saldo < monto`)~~ ✅ `CuentaPagarDAO.tienePagosAplicados` (EXISTS en pagos) + guard **"anular notas antes que la factura"** (`tieneNotaActivaPorFactura` en ambos DAOs de nota), aplicado en editar y anular. Ver §8.4.
 - [x] ~~Reusar `LibroIvaCompraDAO` para filas origen NOTA (insert con signo + anulación)~~ ✅ `insertarLibroIvaNota` + `anularPorNotaCredito`/`anularPorNotaDebito` (filtran por FK de la nota, no por factura).
-- [x] ~~**Stock (NC devolución, §5.3):** `id_deposito` + FK en `nota_credito_compra_detalle`; triggers `trg_nota_credito_compra_detalle_stock_ins` (resta) y `trg_nota_credito_compra_estado_anular` (repone), espejo de factura~~ ✅ escritos en `Base de datos Taller 3ro.sql` y `Procedimientos y Triggers para BD.sql`, con los nombres de columna verificados contra el esquema (2026-08-13). **Falta correrlos contra la BD.**
+- [x] ~~**Stock (NC devolución, §5.3):** `id_deposito` + FK en `nota_credito_compra_detalle`; triggers `trg_nota_credito_compra_detalle_stock_ins` (resta) y `trg_nota_credito_compra_estado_anular` (repone), espejo de factura~~ ✅ escritos en `Base de datos Taller 3ro.sql` y `Procedimientos y Triggers para BD.sql`, con los nombres de columna verificados contra el esquema (2026-08-13) y **corridos contra la BD** (2026-08-17).
 - [x] ~~Validar **cantidad devuelta ≤ comprada** (acumulando NC previas) al guardar la NC~~ ✅ (2026-08-13) `validarCantidadesDevueltas` en el servlet + `obtenerCantidadesCompradasPorArticulo` / `obtenerCantidadesDevueltasPorArticulo` en los DAOs. Detalle y límites en §5.3.
-- [ ] **Correr `Procedimientos y Triggers para BD.sql` contra la base.** El script ahora es
-      re-ejecutable (cada `CREATE TRIGGER` va precedido de un `DROP TRIGGER IF EXISTS`), así que se
-      puede correr sobre la base existente sin recrearla. Ojo: recrear un trigger **no** reprocesa
-      las filas ya cargadas, solo afecta lo que venga después.
+- [x] ~~Correr `Procedimientos y Triggers para BD.sql` contra la base~~ ✅ (2026-08-17). El script es
+      re-ejecutable (cada `CREATE TRIGGER` lleva su `DROP TRIGGER IF EXISTS`). Recordatorio: recrear un
+      trigger **no** reprocesa las filas ya cargadas, así que las NC emitidas antes de esta fecha no
+      movieron stock y habría que corregirlas a mano si existen.
 - [x] ~~Vista: permitir elegir **depósito por línea devuelta** (heredar de la factura); dejar NULL en líneas financieras~~ ✅ combo de depósito por línea en el editor (`idDeposito`), heredado de la factura y editable; las líneas financieras quedan sin depósito.
 - [x] ~~Crear `NotaCreditoDebitoServlet` (Session+Token, enrutado NC/ND, validación de permisos)~~ ✅ + registrado en `AuthorizationFilter` (módulo `compra`).
 - [x] ~~Conectar `notaCreditoDebito.jsp`: buscar factura real, heredar líneas, calcular IVA, condicionar botones~~ ✅ (form único + JS, sucursal/condición read-only, IVA con `<fmt>`, modales reales, permisos; menú redirige por el servlet).

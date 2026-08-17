@@ -1548,6 +1548,21 @@ public class FacturaCompraBean implements Serializable {
 ### Consideraciones
 - Los módulos legacy funcionan pero **tienen bug de concurrencia activo** — usuarios concurrentes pueden ver datos mezclados.
 - Migrar es prioritario si el sistema se va a usar multiusuario.
+
+> **Decisión (2026-08-17): se mantiene el patrón legacy por ahora.** Se asume uso **mono-usuario**,
+> así que el bug de concurrencia no se manifiesta y la migración queda postergada. Lo que sí se
+> corrigió es un síntoma derivado: `PresupuestoServlet` no limpiaba todas sus variables de instancia
+> al hacer "Nuevo", y el pedido y el artículo del documento anterior reaparecían en cuanto se tocaba
+> la condición de compra.
+>
+> **Cuándo deja de ser opcional:** en cuanto una segunda persona use el sistema al mismo tiempo. Ahí
+> los datos se mezclan entre usuarios (usuario A carga un pedido, usuario B abre otro, A ve el de B)
+> y no hay forma de mitigarlo sin migrar. Conviene tenerlo presente antes de poner el sistema en
+> producción con varios operadores.
+>
+> **Trampa a recordar mientras siga así:** cada variable de instancia nueva que se agregue a estos
+> servlets hay que acordarse de limpiarla en la acción "Nuevo", o reaparece en la siguiente acción
+> que la reenvíe a la vista.
 - Priorizar módulos más usados y los que comparten flujo con FacturaCompra.
 
 ---
