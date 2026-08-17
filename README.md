@@ -384,7 +384,20 @@ Sistema-compra-venta-y-tesoreria/
 ### Requisitos Previos
 - JDK 8 o superior
 - Maven 3.6+
-- PostgreSQL 12+
+- PostgreSQL **9.5** (versión con la que se desarrolla y prueba)
+
+> **Piso real: PostgreSQL 9.5.** El sistema usa `INSERT ... ON CONFLICT` en los triggers de stock,
+> que se introdujo justo en 9.5: no funciona en versiones anteriores. Y hay sintaxis más nueva que
+> **no** está disponible: `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` (9.6+), columnas `IDENTITY` y
+> particionado declarativo (10+), `GENERATED ALWAYS AS` (12+) y `CREATE OR REPLACE TRIGGER` (14+) —
+> por eso `Procedimientos y Triggers para BD.sql` usa `DROP TRIGGER IF EXISTS` antes de cada
+> `CREATE TRIGGER`. Tenerlo presente al escribir DDL nuevo.
+
+> **9.5 está fuera de soporte desde febrero de 2021**: no recibe parches de seguridad ni
+> correcciones. No bloquea nada de lo que falta implementar, pero conviene planificar la
+> actualización antes de poner el sistema en producción, sobre todo si va a ser accesible desde
+> fuera del equipo. El driver JDBC (42.6.0) ya soporta versiones modernas, así que la actualización
+> es del servidor, no de la aplicación.
 - GlassFish 5+ o Payara 5+
 
 ### Configuración de Base de Datos
