@@ -591,8 +591,11 @@ CREATE TABLE public.cheque (
                 chq_fecha_pago DATE NOT NULL,
                 chq_fecha_venci DATE NOT NULL,
                 id_usuario INTEGER NOT NULL,
+                chq_fecha_entrega DATE,
+                chq_entregado_a VARCHAR(80),
                 CONSTRAINT id_cheque PRIMARY KEY (id_cheque)
 );
+COMMENT ON COLUMN public.cheque.chq_estado IS 'Emitido, Anulado, Entregado, Cobrado';
 COMMENT ON COLUMN public.cheque.chq_a_la_orden IS 'a nombre de quien va el cheque en caso de ser a la orden';
 
 
