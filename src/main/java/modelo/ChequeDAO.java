@@ -5,6 +5,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Types;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -70,7 +71,8 @@ public class ChequeDAO {
         }
         String sql = "SELECT c.id_cheque, c.chq_numero, c.chq_fecha_emision, c.chq_estado, c.id_chequera, "
                    + "c.chq_a_la_orden, c.chq_observacion, c.id_tipo_cheque, tc.tipo_cheque_descripcion, "
-                   + "c.chq_fecha_pago, c.chq_fecha_venci, c.id_usuario "
+                   + "c.chq_fecha_pago, c.chq_fecha_venci, c.id_usuario, "
+                   + "c.chq_fecha_entrega, c.chq_entregado_a "
                    + "FROM cheque c "
                    + "JOIN tipo_cheque tc ON c.id_tipo_cheque = tc.id_tipo_cheque "
                    + "WHERE c.id_cheque = ?";
@@ -90,6 +92,8 @@ public class ChequeDAO {
                     cheque.setFechaPago(rs.getDate("chq_fecha_pago"));
                     cheque.setFechaVencimiento(rs.getDate("chq_fecha_venci"));
                     cheque.setUsuario(new Usuario(rs.getLong("id_usuario")));
+                    cheque.setFechaEntrega(rs.getDate("chq_fecha_entrega"));
+                    cheque.setEntregadoA(rs.getString("chq_entregado_a"));
                     return cheque;
                 }
             }
@@ -109,6 +113,40 @@ public class ChequeDAO {
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setLong(1, idCheque);
             stmt.executeUpdate();
+        }
+    }
+
+    /**
+     * Registra que el proveedor retiró el cheque: fecha, quién lo retiró y estado 'Entregado'.
+     *
+     * <p>Es re-ejecutable a propósito: volver a guardar sobre un cheque ya entregado **corrige** los
+     * datos en vez de fallar, que es lo que hace falta cuando se cargó mal una fecha o un nombre.
+     *
+     * <p><b>No toca los cheques anulados.</b> Un cheque anulado no se puede entregar, y si se anula
+     * la OP después de la entrega el estado 'Anulado' tiene que ganar: por eso el WHERE lo excluye
+     * en vez de pisarle el estado.
+     *
+     * <p>Corre sobre la Connection compartida; la transacción la controla el Service.
+     *
+     * @return true si el cheque se actualizó (false si no existe o estaba anulado)
+     */
+    public boolean registrarEntrega(Long idCheque, java.sql.Date fechaEntrega, String entregadoA)
+            throws SQLException {
+        if (idCheque == null) {
+            return false;
+        }
+        String sql = "UPDATE cheque SET chq_fecha_entrega = ?, chq_entregado_a = ?, "
+                   + "chq_estado = 'Entregado' "
+                   + "WHERE id_cheque = ? AND chq_estado <> 'Anulado'";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setDate(1, fechaEntrega);
+            if (entregadoA != null && !entregadoA.trim().isEmpty()) {
+                stmt.setString(2, entregadoA.trim());
+            } else {
+                stmt.setNull(2, Types.VARCHAR);
+            }
+            stmt.setLong(3, idCheque);
+            return stmt.executeUpdate() > 0;
         }
     }
 }

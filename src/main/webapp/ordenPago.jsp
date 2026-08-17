@@ -124,6 +124,27 @@
                                         <button type="button" class="btn btn-danger" disabled>Anular</button>
                                     </c:otherwise>
                                 </c:choose>
+
+                                <%-- El boton de entrega solo tiene sentido si esta OP emitio cheques.
+                                     El criterio es que alguna forma de pago tenga cheque, NO el tipo de
+                                     pago de la cabecera: una OP puede mezclar transferencia y cheque. --%>
+                                <c:set var="tieneCheques" value="false" />
+                                <c:forEach var="fpChk" items="${listaFormasPago}">
+                                    <c:if test="${not empty fpChk.cheque}"><c:set var="tieneCheques" value="true" /></c:if>
+                                </c:forEach>
+
+                                <c:if test="${not empty token and not esNuevo and tieneCheques}">
+                                    <c:choose>
+                                        <c:when test="${ordenPago.estado ne 'Anulado' and puedeEditar}">
+                                            <button type="button" class="btn btn-warning" data-bs-toggle="modal"
+                                                    data-bs-target="#modalEntregaCheques">Registrar entrega de cheques</button>
+                                        </c:when>
+                                        <c:otherwise>
+                                            <button type="button" class="btn btn-warning" disabled
+                                                    title="${ordenPago.estado eq 'Anulado' ? 'La orden está anulada' : 'No tiene permisos'}">Registrar entrega de cheques</button>
+                                        </c:otherwise>
+                                    </c:choose>
+                                </c:if>
                             </div>
                         </div>
 
@@ -146,10 +167,14 @@
                                                 <label for="nroOP">Nro de OP</label>
                                             </div>
                                         </div>
+                                        <%-- Recibo SIEMPRE readonly: lo emite el proveedor cuando cobra, asi que
+                                             al generar la OP todavia no existe (nace en 0). Se carga desde el modal
+                                             de "Registrar entrega de cheques". --%>
                                         <div class="col-md-2">
                                             <div class="form-floating mb-3 mb-md-0">
                                                 <input class="form-control" id="recibo" name="recibo" type="number" min="0" placeholder="Recibo Nro"
-                                                       value="${ordenPago.numeroRecibo}" <c:if test="${empty token or not esNuevo}">readonly</c:if> />
+                                                       title="Lo carga el proveedor al retirar el cheque"
+                                                       value="${ordenPago.numeroRecibo}" readonly />
                                                        <label for="recibo">Recibo Nro</label>
                                                 </div>
                                             </div>
@@ -442,6 +467,122 @@
                                 </div>
                             </div>
                         </form>
+
+                        <%-- ============================================================================
+                             Modal: entrega de cheques al proveedor.
+                             Va FUERA de formPrincipal a proposito: tiene su propio <form> y los forms
+                             anidados son HTML invalido. Registra en una sola accion la entrega de los
+                             cheques seleccionados y el Nro de recibo que da el proveedor al cobrar.
+                             ============================================================================ --%>
+                        <%-- Fecha de hoy, para proponerla como fecha de entrega por defecto --%>
+                        <jsp:useBean id="hoy" class="java.util.Date" scope="page" />
+
+                        <div class="modal fade" id="modalEntregaCheques" tabindex="-1" aria-hidden="true">
+                            <div class="modal-dialog modal-lg">
+                                <div class="modal-content">
+                                    <form method="post" action="OrdenPagoServlet">
+                                        <input type="hidden" name="menu" value="OrdenPago">
+                                        <input type="hidden" name="token" value="${token}">
+                                        <input type="hidden" name="accion" value="RegistrarEntrega">
+
+                                        <div class="modal-header">
+                                            <h5 class="modal-title">Entrega de cheques al proveedor</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+
+                                        <div class="modal-body">
+                                            <p class="text-muted small mb-3">
+                                                Marcá los cheques que el proveedor retira. Los diferidos pueden
+                                                entregarse después, en otra carga.
+                                            </p>
+
+                                            <table class="table table-bordered table-sm align-middle">
+                                                <thead>
+                                                    <tr>
+                                                        <th class="text-bg-dark text-center" style="width:40px"></th>
+                                                        <th class="text-bg-dark text-center">N° cheque</th>
+                                                        <th class="text-bg-dark text-center">Banco</th>
+                                                        <th class="text-bg-dark text-center">Monto</th>
+                                                        <th class="text-bg-dark text-center">Estado</th>
+                                                        <th class="text-bg-dark text-center">Entregado</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <c:forEach var="fp" items="${listaFormasPago}">
+                                                        <c:if test="${not empty fp.cheque}">
+                                                            <tr>
+                                                                <td class="text-center">
+                                                                    <%-- Los anulados no se pueden entregar --%>
+                                                                    <input type="checkbox" class="form-check-input" name="idsCheque"
+                                                                           value="${fp.cheque.idCheque}"
+                                                                           <c:if test="${fp.cheque.estado ne 'Anulado'}">checked</c:if>
+                                                                           <c:if test="${fp.cheque.estado eq 'Anulado'}">disabled</c:if> >
+                                                                </td>
+                                                                <td class="text-center">${fp.cheque.numero}</td>
+                                                                <td class="text-center">${fp.cuenta.entidadFinanciera.nombre} - ${fp.cuenta.numero}</td>
+                                                                <td class="text-end">
+                                                                    <fmt:formatNumber value="${fp.monto}" pattern="#,###"/></td>
+                                                                <td class="text-center">
+                                                                    <span class="badge ${fp.cheque.estado eq 'Anulado' ? 'text-bg-danger'
+                                                                                        : (fp.cheque.entregado ? 'text-bg-success' : 'text-bg-secondary')}">
+                                                                        ${fp.cheque.estado}</span>
+                                                                </td>
+                                                                <td class="text-center small text-muted">
+                                                                    <c:choose>
+                                                                        <c:when test="${fp.cheque.entregado}">
+                                                                            <fmt:formatDate value="${fp.cheque.fechaEntrega}" pattern="dd/MM/yyyy"/>
+                                                                            <c:if test="${not empty fp.cheque.entregadoA}">
+                                                                                <br>a ${fp.cheque.entregadoA}
+                                                                            </c:if>
+                                                                        </c:when>
+                                                                        <c:otherwise>-</c:otherwise>
+                                                                    </c:choose>
+                                                                </td>
+                                                            </tr>
+                                                        </c:if>
+                                                    </c:forEach>
+                                                </tbody>
+                                            </table>
+
+                                            <div class="row mt-3">
+                                                <div class="col-md-4">
+                                                    <div class="form-floating">
+                                                        <input class="form-control" id="fechaEntrega" name="fechaEntrega"
+                                                               type="date" required
+                                                               value="<fmt:formatDate value='${hoy}' pattern='yyyy-MM-dd'/>">
+                                                        <label for="fechaEntrega">Fecha de entrega</label>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <div class="form-floating">
+                                                        <input class="form-control" id="entregadoA" name="entregadoA"
+                                                               type="text" maxlength="80" placeholder="Quién retiró">
+                                                        <label for="entregadoA">Retirado por</label>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <div class="form-floating">
+                                                        <input class="form-control" id="nroReciboEntrega" name="nroReciboEntrega"
+                                                               type="number" min="0" placeholder="Recibo Nro"
+                                                               value="${ordenPago.numeroRecibo > 0 ? ordenPago.numeroRecibo : ''}">
+                                                        <label for="nroReciboEntrega">Recibo Nro del proveedor</label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="form-text mt-2">
+                                                "Retirado por" es quién vino a buscar el cheque, que no siempre es
+                                                el mismo nombre a la orden del cheque. El recibo es opcional.
+                                            </div>
+                                        </div>
+
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                            <button type="submit" class="btn btn-warning">Registrar entrega</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
 
                         <!-- Modal Buscar Orden de pago -->
                         <div class="modal fade" id="modalBuscarOrdenPago" tabindex="-1" aria-hidden="true">

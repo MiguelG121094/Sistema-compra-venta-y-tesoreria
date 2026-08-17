@@ -284,6 +284,86 @@ public class OrdenPagoService {
     }
 
     /**
+     * Registra la entrega de los cheques de una OP al proveedor, en UNA transacción:
+     *   1. Marca cada cheque seleccionado como 'Entregado' con fecha y quién retiró.
+     *   2. Guarda en la cabecera de la OP el número de recibo que dio el proveedor.
+     *
+     * <p><b>Por qué el recibo se carga acá y no al generar la OP.</b> `ord_pag_nro_recibo` es el
+     * comprobante que emite el proveedor al cobrar, así que en el momento de generar la orden
+     * todavía no existe: la cabecera nace con 0 y se completa cuando el proveedor viene a retirar.
+     * Es el mismo acto administrativo, por eso va en la misma transacción que la entrega.
+     *
+     * <p><b>Entrega parcial.</b> Una OP puede tener varios cheques (incluso de bancos distintos) y
+     * el proveedor puede retirarlos en momentos distintos — típico con los diferidos. Por eso se
+     * recibe la lista de cheques a marcar y no se asume que sean todos.
+     *
+     * <p>Es re-ejecutable: volver a registrar sobre cheques ya entregados corrige los datos. Los
+     * cheques anulados se ignoran (el DAO los excluye).
+     *
+     * @param idOrdenPago   OP a la que pertenecen los cheques
+     * @param idsCheque     cheques que el proveedor retiró
+     * @param fechaEntrega  fecha en que los retiró
+     * @param entregadoA    quién los retiró (puede ser null)
+     * @param numeroRecibo  recibo del proveedor (0 = sin recibo)
+     * @return cantidad de cheques efectivamente marcados
+     */
+    public int registrarEntregaCheques(Long idOrdenPago, List<Long> idsCheque,
+            java.util.Date fechaEntrega, String entregadoA, Integer numeroRecibo) throws SQLException {
+
+        if (idOrdenPago == null) {
+            throw new SQLException("registrarEntregaCheques: idOrdenPago es nulo");
+        }
+        if (idsCheque == null || idsCheque.isEmpty()) {
+            throw new SQLException("Debe seleccionar al menos un cheque para registrar la entrega");
+        }
+        if (fechaEntrega == null) {
+            throw new SQLException("Debe indicar la fecha de entrega");
+        }
+
+        Connection conn = null;
+        int marcados = 0;
+        try {
+            conn = Conexion.getConnection();
+            conn.setAutoCommit(false);
+
+            OrdenPagoDAO ordenDAO = new OrdenPagoDAO(conn);
+
+            // La OP tiene que existir y estar vigente: sobre una anulada no se entrega nada.
+            OrdenPago orden = ordenDAO.getOrdenPago(idOrdenPago);
+            if (orden == null) {
+                throw new SQLException("La orden de pago " + idOrdenPago + " no existe");
+            }
+            if (ESTADO_OP_ANULADO.equals(orden.getEstado())) {
+                throw new SQLException("La orden de pago está anulada: no se puede registrar la entrega");
+            }
+
+            ChequeDAO chequeDAO = new ChequeDAO(conn);
+            java.sql.Date fechaSql = new java.sql.Date(fechaEntrega.getTime());
+            for (Long idCheque : idsCheque) {
+                if (chequeDAO.registrarEntrega(idCheque, fechaSql, entregadoA)) {
+                    marcados++;
+                }
+            }
+
+            ordenDAO.actualizarNumeroRecibo(idOrdenPago, numeroRecibo);
+
+            conn.commit();
+        } catch (SQLException e) {
+            if (conn != null) {
+                conn.rollback();
+            }
+            System.out.println("Error en registrarEntregaCheques - rollback ejecutado: " + e);
+            throw e;
+        } finally {
+            if (conn != null) {
+                conn.setAutoCommit(true);
+                conn.close();
+            }
+        }
+        return marcados;
+    }
+
+    /**
      * Validaciones de negocio antes de generar (fuera de la transacción):
      * provisión previa obligatoria, hay facturas y formas de pago, cada forma con monto &gt; 0,
      * y Σ de las formas de pago == monto de la OP. El "sin efectivo" lo garantiza el combo de

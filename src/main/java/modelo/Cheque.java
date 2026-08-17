@@ -26,6 +26,13 @@ public class Cheque implements java.io.Serializable {
     private Date fechaVencimiento;
     private Usuario usuario;
 
+    /* Entrega al proveedor. Nulos mientras el cheque no se haya retirado.
+       Ojo: entregadoA es QUIEN RETIRO el cheque, que no es lo mismo que aLaOrden
+       (a nombre de quien se emitio); normalmente retira un empleado del proveedor.
+       Estados: Emitido -> Entregado -> Cobrado, con Anulado terminal desde cualquiera. */
+    private Date fechaEntrega;
+    private String entregadoA;
+
     public Cheque() {
     }
 
@@ -135,5 +142,26 @@ public class Cheque implements java.io.Serializable {
 
     public void setUsuario(Usuario usuario) {
         this.usuario = usuario;
+    }
+
+    public Date getFechaEntrega() {
+        return fechaEntrega;
+    }
+
+    public void setFechaEntrega(Date fechaEntrega) {
+        this.fechaEntrega = fechaEntrega;
+    }
+
+    public String getEntregadoA() {
+        return entregadoA;
+    }
+
+    public void setEntregadoA(String entregadoA) {
+        this.entregadoA = entregadoA;
+    }
+
+    /** true si el cheque ya fue retirado por el proveedor. Lo usa la vista. */
+    public boolean isEntregado() {
+        return fechaEntrega != null;
     }
 }

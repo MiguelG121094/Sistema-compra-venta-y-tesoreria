@@ -261,6 +261,7 @@ public class OrdenPagoServlet extends HttpServlet {
 
         // Leer permisos del filter
         Boolean puedeInsertar = (Boolean) request.getAttribute("puedeInsertar");
+        Boolean puedeEditar = (Boolean) request.getAttribute("puedeEditar");
         Boolean puedeBorrar = (Boolean) request.getAttribute("puedeBorrar");
 
         try {
@@ -273,6 +274,14 @@ public class OrdenPagoServlet extends HttpServlet {
                 case "EliminarForma":
                 case "Generar":
                     if (puedeInsertar == null || !puedeInsertar) {
+                        mostrarMensaje(request, "No tiene permisos para realizar esta acción", "alert-danger");
+                        accionListarModal(request, response);
+                        return;
+                    }
+                    break;
+                // Registrar la entrega modifica una OP ya generada: es edición, no alta.
+                case "RegistrarEntrega":
+                    if (puedeEditar == null || !puedeEditar) {
                         mostrarMensaje(request, "No tiene permisos para realizar esta acción", "alert-danger");
                         accionListarModal(request, response);
                         return;
@@ -311,6 +320,9 @@ public class OrdenPagoServlet extends HttpServlet {
                     break;
                 case "Generar":
                     accionGenerar(request, response, session, token, usuario);
+                    break;
+                case "RegistrarEntrega":
+                    accionRegistrarEntrega(request, response, session, token);
                     break;
                 case "Anular":
                     accionAnular(request, response, session, token);
@@ -861,6 +873,96 @@ public class OrdenPagoServlet extends HttpServlet {
      * Anular la orden de pago: el Service revierte todo (devuelve el saldo de las facturas,
      * anula los cheques emitidos y reactiva la provisión a 'Pendiente').
      */
+    /**
+     * Registra que el proveedor retiró los cheques de esta OP y guarda su número de recibo.
+     *
+     * <p>Es el momento real del recibo: `ord_pag_nro_recibo` lo emite el proveedor al cobrar, no
+     * existe cuando se genera la orden (por eso la cabecera nace con 0). Entrega y recibo son el
+     * mismo acto administrativo, así que se guardan en la misma transacción.
+     *
+     * <p>Recibe los cheques seleccionados y no asume que sean todos: una OP puede tener varios
+     * cheques y los diferidos suelen retirarse en momentos distintos.
+     */
+    private void accionRegistrarEntrega(HttpServletRequest request, HttpServletResponse response,
+            HttpSession session, String token) throws ServletException, IOException, SQLException {
+
+        OrdenPagoState estado = obtenerEstadoORedireccionar(request, response, session, token);
+        if (estado == null) return;
+
+        if (estado.idOrdenPagoExistente == null) {
+            mostrarMensaje(request, "Primero hay que generar la orden de pago", "alert-warning");
+            volverAVista(request, response, session, estado, token);
+            return;
+        }
+        if ("Anulado".equals(estado.ordenPago.getEstado())) {
+            mostrarMensaje(request, "La orden de pago está anulada: no se puede registrar la entrega", "alert-warning");
+            volverAVista(request, response, session, estado, token);
+            return;
+        }
+
+        String[] idsStr = request.getParameterValues("idsCheque");
+        if (idsStr == null || idsStr.length == 0) {
+            mostrarMensaje(request, "Seleccione al menos un cheque para registrar la entrega", "alert-warning");
+            volverAVista(request, response, session, estado, token);
+            return;
+        }
+
+        Date fechaEntrega;
+        try {
+            String fechaStr = request.getParameter("fechaEntrega");
+            if (fechaStr == null || fechaStr.trim().isEmpty()) {
+                mostrarMensaje(request, "Indique la fecha de entrega", "alert-warning");
+                volverAVista(request, response, session, estado, token);
+                return;
+            }
+            fechaEntrega = new SimpleDateFormat("yyyy-MM-dd").parse(fechaStr.trim());
+        } catch (ParseException e) {
+            mostrarMensaje(request, "La fecha de entrega no es válida", "alert-warning");
+            volverAVista(request, response, session, estado, token);
+            return;
+        }
+
+        List<Long> idsCheque = new ArrayList<>();
+        for (String id : idsStr) {
+            try {
+                idsCheque.add(Long.parseLong(id));
+            } catch (NumberFormatException e) {
+                LOGGER.log(Level.WARNING, "Id de cheque no numérico en RegistrarEntrega: {0}", id);
+            }
+        }
+
+        String entregadoA = request.getParameter("entregadoA");
+
+        // El recibo es opcional: si el proveedor no dio ninguno, queda en 0 (mismo criterio que al generar).
+        Integer numeroRecibo = 0;
+        String reciboStr = request.getParameter("nroReciboEntrega");
+        if (reciboStr != null && !reciboStr.trim().isEmpty()) {
+            try {
+                numeroRecibo = Integer.parseInt(reciboStr.trim().replace(".", ""));
+            } catch (NumberFormatException e) {
+                mostrarMensaje(request, "El número de recibo debe ser numérico", "alert-warning");
+                volverAVista(request, response, session, estado, token);
+                return;
+            }
+        }
+
+        int marcados = ordenPagoService.registrarEntregaCheques(
+                estado.idOrdenPagoExistente, idsCheque, fechaEntrega, entregadoA, numeroRecibo);
+
+        /* Releer desde la BD: el estado en sesión tiene los cheques como estaban antes y la vista
+           debe mostrarlos ya como 'Entregado', con su fecha y el recibo cargado. */
+        estado.ordenPago = ordenPagoService.getOrdenPago(estado.idOrdenPagoExistente);
+        estado.listaFormasPago = ordenPagoService.listarFormasPagoPorOrden(estado.idOrdenPagoExistente);
+        if (estado.listaFormasPago == null) {
+            estado.listaFormasPago = new ArrayList<>();
+        }
+        guardarEstado(session, token, estado);
+
+        mostrarMensaje(request, "Entrega registrada: " + marcados
+                + (marcados == 1 ? " cheque" : " cheques"), "alert-success");
+        volverAVista(request, response, session, estado, token);
+    }
+
     private void accionAnular(HttpServletRequest request, HttpServletResponse response,
             HttpSession session, String token) throws ServletException, IOException, SQLException {
 

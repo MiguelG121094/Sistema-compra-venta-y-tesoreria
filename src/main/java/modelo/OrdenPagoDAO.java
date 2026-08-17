@@ -144,6 +144,24 @@ public class OrdenPagoDAO {
     }
 
     /**
+     * Actualiza el número de recibo que dio el proveedor.
+     *
+     * <p>El recibo se carga al **entregar** el cheque, no al generar la OP: en ese momento el
+     * proveedor todavía no lo dio. Por eso la cabecera nace con 0 = sin recibo y se completa después.
+     */
+    public void actualizarNumeroRecibo(Long idOrdenPago, Integer numeroRecibo) throws SQLException {
+        if (idOrdenPago == null) {
+            return;
+        }
+        String sql = "UPDATE orden_pago_cabecera SET ord_pag_nro_recibo = ? WHERE id_orden_pago = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, numeroRecibo != null ? numeroRecibo : 0);
+            stmt.setLong(2, idOrdenPago);
+            stmt.executeUpdate();
+        }
+    }
+
+    /**
      * Indica si la provisión ya fue consumida por una orden de pago vigente (no anulada).
      *
      * <p>Es el guard que impide anular una provisión ya pagada, calcado de
