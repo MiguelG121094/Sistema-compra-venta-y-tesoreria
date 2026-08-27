@@ -146,7 +146,6 @@
                                                         <c:if test="${empty cuentaEnEditor or not puedeInsertar}">disabled</c:if>>Agregar</button>
                                             </div>
                                         </div>
-                                        <small class="text-muted">Seleccione una cuenta desde "Lista de Cuentas a Pagar", ajuste el importe a pagar y agregue.</small>
                                     </div>
                                 </div>
                             </c:if>
@@ -273,7 +272,6 @@
                                                 </c:forEach>
                                             </tbody>
                                         </table>
-                                        <small class="text-muted">Las filas resaltadas son saldos a favor (negativos) por notas de crédito.</small>
                                     </div>
                                     <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button></div>
                                 </div>

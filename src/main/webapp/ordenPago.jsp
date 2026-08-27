@@ -244,7 +244,6 @@
                                             <div class="col-md-6">
                                                 <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalFormasPago"
                                                         <c:if test="${empty token}">disabled title="Presione Nuevo para iniciar una orden de pago"</c:if>>&#43; Ver / Agregar Forma de Pago</button>
-                                                <small class="text-muted ms-2">Se cargan en el modal. Sólo Cheque o Transferencia (sin efectivo).</small>
                                             </div>
                                         </div>
 
@@ -377,7 +376,9 @@
                                                                             </td>
                                                                             <c:if test="${esNuevo}">
                                                                                 <td class="text-center">
-                                                                                    <button type="button" class="btn btn-danger btn-sm" onclick="eliminarForma(${st.index});">Eliminar</button>
+                                                                                    <!--<button type="button" class="btn btn-danger btn-sm" onclick="eliminarForma(${st.index});">Eliminar</button>-->
+                                                                                    <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#modalEliminarFormaPago"
+                                                                                        onclick="document.getElementById('indexLinea').value=${st.index};">Eliminar</button>
                                                                                 </td>
                                                                             </c:if>
                                                                         </tr>
@@ -626,7 +627,7 @@
                         <div class="modal fade" id="modalBuscarProvision" tabindex="-1" aria-hidden="true">
                             <div class="modal-dialog modal-lg">
                                 <div class="modal-content">
-                                    <div class="modal-header"><h5 class="modal-title">Buscar Provisión (Pendiente)</h5>
+                                    <div class="modal-header"><h5 class="modal-title">Buscar Provisión</h5>
                                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
                                     <div class="modal-body table-responsive">
                                         <table id="tablaProvisiones" class="table table-bordered table-striped">
@@ -652,9 +653,23 @@
                                                 </c:forEach>
                                             </tbody>
                                         </table>
-                                        <small class="text-muted">Solo se listan provisiones en estado "Pendiente" (aún no pagadas).</small>
                                     </div>
                                     <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Modal Confirmar Eliminar forma pago -->
+                        <div class="modal fade" id="modalEliminarFormaPago" tabindex="-1" aria-hidden="true">
+                            <div class="modal-dialog modal-dialog-centered">
+                                <div class="modal-content">
+                                    <div class="modal-header bg-danger text-white"><h5 class="modal-title">Confirmación</h5>
+                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+                                    <div class="modal-body"><p>¿Está seguro que desea eliminar esta línea?</p></div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">No</button>
+                                        <button type="button" class="btn btn-danger" onclick="confirmarEliminarLinea();">Sí, Eliminar</button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
