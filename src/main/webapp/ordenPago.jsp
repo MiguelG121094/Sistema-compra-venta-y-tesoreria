@@ -329,9 +329,6 @@
                                                                     <input type="date" class="form-control" id="fechaVenciCheque" name="fechaVenciCheque"
                                                                            value="<fmt:formatDate value='${formaEnEditor.cheque.fechaVencimiento}' pattern='yyyy-MM-dd'/>">
                                                                 </div>
-                                                                <div class="col-md-3 d-flex align-items-center">
-                                                                    <small class="text-muted">El N° de cheque se asigna automáticamente del rango de la chequera al Generar.</small>
-                                                                </div>
                                                             </div>
 
                                                             <div class="text-end mb-2">
@@ -376,9 +373,8 @@
                                                                             </td>
                                                                             <c:if test="${esNuevo}">
                                                                                 <td class="text-center">
-                                                                                    <!--<button type="button" class="btn btn-danger btn-sm" onclick="eliminarForma(${st.index});">Eliminar</button>-->
                                                                                     <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#modalEliminarFormaPago"
-                                                                                        onclick="document.getElementById('indexLinea').value=${st.index};">Eliminar</button>
+                                                                                            onclick="document.getElementById('indexForma').value = ${st.index};">Eliminar</button>
                                                                                 </td>
                                                                             </c:if>
                                                                         </tr>
@@ -492,11 +488,6 @@
                                         </div>
 
                                         <div class="modal-body">
-                                            <p class="text-muted small mb-3">
-                                                Marcá los cheques que el proveedor retira. Los diferidos pueden
-                                                entregarse después, en otra carga.
-                                            </p>
-
                                             <table class="table table-bordered table-sm align-middle">
                                                 <thead>
                                                     <tr>
@@ -682,7 +673,6 @@
                                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
                                     <div class="modal-body">
                                         <p>¿Está seguro que desea anular esta orden de pago?</p>
-                                        <p class="text-muted small">Se devolverá el saldo de las facturas, se anularán los cheques emitidos y la provisión volverá a estar disponible.</p>
                                     </div>
                                     <div class="modal-footer">
                                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">No</button>
@@ -724,10 +714,7 @@
                 setAccion('AgregarForma');
                 document.getElementById('formPrincipal').submit();
             }
-            function eliminarForma(index) {
-                if (!confirm('¿Está seguro que desea eliminar esta forma de pago?'))
-                    return;
-                document.getElementById('indexForma').value = index;
+            function confirmarEliminarLinea() {
                 setAccion('EliminarForma');
                 document.getElementById('formPrincipal').submit();
             }
@@ -755,6 +742,17 @@
                 if (modalForma) {
                     modalForma.addEventListener('shown.bs.modal', toggleCamposCheque);
             <c:if test="${abrirModalForma}">new bootstrap.Modal(modalForma).show();</c:if>
+                    }
+
+                    // La confirmación se abre encima del modal de formas de pago: al cerrarla
+                    // Bootstrap limpia el body, hay que devolvérselo al que queda abierto abajo.
+                    var modalEliminarForma = document.getElementById('modalEliminarFormaPago');
+                    if (modalEliminarForma) {
+                        modalEliminarForma.addEventListener('hidden.bs.modal', function () {
+                            if (modalForma && modalForma.classList.contains('show')) {
+                                document.body.classList.add('modal-open');
+                            }
+                        });
                     }
 
                     $('#tablaDetalleOP').DataTable({language: {url: "DataTables 2/es-ES.json"}});
