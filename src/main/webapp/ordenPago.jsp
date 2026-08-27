@@ -373,8 +373,8 @@
                                                                             </td>
                                                                             <c:if test="${esNuevo}">
                                                                                 <td class="text-center">
-                                                                                    <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#modalEliminarFormaPago"
-                                                                                            onclick="document.getElementById('indexForma').value = ${st.index};">Eliminar</button>
+                                                                                    <button type="button" class="btn btn-danger btn-sm"
+                                                                                            onclick="pedirEliminarForma(${st.index});">Eliminar</button>
                                                                                 </td>
                                                                             </c:if>
                                                                         </tr>
@@ -714,6 +714,12 @@
                 setAccion('AgregarForma');
                 document.getElementById('formPrincipal').submit();
             }
+            // No se usa data-bs-toggle: el data-api de Bootstrap cierra el modal que ya está
+            // abierto (el de formas de pago) antes de abrir el nuevo, y acá tiene que quedar.
+            function pedirEliminarForma(index) {
+                document.getElementById('indexForma').value = index;
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('modalEliminarFormaPago')).show();
+            }
             function confirmarEliminarLinea() {
                 setAccion('EliminarForma');
                 document.getElementById('formPrincipal').submit();
@@ -744,13 +750,31 @@
             <c:if test="${abrirModalForma}">new bootstrap.Modal(modalForma).show();</c:if>
                     }
 
-                    // La confirmación se abre encima del modal de formas de pago: al cerrarla
-                    // Bootstrap limpia el body, hay que devolvérselo al que queda abierto abajo.
+                    // La confirmación se abre encima del modal de formas de pago. Bootstrap 5 no
+                    // soporta modales apilados, así que hay que levantarla por sobre el de abajo y
+                    // devolverle al body el estado que Bootstrap le limpia al cerrarla.
                     var modalEliminarForma = document.getElementById('modalEliminarFormaPago');
                     if (modalEliminarForma) {
+                        var bodyPrevio = null;
+                        modalEliminarForma.addEventListener('show.bs.modal', function () {
+                            bodyPrevio = {
+                                abierto: document.body.classList.contains('modal-open'),
+                                padding: document.body.style.paddingRight,
+                                overflow: document.body.style.overflow
+                            };
+                            modalEliminarForma.style.zIndex = 1065;
+                        });
+                        modalEliminarForma.addEventListener('shown.bs.modal', function () {
+                            var fondos = document.querySelectorAll('.modal-backdrop');
+                            if (fondos.length) {
+                                fondos[fondos.length - 1].style.zIndex = 1060;
+                            }
+                        });
                         modalEliminarForma.addEventListener('hidden.bs.modal', function () {
-                            if (modalForma && modalForma.classList.contains('show')) {
+                            if (bodyPrevio && bodyPrevio.abierto) {
                                 document.body.classList.add('modal-open');
+                                document.body.style.paddingRight = bodyPrevio.padding;
+                                document.body.style.overflow = bodyPrevio.overflow;
                             }
                         });
                     }
