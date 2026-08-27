@@ -762,7 +762,8 @@ public class OrdenPagoServlet extends HttpServlet {
     }
 
     /**
-     * Eliminar una forma de pago del carrito.
+     * Eliminar una forma de pago del carrito. Se reabre el modal de formas de pago
+     * (abrirModalForma), que el submit de la confirmación deja cerrado.
      */
     private void accionEliminarForma(HttpServletRequest request, HttpServletResponse response,
             HttpSession session, String token) throws ServletException, IOException, SQLException {
@@ -788,6 +789,7 @@ public class OrdenPagoServlet extends HttpServlet {
         }
         estado.formaEnEditor = null;
 
+        request.setAttribute("abrirModalForma", true);
         volverAVista(request, response, session, estado, token);
     }
 

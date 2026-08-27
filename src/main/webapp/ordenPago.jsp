@@ -714,8 +714,8 @@
                 setAccion('AgregarForma');
                 document.getElementById('formPrincipal').submit();
             }
-            // No se usa data-bs-toggle: el data-api de Bootstrap cierra el modal que ya está
-            // abierto (el de formas de pago) antes de abrir el nuevo, y acá tiene que quedar.
+            // La confirmación se abre a mano: con data-bs-toggle, el data-api de Bootstrap
+            // cierra el modal de formas de pago antes de mostrar el de confirmación.
             function pedirEliminarForma(index) {
                 document.getElementById('indexForma').value = index;
                 bootstrap.Modal.getOrCreateInstance(document.getElementById('modalEliminarFormaPago')).show();
@@ -750,9 +750,8 @@
             <c:if test="${abrirModalForma}">new bootstrap.Modal(modalForma).show();</c:if>
                     }
 
-                    // La confirmación se abre encima del modal de formas de pago. Bootstrap 5 no
-                    // soporta modales apilados, así que hay que levantarla por sobre el de abajo y
-                    // devolverle al body el estado que Bootstrap le limpia al cerrarla.
+                    // Bootstrap 5 no apila modales: se levanta la confirmación por sobre el de
+                    // formas de pago y se le devuelve al body el estado que se pierde al cerrarla.
                     var modalEliminarForma = document.getElementById('modalEliminarFormaPago');
                     if (modalEliminarForma) {
                         var bodyPrevio = null;
