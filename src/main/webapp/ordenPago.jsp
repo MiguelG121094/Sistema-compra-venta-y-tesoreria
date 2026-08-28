@@ -257,77 +257,97 @@
 
                                                         <!-- Editor de alta -->
                                                         <c:if test="${esNuevo}">
-                                                            <div class="row g-2 align-items-end mb-3">
+                                                            <div class="row g-2 mb-3">
                                                                 <div class="col-md-2">
-                                                                    <label class="form-label mb-1">Tipo</label>
-                                                                    <select class="form-control" id="tipoForma" name="idFormaPagoCab" onchange="toggleCamposCheque();">
-                                                                        <option value="">Seleccionar...</option>
-                                                                        <c:forEach var="fp" items="${listaFormaPago}">
-                                                                            <option value="${fp.idFormaPagoCabecera}" data-desc="${fp.descripcion}"
-                                                                                    <c:if test="${formaEnEditor.formaPagoCabecera.idFormaPagoCabecera == fp.idFormaPagoCabecera}">selected</c:if>>${fp.descripcion}</option>
-                                                                        </c:forEach>
-                                                                    </select>
-                                                                </div>
-                                                                <div class="col-md-3">
-                                                                    <label class="form-label mb-1">Cuenta bancaria</label>
-                                                                    <select class="form-control" id="cuentaForma" name="idCuenta">
-                                                                        <option value="">Seleccionar...</option>
-                                                                        <c:forEach var="cta" items="${listaCuentas}">
-                                                                            <option value="${cta.idCuenta}"
-                                                                                    <c:if test="${formaEnEditor.cuenta.idCuenta == cta.idCuenta}">selected</c:if>>
-                                                                                ${cta.entidadFinanciera.nombre} - ${cta.numero} (${cta.moneda.descripcion})</option>
+                                                                    <div class="form-floating">
+                                                                        <select class="form-control" id="tipoForma" name="idFormaPagoCab" onchange="toggleCamposCheque();">
+                                                                            <option value="">Seleccionar...</option>
+                                                                            <c:forEach var="fp" items="${listaFormaPago}">
+                                                                                <option value="${fp.idFormaPagoCabecera}" data-desc="${fp.descripcion}"
+                                                                                        <c:if test="${formaEnEditor.formaPagoCabecera.idFormaPagoCabecera == fp.idFormaPagoCabecera}">selected</c:if>>${fp.descripcion}</option>
                                                                             </c:forEach>
-                                                                    </select>
-                                                                </div>
-                                                                <div class="col-md-2">
-                                                                    <label class="form-label mb-1">Monto</label>
-                                                                    <input type="text" inputmode="numeric" class="form-control mask-miles" id="montoForma" name="montoForma"
-                                                                           placeholder="Monto" value="${empty formaEnEditor ? montoSugerido : formaEnEditor.monto}">
-                                                                </div>
-                                                                <div class="col-md-2">
-                                                                    <label class="form-label mb-1">Tipo de cambio</label>
-                                                                    <input type="text" inputmode="decimal" class="form-control" id="tipoCambioForma" name="tipoCambioForma"
-                                                                           placeholder="Tipo de cambio" value="${formaEnEditor.tipoCambio}">
+                                                                        </select>
+                                                                        <label for="tipoForma">Tipo</label>
+                                                                    </div>
                                                                 </div>
                                                                 <div class="col-md-3">
-                                                                    <label class="form-label mb-1">Referencia</label>
-                                                                    <input type="text" class="form-control" id="referenciaForma" name="referenciaForma"
-                                                                           placeholder="Referencia" value="${formaEnEditor.referencia}">
+                                                                    <div class="form-floating">
+                                                                        <select class="form-control" id="cuentaForma" name="idCuenta">
+                                                                            <option value="">Seleccionar...</option>
+                                                                            <c:forEach var="cta" items="${listaCuentas}">
+                                                                                <option value="${cta.idCuenta}"
+                                                                                        <c:if test="${formaEnEditor.cuenta.idCuenta == cta.idCuenta}">selected</c:if>>
+                                                                                    ${cta.entidadFinanciera.nombre} - ${cta.numero} (${cta.moneda.descripcion})</option>
+                                                                            </c:forEach>
+                                                                        </select>
+                                                                        <label for="cuentaForma">Cuenta bancaria</label>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="col-md-2">
+                                                                    <div class="form-floating">
+                                                                        <input type="text" inputmode="numeric" class="form-control mask-miles" id="montoForma" name="montoForma"
+                                                                               placeholder="Monto" value="${empty formaEnEditor ? montoSugerido : formaEnEditor.monto}">
+                                                                        <label for="montoForma">Monto</label>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="col-md-2">
+                                                                    <div class="form-floating">
+                                                                        <input type="text" inputmode="decimal" class="form-control" id="tipoCambioForma" name="tipoCambioForma"
+                                                                               placeholder="Tipo de cambio" value="${formaEnEditor.tipoCambio}">
+                                                                        <label for="tipoCambioForma">Tipo de cambio</label>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="col-md-3">
+                                                                    <div class="form-floating">
+                                                                        <input type="text" class="form-control" id="referenciaForma" name="referenciaForma"
+                                                                               placeholder="Referencia" value="${formaEnEditor.referencia}">
+                                                                        <label for="referenciaForma">Referencia</label>
+                                                                    </div>
                                                                 </div>
                                                             </div>
 
                                                             <!-- Campos solo para CHEQUE -->
-                                                            <div class="row g-2 align-items-end mb-2" id="camposCheque" style="display:none;">
+                                                            <div class="row g-2 mb-2" id="camposCheque" style="display:none;">
                                                                 <div class="col-md-3">
-                                                                    <label class="form-label mb-1">Chequera</label>
-                                                                    <select class="form-control" id="chequeraForma" name="idChequera">
-                                                                        <option value="">Seleccionar...</option>
-                                                                        <c:forEach var="chq" items="${listaChequeras}">
-                                                                            <option value="${chq.idChequera}"
-                                                                                    <c:if test="${formaEnEditor.cheque.chequera.idChequera == chq.idChequera}">selected</c:if>>
-                                                                                ${chq.cuenta.entidadFinanciera.nombre} - Serie ${chq.serie} (${chq.desdeNumero}-${chq.hastaNumero})</option>
+                                                                    <div class="form-floating">
+                                                                        <select class="form-control" id="chequeraForma" name="idChequera">
+                                                                            <option value="">Seleccionar...</option>
+                                                                            <c:forEach var="chq" items="${listaChequeras}">
+                                                                                <option value="${chq.idChequera}"
+                                                                                        <c:if test="${formaEnEditor.cheque.chequera.idChequera == chq.idChequera}">selected</c:if>>
+                                                                                    ${chq.cuenta.entidadFinanciera.nombre} - Serie ${chq.serie} (${chq.desdeNumero}-${chq.hastaNumero})</option>
                                                                             </c:forEach>
-                                                                    </select>
+                                                                        </select>
+                                                                        <label for="chequeraForma">Chequera</label>
+                                                                    </div>
                                                                 </div>
                                                                 <div class="col-md-2">
-                                                                    <label class="form-label mb-1">Tipo de cheque</label>
-                                                                    <select class="form-control" id="tipoChequeForma" name="idTipoCheque">
-                                                                        <option value="">Seleccionar...</option>
-                                                                        <c:forEach var="tc" items="${listaTipoCheque}">
-                                                                            <option value="${tc.idTipoCheque}"
-                                                                                    <c:if test="${formaEnEditor.cheque.tipoCheque.idTipoCheque == tc.idTipoCheque}">selected</c:if>>${tc.descripcion}</option>
-                                                                        </c:forEach>
-                                                                    </select>
+                                                                    <div class="form-floating">
+                                                                        <select class="form-control" id="tipoChequeForma" name="idTipoCheque">
+                                                                            <option value="">Seleccionar...</option>
+                                                                            <c:forEach var="tc" items="${listaTipoCheque}">
+                                                                                <option value="${tc.idTipoCheque}"
+                                                                                        <c:if test="${formaEnEditor.cheque.tipoCheque.idTipoCheque == tc.idTipoCheque}">selected</c:if>>${tc.descripcion}</option>
+                                                                            </c:forEach>
+                                                                        </select>
+                                                                        <label for="tipoChequeForma">Tipo de cheque</label>
+                                                                    </div>
                                                                 </div>
                                                                 <div class="col-md-2">
-                                                                    <label class="form-label mb-1">Fecha de pago</label>
-                                                                    <input type="date" class="form-control" id="fechaPagoCheque" name="fechaPagoCheque"
-                                                                           value="<fmt:formatDate value='${formaEnEditor.cheque.fechaPago}' pattern='yyyy-MM-dd'/>">
+                                                                    <div class="form-floating">
+                                                                        <input type="date" class="form-control" id="fechaPagoCheque" name="fechaPagoCheque"
+                                                                               placeholder="Fecha de pago"
+                                                                               value="<fmt:formatDate value='${formaEnEditor.cheque.fechaPago}' pattern='yyyy-MM-dd'/>">
+                                                                        <label for="fechaPagoCheque">Fecha de pago</label>
+                                                                    </div>
                                                                 </div>
                                                                 <div class="col-md-2">
-                                                                    <label class="form-label mb-1">Fecha de vencimiento</label>
-                                                                    <input type="date" class="form-control" id="fechaVenciCheque" name="fechaVenciCheque"
-                                                                           value="<fmt:formatDate value='${formaEnEditor.cheque.fechaVencimiento}' pattern='yyyy-MM-dd'/>">
+                                                                    <div class="form-floating">
+                                                                        <input type="date" class="form-control" id="fechaVenciCheque" name="fechaVenciCheque"
+                                                                               placeholder="Fecha de vencimiento"
+                                                                               value="<fmt:formatDate value='${formaEnEditor.cheque.fechaVencimiento}' pattern='yyyy-MM-dd'/>">
+                                                                        <label for="fechaVenciCheque">Fecha de vencimiento</label>
+                                                                    </div>
                                                                 </div>
                                                             </div>
 
