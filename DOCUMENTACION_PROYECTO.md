@@ -309,8 +309,9 @@ Faltan crear las vistas para las nuevas funcionalidades:
 #### Tesorería *(plan detallado: [MODULO_TESORERIA_PLAN.md](MODULO_TESORERIA_PLAN.md))*
 - [x] CRUD de Cuentas Bancarias ✅ (2026-07 — `CuentaServlet` + `cuenta.jsp`, con seed de moneda/entidad financiera/tipo de cuenta)
 - [x] Provisión de Cuenta a Pagar ✅ (2026-07 — reserva las cuentas y netea el saldo a favor de las NC; ver plan §B)
-- [x] Orden de Pago ✅ (2026-07 — N formas de pago mixtas transferencia/cheque multi-cuenta, descuenta `cta_pag_saldo`, consume la provisión y anula con reversa total; ver plan §C). **Pendiente de prueba end-to-end.**
+- [x] Orden de Pago ✅ (2026-07 — N formas de pago mixtas transferencia/cheque multi-cuenta, descuenta `cta_pag_saldo`, consume la provisión y anula con reversa total; ver plan §C). **Probada end-to-end el 2026-08-17.**
 - [x] Emisión de Cheques ✅ (2026-07 — se emiten desde la Orden de Pago, con N° tomado del rango de la chequera)
+- [x] Entrega de cheques al proveedor ✅ (2026-08-17 — se registra desde la Orden de Pago: estado `'Entregado'`, `chq_fecha_entrega`, `chq_entregado_a` y el N° de recibo, todo en una transacción; ver plan §G2)
 - [ ] Débitos / Créditos bancarios (plan §D) — **próximo**
 - [ ] Gestión de Chequeras (ABM propio; hoy las chequeras vienen del seed)
 - [ ] Gestión de Fondo Fijo + Rendición (plan §E)
@@ -387,6 +388,32 @@ Todas las entidades siguen el patrón POJO:
 ---
 
 ## Historial de Cambios
+
+### 2026-08-17 al 28 — Entrega de cheques al proveedor y ajustes de la Orden de Pago
+
+**Entrega de cheques (requerimiento 3.3).** Cierra el pendiente §G2 del plan de tesorería. Se agregaron
+a `cheque` las columnas `chq_fecha_entrega` y `chq_entregado_a`, porque el estado `'Entregado'` solo no
+alcanzaba: `chq_a_la_orden` dice a nombre de quién se emite el cheque, no quién lo retiró. La entrega se
+registra desde la propia Orden de Pago, con un modal que recibe los cheques que se marcan (los diferidos
+se retiran en otro momento) y que aparece cuando alguna forma de pago tiene cheque.
+
+El **N° de recibo se movió a este momento**: lo emite el proveedor al cobrar, así que al generar la OP
+todavía no existe. La cabecera nace en 0, el campo queda readonly y se completa al registrar la entrega,
+en la misma transacción, porque entrega y recibo son el mismo acto administrativo.
+
+- `ChequeDAO.registrarEntrega` excluye los anulados en el `WHERE` en vez de pisarles el estado, para que
+  `'Anulado'` gane si la OP se anula después de la entrega.
+- `OrdenPagoService.registrarEntregaCheques` es re-ejecutable: volver a guardar corrige una entrega mal
+  cargada en vez de fallar. Rechaza la entrega sobre una OP anulada.
+- La acción exige permiso de **edición**, no de alta: modifica una OP ya generada.
+
+**Otros ajustes.** Se probó la Orden de Pago de punta a punta y se confirmó `forma_pag_tipo_cambio`
+contra Power Architect (2026-08-17). Se agregó el seed de `forma_pago_cabecera` (Cheque / Transferencia)
+y se corrigió `creditos.id_cobro` a nullable. En la vista (2026-08-27/28) se sacaron los textos
+aclaratorios, se completó el modal de confirmación para eliminar una forma de pago —que se abre encima
+del modal de formas y lo deja abierto— y se pasaron sus campos a etiqueta flotante.
+
+---
 
 ### 2026-07-17 al 26 — Módulo de Tesorería: referenciales, Provisión y Orden de Pago
 
@@ -746,9 +773,9 @@ Gestión financiera completa: cuentas bancarias, cheques, cobros, pagos, caja, f
 11. ~~**Subir el esquema con `creditos.id_cobro` nullable.**~~ ✅ Subido el 2026-08-17; ya se puede
     registrar un depósito bancario sin módulo de Cobros. Ver `MODULO_TESORERIA_PLAN.md` §D.
 12. **Gestión de cheques** (`ChequeServlet` + `cheque.jsp`): ABM de chequeras — hoy vienen del seed y
-    cuando se agote el rango la emisión se corta —, **registrar la entrega al proveedor** (el cheque
-    no tiene columnas de fecha de entrega ni receptor) y **anular un cheque individual** (hoy sólo se
-    anulan en cascada al anular la orden de pago). Ver `MODULO_TESORERIA_PLAN.md` §G.
+    cuando se agote el rango la emisión se corta — y **anular un cheque individual** (hoy sólo se
+    anulan en cascada al anular la orden de pago). La **entrega al proveedor** ya no está acá: se
+    implementó el 2026-08-17 dentro de la Orden de Pago. Ver `MODULO_TESORERIA_PLAN.md` §G.
 13. **Informes.** No hay nada implementado ni planificado: sin código, sin librería en el `pom.xml` y
     sin definición de qué informes ni en qué formato. Ver `MODULO_TESORERIA_PLAN.md` §H.
 14. ~~**Probar la Orden de Pago de punta a punta.**~~ ✅ Probada el 2026-08-17: el circuito corre y la

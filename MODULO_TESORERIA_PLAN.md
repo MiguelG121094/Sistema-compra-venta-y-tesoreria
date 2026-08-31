@@ -45,13 +45,13 @@ factura_compra ─► cuenta_pagar ─► PROVISIÓN ─► ORDEN DE PAGO ─►
 
 ### 1.1 Trazabilidad de requerimientos
 
-Mapeo de los requerimientos del módulo contra lo que existe (revisado 2026-08-13):
+Mapeo de los requerimientos del módulo contra lo que existe (revisado 2026-08-31):
 
 | # | Requerimiento | Estado | Dónde |
 |---|---|---|---|
 | 3.1 | Generar provisión de cuentas a pagar | ✅ Completo y probado | §B |
 | 3.2 | Generar órdenes de pago | ✅ **Completo y probado** (2026-08-17) | §C |
-| 3.3 | Registrar entrega de cheques a proveedores | ❌ No existe | §G2 |
+| 3.3 | Registrar entrega de cheques a proveedores | ✅ **Completo** (2026-08-17) | §G2 |
 | 3.4 | Procesos especiales (anular OP / anular cheques) | ⚠️ Parcial: anular OP ✅ (sin probar); anular un cheque suelto ❌ | §C.1 / §G3 |
 | 3.5 | Asignar fondo fijo | ❌ Pendiente | §E |
 | 3.6 | Rendir fondo fijo | ❌ Pendiente | §E |
@@ -471,9 +471,16 @@ Decisiones tomadas al implementarlo:
 - **`forma_pag_estado`** nace en `'Pendiente'` = pendiente de conciliación bancaria (§F la cierra).
 - Cambiar de provisión o generar/anular **invalida el documento en sesión** (se limpia el token).
 
-> **📍 DÓNDE NOS QUEDAMOS (2026-08-17):** Provisión y **Orden de Pago terminadas y probadas** (el
-> circuito corre y la provisión pasa a `'Procesada'`). Lo próximo acordado es la **entrega de cheques**
-> (§G2). Débitos/Créditos (§D) y el ABM de chequeras (§G1) quedan para después, por decisión explícita.
+> **📍 DÓNDE NOS QUEDAMOS (2026-08-31):** Provisión, **Orden de Pago** y **entrega de cheques**
+> terminadas. El circuito corre, la provisión pasa a `'Procesada'` y el cheque queda `'Entregado'`.
+> Quedan pendientes el **ABM de chequeras** (§G1) y **Débitos/Créditos** (§D); el orden en que se
+> encaran está por definir. §G1 es el único que puede cortar la operación, porque cuando se agote la
+> chequera del seed la emisión falla.
+>
+> _Historial:_ **Entrega de cheques (3.3) COMPLETA** (2026-08-17) — columnas `chq_fecha_entrega` y
+> `chq_entregado_a`, estado `'Entregado'`, modal en la OP y el N° de recibo cargado en ese momento;
+> el detalle está en §G2. La UI del modal de formas de pago se pulió el 2026-08-27/28 (confirmación
+> para eliminar una línea y campos con etiqueta flotante).
 >
 > _Historial:_ **Orden de Pago COMPLETA**
 > — esquema, POJOs, DAOs, `OrdenPagoService` transaccional (guard anti doble-pago, consumo de provisión,
@@ -550,7 +557,7 @@ existan OP, débitos y créditos (por eso va al final).
 
 ---
 
-### G. Gestión de cheques *(pendiente — antes sólo se mencionaba de pasada)*
+### G. Gestión de cheques *(parcial — G2 implementada; G1 y G3 pendientes)*
 
 > Sección agregada el 2026-08-13. §C la venía referenciando como "§G" (ABM de chequera) pero nunca
 > se había escrito. Cubre además dos requerimientos que no estaban planificados en ningún lado:
@@ -558,22 +565,38 @@ existan OP, débitos y créditos (por eso va al final).
 
 **Tablas:** `cheque`, `chequera`, `tipo_cheque`.
 
-Hoy el cheque nace **dentro de la Orden de Pago**: `OrdenPagoService` lo emite con estado
-`'Emitido'` y número tomado del rango de la chequera, y ahí termina su ciclo de vida. No existe
-ninguna pantalla de cheques. Faltan tres cosas distintas:
+El cheque nace **dentro de la Orden de Pago**: `OrdenPagoService` lo emite con estado `'Emitido'` y
+número tomado del rango de la chequera, y desde la misma OP se registra su entrega al proveedor. No
+existe todavía una pantalla propia de cheques. De las tres cosas que faltaban, **G2 ya está
+implementada**; quedan G1 y G3:
 
 **G1. ABM de chequeras.** Hoy las chequeras vienen del **seed** (`Inserts inciales.sql`: Itaú
 1000001–1000050, Ueno 2000001–2000050). Cuando se agote una, no hay forma de cargar otra desde la
 aplicación y la emisión va a fallar con *"Chequera agotada"*. Es el pendiente más urgente de los
 tres, porque bloquea la operación normal.
 
-**G2. Registrar la entrega al proveedor (requerimiento 3.3).** Hoy no se deja constancia de que el
-proveedor retiró el cheque. `chq_estado` es `VARCHAR(20)`, así que el estado `'Entregado'` **no
-necesita cambio de esquema**; pero **no hay columnas para la fecha de entrega ni para quién
-retiró**. Ojo: `chq_a_la_orden` es a nombre de quién se emite el cheque, que no es lo mismo que
-quién lo retiró. Si se quiere dejar constancia real hace falta agregar, por ejemplo,
-`chq_fecha_entrega DATE` y `chq_entregado_a VARCHAR`. **Decisión pendiente:** alcanza con el
-estado, o se agregan las columnas.
+**G2. Registrar la entrega al proveedor (requerimiento 3.3).** ✅ **Implementado el 2026-08-17.** La
+decisión que estaba pendiente se resolvió por las columnas: el estado `'Entregado'` solo no alcanzaba,
+porque `chq_a_la_orden` es a nombre de quién se emite el cheque y no quién lo retiró. Se agregaron
+`chq_fecha_entrega DATE` y `chq_entregado_a VARCHAR` a `cheque`. La entrega se registra **desde la
+Orden de Pago** (botón "Registrar entrega de cheques", que aparece cuando alguna forma de pago tiene
+cheque, no según el tipo de pago de la cabecera: una OP puede mezclar transferencia y cheque).
+
+Cómo quedó:
+
+- `ChequeDAO.registrarEntrega` graba fecha, receptor y estado `'Entregado'`, y **excluye los anulados
+  en el `WHERE`** en vez de pisarles el estado, para que `'Anulado'` gane si la OP se anula después de
+  la entrega.
+- `OrdenPagoService.registrarEntregaCheques` corre todo en una transacción y rechaza la entrega sobre
+  una OP anulada. Es **re-ejecutable**: volver a guardar corrige una entrega mal cargada en vez de
+  fallar.
+- El **N° de recibo se carga recién acá**. Lo emite el proveedor al cobrar, así que al generar la OP
+  todavía no existe (`ord_pag_nro_recibo` nace en 0 y el campo de la pantalla queda readonly). Entrega
+  y recibo son el mismo acto administrativo, por eso se guardan en la misma transacción.
+- El modal recibe **los cheques que se marcan**, no asume que sean todos: una OP puede tener varios y
+  los diferidos se retiran en otro momento.
+- La acción exige permiso de **edición** (`puedeEditar`), no de alta: registrar la entrega modifica una
+  OP ya generada.
 
 **G3. Anulación de un cheque individual (mitad de 3.4).** Hoy los cheques sólo se anulan **en
 cascada**, cuando se anula la OP entera (`anularOrdenPagoCompleta`, paso 3). El caso real —cheque
@@ -696,7 +719,7 @@ PDF para los informes que realmente se impriman y archiven.
 
 **G. Gestión de cheques** *(cierra 3.3 y completa 3.4)*
 - [ ] **ABM de chequeras** (G1) — hoy vienen del seed; cuando se agote una, la emisión falla
-- [ ] **Registrar entrega al proveedor** (G2) — decidir si alcanza el estado `'Entregado'` o se agregan `chq_fecha_entrega` / `chq_entregado_a` (hoy esas columnas **no existen**)
+- [x] ✅ **Registrar entrega al proveedor** (G2) — implementado el 2026-08-17 con estado `'Entregado'` + `chq_fecha_entrega` / `chq_entregado_a`; se registra desde la OP y arrastra el N° de recibo
 - [ ] **Anular un cheque individual** (G3) — hoy sólo se anulan en cascada al anular la OP
 - [ ] `ChequeServlet` + `cheque.jsp` + `ChequeService`
 
@@ -719,7 +742,7 @@ PDF para los informes que realmente se impriman y archiven.
 - **`fondo_fijo_rendicion(_detalle)`** sin secuencia serial en la PK (pendiente para §E).
 - **Cheque desde chequera:** el próximo `chq_numero` debe validarse dentro de `[chequera_desde_nro, chequera_hasta_nro]`; controlar "chequera agotada" (§C). ⚠️ Hoy **no hay ABM de chequeras** (vienen del seed): cuando se agote el rango, la emisión de cheques se corta y no hay forma de cargar una nueva desde la aplicación (§G1).
 - ~~**`creditos.id_cobro`** era `NOT NULL` y bloqueaba el registro de depósitos~~ → ✅ **resuelto**: nullable y subido (2026-08-17).
-- **`cheque` no tiene columnas de entrega** (fecha ni receptor): `chq_a_la_orden` es a nombre de quién se emite, no quién retiró (§G2).
+- ~~**`cheque` no tiene columnas de entrega** (fecha ni receptor)~~ → ✅ **resuelto**: se agregaron `chq_fecha_entrega` y `chq_entregado_a` (2026-08-17). `chq_a_la_orden` sigue siendo a nombre de quién se emite, no quién retiró (§G2).
 - **Descuento de saldo greenfield**: hoy **nada** descuenta `cta_pag_saldo` al pagar; se diseña desde
   cero en la Orden de Pago, en la **misma transacción** que la OP.
 - **Nombres de constraint** con doble token (`orden_pagoorden_pago_cabecera_fk`) — cosmético, las FKs
@@ -753,7 +776,7 @@ recaudación a depositar → **crédito bancario** → conciliación. Se planifi
 | 2 | Provisión de cuenta a pagar (+ neteo NC) | 3.1 | cuenta_pagar (✅) |
 | 3 | Orden de pago + formas de pago (descuenta saldo) | 3.2 | Provisión, Cuenta bancaria |
 | 4 | Débitos / Créditos (+ depósitos) | 3.8, 3.9 | Cuenta bancaria, `id_cobro` nullable |
-| 5 | Gestión de cheques (ABM chequera, entrega, anulación) | 3.3, 3.4 | Orden de pago |
+| 5 | Gestión de cheques (ABM chequera ❌, entrega ✅, anulación individual ❌) | 3.3, 3.4 | Orden de pago |
 | 6 | Fondo Fijo + rendición | 3.5, 3.6, 3.7 | Provisión, Orden de pago |
 | 7 | Conciliación bancaria | 3.10 | OP, Débitos, Créditos |
 | 8 | Informes | 3.11 | Lo que se quiera informar |

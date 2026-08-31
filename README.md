@@ -230,6 +230,12 @@ El sistema **no implementa contabilidad** (asientos, plan de cuentas, balances).
 │     (Aprobada)      │     Formas: Cheque y/o Transferencia
 │                     │     (sin efectivo — eso va por Fondo Fijo)
 └──────────┬──────────┘
+           │ Se emite el cheque y el proveedor lo retira
+           ▼
+┌─────────────────────┐
+│ ENTREGA DEL CHEQUE  │  ← Fecha, quién retiró y N° de recibo
+│    (Entregado)      │     Los diferidos se retiran después
+└──────────┬──────────┘
            │ Se ejecuta el pago
            ▼
 ┌─────────────────────┐
@@ -356,10 +362,10 @@ Sistema-compra-venta-y-tesoreria/
 | Cuenta a Pagar | ✅ | ✅ | ✅ | Backend listo (sincronizado con Factura Compra) |
 | Cuenta bancaria (+ moneda, tipo de cuenta, entidad financiera) | ✅ | ✅ | ✅ | ✅ **Completo** — ABM con `CuentaServlet` + `cuenta.jsp` |
 | Provisión de Cuenta a Pagar | ✅ | ✅ | ✅ | ✅ **Completo** — `ProvisionCuentaPagarServlet` + `provision.jsp` (netea el saldo a favor de las NC) |
-| Orden de Pago (+ formas de pago, cheque, chequera) | ✅ | ✅ | ✅ | ✅ **Completo** — `OrdenPagoServlet` + `ordenPago.jsp`; descuenta el saldo, emite cheques y anula con reversa total. Probada end-to-end (2026-08-17) |
+| Orden de Pago (+ formas de pago, cheque, chequera) | ✅ | ✅ | ✅ | ✅ **Completo** — `OrdenPagoServlet` + `ordenPago.jsp`; descuenta el saldo, emite cheques, registra su entrega al proveedor y anula con reversa total. Probada end-to-end (2026-08-17) |
 | Débitos / Créditos bancarios | ✅ | ❌ | ❌ | Próximo (alimentan la conciliación) |
 | Depósitos bancarios (boletas) | ✅ | ❌ | ❌ | Pendiente — es el mismo ABM que Créditos; `creditos.id_cobro` ya es nullable |
-| Gestión de cheques (ABM chequera, entrega, anulación individual) | ✅ | ⚠️ | ❌ | Pendiente — hoy los cheques sólo se emiten/anulan desde la Orden de Pago |
+| Gestión de cheques (ABM chequera, anulación individual) | ✅ | ⚠️ | ❌ | Pendiente — la **entrega al proveedor** ya se registra desde la Orden de Pago (2026-08-17); falta el ABM de chequeras y anular un cheque suelto |
 | Informes | — | — | — | Pendiente — sin planificar (ver `MODULO_TESORERIA_PLAN.md` §H) |
 | Fondo Fijo + Rendición | ✅ | ❌ | ❌ | Pendiente |
 | Conciliación Bancaria | ✅ | ❌ | ❌ | Pendiente (objetivo final del módulo) |
