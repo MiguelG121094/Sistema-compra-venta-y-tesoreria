@@ -520,6 +520,11 @@ de pago y que alimentan la conciliación.
 igual que `NotaCreditoDebitoServlet` hace con las notas: es el mismo formulario y lo único que cambia es
 la tabla donde cae el movimiento. En el menú son dos entradas, así que el usuario ve dos pantallas.
 
+Cada tipo entra por **su propia URL** (`/DebitoServlet` y `/CreditoServlet`, las dos mapeadas al mismo
+servlet, que deduce el tipo del `getServletPath()`). No es cosmético: el resaltado del menú de
+`Theme/js/scripts.js` compara sólo el nombre del servlet, así que dos entradas a la misma URL se
+pintaban las dos como activas.
+
 Para que la vista pudiera ser una sola, `Debito` y `Credito` implementan la interfaz
 `MovimientoBancario` (`getId`, `getMonto`, `getEstado`…): así la JSP no tiene que preguntar qué está
 mirando para saber qué getter llamar.

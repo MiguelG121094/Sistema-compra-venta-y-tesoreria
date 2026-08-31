@@ -2,6 +2,9 @@
     Document   : movimientoBancario
     Carga de otros débitos y créditos bancarios (Tesorería), cableada a MovimientoBancarioServlet.
     Una sola vista para los dos tipos: el servlet manda el tipo y sus textos.
+    Cada tipo entra por su propia URL (DebitoServlet / CreditoServlet, ambas del mismo servlet),
+    que llega en el atributo "ruta": el resaltado del menú compara el nombre del servlet, así que
+    dos entradas a la misma URL se pintarían las dos como activas.
 
     Atributos de request esperados del servlet:
       tipo (String: "debito" | "credito"), etiqueta ("Débito" | "Crédito"), titulo (encabezado)
@@ -60,7 +63,7 @@
                             <div class="col-auto">
                                 <c:choose>
                                     <c:when test="${puedeInsertar}">
-                                        <a href="MovimientoBancarioServlet?menu=MovimientoBancario&tipo=${tipo}&accion=Nuevo" class="btn btn-success">Nuevo</a>
+                                        <a href="${ruta}?menu=MovimientoBancario&accion=Nuevo" class="btn btn-success">Nuevo</a>
                                     </c:when>
                                     <c:otherwise>
                                         <button type="button" class="btn btn-success" disabled title="No tiene permisos">Nuevo</button>
@@ -77,7 +80,7 @@
                             </div>
                         </div>
 
-                        <form id="formPrincipal" method="post" action="MovimientoBancarioServlet">
+                        <form id="formPrincipal" method="post" action="${ruta}">
                             <input type="hidden" name="menu" value="MovimientoBancario">
                             <input type="hidden" name="tipo" value="${tipo}">
                             <input type="hidden" name="accion" id="accionPrincipal" value="Generar">
@@ -199,7 +202,7 @@
                                         </c:choose>
                                     </div>
                                     <div class="col-auto d-inline-block">
-                                        <a href="MovimientoBancarioServlet?menu=MovimientoBancario&tipo=${tipo}&accion=Cancelar" class="btn btn-danger">Cancelar</a>
+                                        <a href="${ruta}?menu=MovimientoBancario&accion=Cancelar" class="btn btn-danger">Cancelar</a>
                                     </div>
                                 </div>
                             </div>
@@ -241,7 +244,7 @@
                                                             </c:choose>
                                                         </td>
                                                         <td class="text-center">
-                                                            <a href="MovimientoBancarioServlet?menu=MovimientoBancario&tipo=${tipo}&accion=Cargar&id=${mov.id}"
+                                                            <a href="${ruta}?menu=MovimientoBancario&accion=Cargar&id=${mov.id}"
                                                                class="btn btn-primary btn-sm">Cargar</a>
                                                         </td>
                                                     </tr>

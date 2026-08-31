@@ -30,7 +30,8 @@ import service.CuentaService;
 import service.DebitoService;
 import service.EntidadFinancieraService;
 
-@WebServlet(name = "MovimientoBancarioServlet", urlPatterns = {"/MovimientoBancarioServlet"})
+@WebServlet(name = "MovimientoBancarioServlet",
+        urlPatterns = {"/MovimientoBancarioServlet", "/DebitoServlet", "/CreditoServlet"})
 public class MovimientoBancarioServlet extends HttpServlet {
 
     private static final Logger LOGGER = Logger.getLogger(MovimientoBancarioServlet.class.getName());
@@ -49,7 +50,12 @@ public class MovimientoBancarioServlet extends HttpServlet {
 
         String menu = request.getParameter("menu");
         String accion = request.getParameter("accion");
-        String tipo = request.getParameter("tipo");
+        // Cada tipo entra por su propia URL: dos entradas de menu al mismo servlet se pintan las
+        // dos como activas, porque el resaltado compara el nombre del servlet.
+        String tipo = tipoDesdeRuta(request.getServletPath());
+        if (tipo == null) {
+            tipo = request.getParameter("tipo");
+        }
 
         HttpSession session = request.getSession();
         Usuario usuario = (Usuario) session.getAttribute("usuario");
@@ -263,6 +269,7 @@ public class MovimientoBancarioServlet extends HttpServlet {
             String tipo, MovimientoBancario mov, boolean esNuevo) throws ServletException, IOException {
 
         request.setAttribute("tipo", tipo);
+        request.setAttribute("ruta", ruta(tipo));
         request.setAttribute("etiqueta", etiqueta(tipo));
         request.setAttribute("titulo", TIPO_CREDITO.equals(tipo) ? "CARGAR CRÉDITOS" : "CARGAR DÉBITOS");
         request.setAttribute("movimiento", mov);
@@ -285,6 +292,21 @@ public class MovimientoBancarioServlet extends HttpServlet {
 
     private String etiqueta(String tipo) {
         return TIPO_CREDITO.equals(tipo) ? "Crédito" : "Débito";
+    }
+
+    /** URL propia de cada tipo; null si se entro por la generica. */
+    private String tipoDesdeRuta(String servletPath) {
+        if ("/CreditoServlet".equals(servletPath)) {
+            return TIPO_CREDITO;
+        }
+        if ("/DebitoServlet".equals(servletPath)) {
+            return TIPO_DEBITO;
+        }
+        return null;
+    }
+
+    private String ruta(String tipo) {
+        return TIPO_CREDITO.equals(tipo) ? "CreditoServlet" : "DebitoServlet";
     }
 
     private Long leerId(String idStr) {
