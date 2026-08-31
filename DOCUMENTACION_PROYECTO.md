@@ -313,7 +313,7 @@ Faltan crear las vistas para las nuevas funcionalidades:
 - [x] Emisión de Cheques ✅ (2026-07 — se emiten desde la Orden de Pago, con N° tomado del rango de la chequera)
 - [x] Entrega de cheques al proveedor ✅ (2026-08-17 — se registra desde la Orden de Pago: estado `'Entregado'`, `chq_fecha_entrega`, `chq_entregado_a` y el N° de recibo, todo en una transacción; ver plan §G2)
 - [ ] Débitos / Créditos bancarios (plan §D) — **próximo**
-- [ ] Gestión de Chequeras (ABM propio; hoy las chequeras vienen del seed)
+- [x] Gestión de Chequeras ✅ (2026-08-31 — `ChequeraServlet` + `chequera.jsp`, calcados de Cuentas Bancarias; validan solapamiento de rangos y muestran el consumo de la chequera; ver plan §G1)
 - [ ] Gestión de Fondo Fijo + Rendición (plan §E)
 - [ ] Conciliación Bancaria (plan §F — el objetivo final)
 - [ ] Recepción de Cheques, Arqueo de Caja, Recaudaciones a Depositar *(lado cobros — requiere Ventas; plan §9)*
@@ -388,6 +388,35 @@ Todas las entidades siguen el patrón POJO:
 ---
 
 ## Historial de Cambios
+
+### 2026-08-31 — ABM de chequeras
+
+Cierra el pendiente §G1 del plan de tesorería, que era el único que podía cortar la operación: las
+chequeras venían del seed y, al agotarse el rango, la emisión de cheques de una orden de pago fallaba
+con *"Chequera agotada"* sin forma de cargar otra desde la aplicación.
+
+`ChequeraServlet` + `chequera.jsp` están calcados de Cuentas Bancarias, registrados en
+`AuthorizationFilter` bajo el módulo `tesoreria` y enlazados desde el menú. No hizo falta tocar la base:
+`chequera` y su POJO ya existían.
+
+Más allá del alta simple, se resolvieron tres agujeros que la base no cubre (no tiene ningún `CHECK`):
+
+- **Solapamiento de rangos.** El próximo número de cheque se calcula por chequera y no por cuenta, así
+  que dos chequeras de la misma cuenta con rangos pisados emitirían dos cheques con el mismo número en
+  el mismo banco. Se rechaza al insertar y al actualizar.
+- **Rango contra lo ya emitido.** Al editar, el rango nuevo tiene que contener los cheques ya emitidos.
+- **Eliminar.** `cheque.id_chequera` es FK `ON DELETE NO ACTION`: se corta antes con un mensaje claro en
+  vez del error crudo de PostgreSQL.
+
+La grilla muestra *Emitidos*, *Próximo N°* y *Disponibles*, con badge amarillo cuando quedan 10 o menos
+y rojo cuando está agotada, para que el agotamiento se vea antes de que falle una orden de pago. Los
+disponibles salen de `MAX(chq_numero)` y no del conteo, porque un número anulado no se reutiliza.
+
+Las validaciones viven en `ChequeraService`, adentro de la transacción. De paso se corrigió que
+`ChequeraDAO` no hidrataba la cuenta: el combo de chequera de la Orden de Pago mostraba la serie sin el
+nombre del banco.
+
+---
 
 ### 2026-08-17 al 28 — Entrega de cheques al proveedor y ajustes de la Orden de Pago
 
@@ -772,10 +801,10 @@ Gestión financiera completa: cuentas bancarias, cheques, cobros, pagos, caja, f
     fecha no movieron stock.
 11. ~~**Subir el esquema con `creditos.id_cobro` nullable.**~~ ✅ Subido el 2026-08-17; ya se puede
     registrar un depósito bancario sin módulo de Cobros. Ver `MODULO_TESORERIA_PLAN.md` §D.
-12. **Gestión de cheques** (`ChequeServlet` + `cheque.jsp`): ABM de chequeras — hoy vienen del seed y
-    cuando se agote el rango la emisión se corta — y **anular un cheque individual** (hoy sólo se
-    anulan en cascada al anular la orden de pago). La **entrega al proveedor** ya no está acá: se
-    implementó el 2026-08-17 dentro de la Orden de Pago. Ver `MODULO_TESORERIA_PLAN.md` §G.
+12. **Anular un cheque individual** (`ChequeServlet` + `cheque.jsp`): hoy sólo se anulan en cascada al
+    anular la orden de pago, y el caso real —cheque mal impreso, extraviado o rechazado, sin deshacer
+    el pago— no tiene camino. Es lo único que queda de §G: la **entrega al proveedor** se implementó el
+    2026-08-17 y el **ABM de chequeras** el 2026-08-31. Ver `MODULO_TESORERIA_PLAN.md` §G3.
 13. **Informes.** No hay nada implementado ni planificado: sin código, sin librería en el `pom.xml` y
     sin definición de qué informes ni en qué formato. Ver `MODULO_TESORERIA_PLAN.md` §H.
 14. ~~**Probar la Orden de Pago de punta a punta.**~~ ✅ Probada el 2026-08-17: el circuito corre y la

@@ -92,6 +92,7 @@ usuario inicio sesion, se debe agregar esta validacon en cada una de las vistas 
                                 <nav class="sb-sidenav-menu-nested nav">
                                     <a class="nav-link" href="tipoArticulo.jsp">Agregar Banco</a>
                                     <a class="nav-link" href="CuentaServlet?menu=Cuenta&accion=Listar">Cuentas Bancarias</a>
+                                    <a class="nav-link" href="ChequeraServlet?menu=Chequera&accion=Listar">Chequeras</a>
                                 </nav>
                             </div>
                             <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#pagesCollapseError2" aria-expanded="false" aria-controls="pagesCollapseError2">

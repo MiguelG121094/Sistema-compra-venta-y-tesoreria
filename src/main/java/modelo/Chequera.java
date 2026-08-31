@@ -18,6 +18,12 @@ public class Chequera implements java.io.Serializable {
     private Long desdeNumero;
     private Long hastaNumero;
 
+    // Se calculan para la grilla del ABM de chequeras y no se persisten: cuantos cheques
+    // se emitieron, cual es el proximo numero libre y cuantos quedan hasta agotar el rango.
+    private Long emitidos;
+    private Long proximoNumero;
+    private Long disponibles;
+
     public Chequera() {
     }
 
@@ -71,5 +77,29 @@ public class Chequera implements java.io.Serializable {
 
     public void setHastaNumero(Long hastaNumero) {
         this.hastaNumero = hastaNumero;
+    }
+
+    public Long getEmitidos() {
+        return emitidos;
+    }
+
+    public void setEmitidos(Long emitidos) {
+        this.emitidos = emitidos;
+    }
+
+    public Long getProximoNumero() {
+        return proximoNumero;
+    }
+
+    public void setProximoNumero(Long proximoNumero) {
+        this.proximoNumero = proximoNumero;
+    }
+
+    public Long getDisponibles() {
+        return disponibles;
+    }
+
+    public void setDisponibles(Long disponibles) {
+        this.disponibles = disponibles;
     }
 }

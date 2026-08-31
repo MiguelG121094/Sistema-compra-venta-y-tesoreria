@@ -473,9 +473,11 @@ Decisiones tomadas al implementarlo:
 
 > **📍 DÓNDE NOS QUEDAMOS (2026-08-31):** Provisión, **Orden de Pago** y **entrega de cheques**
 > terminadas. El circuito corre, la provisión pasa a `'Procesada'` y el cheque queda `'Entregado'`.
-> Quedan pendientes el **ABM de chequeras** (§G1) y **Débitos/Créditos** (§D); el orden en que se
-> encaran está por definir. §G1 es el único que puede cortar la operación, porque cuando se agote la
-> chequera del seed la emisión falla.
+> El **ABM de chequeras** (§G1) se hizo el 2026-08-31, así que ya no depende del seed. Lo próximo es
+> **Débitos/Créditos** (§D); de cheques queda la anulación individual (§G3).
+>
+> _Historial:_ **ABM de chequeras (G1) COMPLETO** (2026-08-31) — `ChequeraServlet` + `chequera.jsp`
+> calcados de Cuentas Bancarias, con control de solapamiento de rangos y del consumo de la chequera.
 >
 > _Historial:_ **Entrega de cheques (3.3) COMPLETA** (2026-08-17) — columnas `chq_fecha_entrega` y
 > `chq_entregado_a`, estado `'Entregado'`, modal en la OP y el N° de recibo cargado en ese momento;
@@ -557,7 +559,7 @@ existan OP, débitos y créditos (por eso va al final).
 
 ---
 
-### G. Gestión de cheques *(parcial — G2 implementada; G1 y G3 pendientes)*
+### G. Gestión de cheques *(parcial — G1 y G2 implementadas; G3 pendiente)*
 
 > Sección agregada el 2026-08-13. §C la venía referenciando como "§G" (ABM de chequera) pero nunca
 > se había escrito. Cubre además dos requerimientos que no estaban planificados en ningún lado:
@@ -568,12 +570,35 @@ existan OP, débitos y créditos (por eso va al final).
 El cheque nace **dentro de la Orden de Pago**: `OrdenPagoService` lo emite con estado `'Emitido'` y
 número tomado del rango de la chequera, y desde la misma OP se registra su entrega al proveedor. No
 existe todavía una pantalla propia de cheques. De las tres cosas que faltaban, **G2 ya está
-implementada**; quedan G1 y G3:
+implementada**, y **G1 también** desde el 2026-08-31; queda G3:
 
-**G1. ABM de chequeras.** Hoy las chequeras vienen del **seed** (`Inserts inciales.sql`: Itaú
-1000001–1000050, Ueno 2000001–2000050). Cuando se agote una, no hay forma de cargar otra desde la
-aplicación y la emisión va a fallar con *"Chequera agotada"*. Es el pendiente más urgente de los
-tres, porque bloquea la operación normal.
+**G1. ABM de chequeras.** ✅ **Implementado el 2026-08-31.** Antes las chequeras venían solo del
+**seed** (`Inserts inciales.sql`: Itaú 1000001–1000050, Ueno 2000001–2000050) y, al agotarse una, la
+emisión fallaba con *"Chequera agotada"* sin forma de cargar otra desde la aplicación. `ChequeraServlet`
++ `chequera.jsp` están calcados de Cuentas Bancarias (`CuentaServlet` / `cuenta.jsp`), registrados en
+`AuthorizationFilter` bajo el módulo `tesoreria` y enlazados desde el menú.
+
+Lo que se resolvió más allá del alta simple:
+
+- **Solapamiento de rangos.** `proximoNumeroCheque` calcula `MAX(chq_numero) + 1` **por chequera, no
+  por cuenta**: dos chequeras de la misma cuenta con rangos que se pisan emitirían dos cheques con el
+  mismo número en el mismo banco, y la base no tiene ningún `CHECK` que lo impida. El Service rechaza
+  el solapamiento al insertar y al actualizar.
+- **Rango contra lo ya emitido.** Al editar, el rango nuevo tiene que contener los cheques que la
+  chequera ya emitió; si no, esos cheques quedarían fuera de su propia chequera y el próximo número
+  saldría mal.
+- **Eliminar.** `cheque.id_chequera` es FK `ON DELETE NO ACTION`, así que el borrado de una chequera
+  con cheques fallaba con el error crudo de PostgreSQL. Ahora se corta antes, avisando cuántos cheques
+  tiene.
+- **Consumo visible.** La grilla muestra *Emitidos*, *Próximo N°* y *Disponibles*, con badge amarillo
+  cuando quedan 10 o menos y rojo cuando está agotada. Los disponibles salen de `MAX(chq_numero)` y no
+  del conteo, porque un número anulado no se reutiliza y consume rango igual.
+
+De paso se corrigió que `ChequeraDAO` no hidrataba la cuenta: el combo de chequera de la Orden de Pago
+mostraba la serie sin el nombre del banco.
+
+Las validaciones viven en `ChequeraService`, **adentro de la transacción**, para que el control y el
+guardado vean el mismo estado.
 
 **G2. Registrar la entrega al proveedor (requerimiento 3.3).** ✅ **Implementado el 2026-08-17.** La
 decisión que estaba pendiente se resolvió por las columnas: el estado `'Entregado'` solo no alcanzaba,
@@ -718,7 +743,7 @@ PDF para los informes que realmente se impriman y archiven.
 - [ ] `ConciliacionBancariaDAO` (+detalle), Service, Servlet, JSP
 
 **G. Gestión de cheques** *(cierra 3.3 y completa 3.4)*
-- [ ] **ABM de chequeras** (G1) — hoy vienen del seed; cuando se agote una, la emisión falla
+- [x] ✅ **ABM de chequeras** (G1) — `ChequeraServlet` + `chequera.jsp` (2026-08-31), con control de solapamiento, de rango contra lo emitido y del consumo de la chequera
 - [x] ✅ **Registrar entrega al proveedor** (G2) — implementado el 2026-08-17 con estado `'Entregado'` + `chq_fecha_entrega` / `chq_entregado_a`; se registra desde la OP y arrastra el N° de recibo
 - [ ] **Anular un cheque individual** (G3) — hoy sólo se anulan en cascada al anular la OP
 - [ ] `ChequeServlet` + `cheque.jsp` + `ChequeService`
@@ -740,7 +765,7 @@ PDF para los informes que realmente se impriman y archiven.
   rendición la referencian juntos. Cuidado al insertar/consultar.
 - ~~`orden_pago_detalle` con PK solo `id_orden_pago`~~ → ✅ **resuelto**: ahora tiene serial `id_orden_pago_det` (N facturas por OP).
 - **`fondo_fijo_rendicion(_detalle)`** sin secuencia serial en la PK (pendiente para §E).
-- **Cheque desde chequera:** el próximo `chq_numero` debe validarse dentro de `[chequera_desde_nro, chequera_hasta_nro]`; controlar "chequera agotada" (§C). ⚠️ Hoy **no hay ABM de chequeras** (vienen del seed): cuando se agote el rango, la emisión de cheques se corta y no hay forma de cargar una nueva desde la aplicación (§G1).
+- **Cheque desde chequera:** el próximo `chq_numero` debe validarse dentro de `[chequera_desde_nro, chequera_hasta_nro]`; controlar "chequera agotada" (§C). ~~Hoy no hay ABM de chequeras~~ → ✅ **resuelto** (2026-08-31, §G1): se cargan desde la aplicación y la grilla avisa el consumo del rango. Queda el riesgo de fondo: el próximo número se calcula **por chequera y no por cuenta**, así que dos rangos solapados de la misma cuenta darían el mismo número de cheque; por eso el ABM valida el solapamiento.
 - ~~**`creditos.id_cobro`** era `NOT NULL` y bloqueaba el registro de depósitos~~ → ✅ **resuelto**: nullable y subido (2026-08-17).
 - ~~**`cheque` no tiene columnas de entrega** (fecha ni receptor)~~ → ✅ **resuelto**: se agregaron `chq_fecha_entrega` y `chq_entregado_a` (2026-08-17). `chq_a_la_orden` sigue siendo a nombre de quién se emite, no quién retiró (§G2).
 - **Descuento de saldo greenfield**: hoy **nada** descuenta `cta_pag_saldo` al pagar; se diseña desde
@@ -776,7 +801,7 @@ recaudación a depositar → **crédito bancario** → conciliación. Se planifi
 | 2 | Provisión de cuenta a pagar (+ neteo NC) | 3.1 | cuenta_pagar (✅) |
 | 3 | Orden de pago + formas de pago (descuenta saldo) | 3.2 | Provisión, Cuenta bancaria |
 | 4 | Débitos / Créditos (+ depósitos) | 3.8, 3.9 | Cuenta bancaria, `id_cobro` nullable |
-| 5 | Gestión de cheques (ABM chequera ❌, entrega ✅, anulación individual ❌) | 3.3, 3.4 | Orden de pago |
+| 5 | Gestión de cheques (ABM chequera ✅, entrega ✅, anulación individual ❌) | 3.3, 3.4 | Orden de pago |
 | 6 | Fondo Fijo + rendición | 3.5, 3.6, 3.7 | Provisión, Orden de pago |
 | 7 | Conciliación bancaria | 3.10 | OP, Débitos, Créditos |
 | 8 | Informes | 3.11 | Lo que se quiera informar |

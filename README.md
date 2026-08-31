@@ -365,7 +365,8 @@ Sistema-compra-venta-y-tesoreria/
 | Orden de Pago (+ formas de pago, cheque, chequera) | ✅ | ✅ | ✅ | ✅ **Completo** — `OrdenPagoServlet` + `ordenPago.jsp`; descuenta el saldo, emite cheques, registra su entrega al proveedor y anula con reversa total. Probada end-to-end (2026-08-17) |
 | Débitos / Créditos bancarios | ✅ | ❌ | ❌ | Próximo (alimentan la conciliación) |
 | Depósitos bancarios (boletas) | ✅ | ❌ | ❌ | Pendiente — es el mismo ABM que Créditos; `creditos.id_cobro` ya es nullable |
-| Gestión de cheques (ABM chequera, anulación individual) | ✅ | ⚠️ | ❌ | Pendiente — la **entrega al proveedor** ya se registra desde la Orden de Pago (2026-08-17); falta el ABM de chequeras y anular un cheque suelto |
+| Chequeras (ABM) | ✅ | ✅ | ✅ | ✅ **Completo** — `ChequeraServlet` + `chequera.jsp`; valida solapamiento de rangos y avisa el consumo de la chequera |
+| Anulación individual de cheques | ✅ | ⚠️ | ❌ | Pendiente — hoy sólo se anulan en cascada al anular la orden de pago (ver `MODULO_TESORERIA_PLAN.md` §G3) |
 | Informes | — | — | — | Pendiente — sin planificar (ver `MODULO_TESORERIA_PLAN.md` §H) |
 | Fondo Fijo + Rendición | ✅ | ❌ | ❌ | Pendiente |
 | Conciliación Bancaria | ✅ | ❌ | ❌ | Pendiente (objetivo final del módulo) |
