@@ -567,7 +567,7 @@
                                                 </div>
                                                 <div class="col-md-4">
                                                     <div class="form-floating">
-                                                        <input class="form-control" id="entregadoA" name="entregadoA"
+                                                        <input required="true" class="form-control" id="entregadoA" name="entregadoA"
                                                                type="text" maxlength="80" placeholder="Quién retiró">
                                                         <label for="entregadoA">Retirado por</label>
                                                     </div>
@@ -580,10 +580,6 @@
                                                         <label for="nroReciboEntrega">Recibo Nro del proveedor</label>
                                                     </div>
                                                 </div>
-                                            </div>
-                                            <div class="form-text mt-2">
-                                                "Retirado por" es quién vino a buscar el cheque, que no siempre es
-                                                el mismo nombre a la orden del cheque. El recibo es opcional.
                                             </div>
                                         </div>
 
