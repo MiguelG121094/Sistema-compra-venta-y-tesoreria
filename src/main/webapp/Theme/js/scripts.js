@@ -27,11 +27,21 @@ window.addEventListener('DOMContentLoaded', event => {
 
 // Highlight active menu item - using jQuery for better compatibility
 $(document).ready(function() {
-    var currentUrl = window.location.href;
     var currentPath = window.location.pathname;
 
     // Get the page/servlet name from current URL
     var currentPage = currentPath.substring(currentPath.lastIndexOf('/') + 1);
+
+    // Se cuenta cuantas entradas del menu apuntan a cada pagina.
+    var entradasPorPagina = {};
+    $('.sb-sidenav-menu .nav-link').each(function() {
+        var linkHref = $(this).attr('href');
+        if (!linkHref || linkHref === '#') {
+            return;
+        }
+        var pagina = linkHref.split('?')[0].toLowerCase();
+        entradasPorPagina[pagina] = (entradasPorPagina[pagina] || 0) + 1;
+    });
 
     // Find and activate the matching menu link
     $('.sb-sidenav-menu .nav-link').each(function() {
@@ -46,22 +56,33 @@ $(document).ready(function() {
         var linkPage = linkHref.split('?')[0];
 
         // Check if this link matches the current page
-        if (currentPage && linkPage && currentPage.toLowerCase() === linkPage.toLowerCase()) {
-            // Add active class
-            $(this).addClass('active');
+        if (!currentPage || !linkPage || currentPage.toLowerCase() !== linkPage.toLowerCase()) {
+            return;
+        }
 
-            // Expand all parent collapse elements
-            $(this).parents('.collapse').each(function() {
-                $(this).addClass('show');
+        // Varias entradas pueden apuntar al mismo servlet y distinguirse solo por sus parametros,
+        // como otros debitos y otros creditos. Comparar la pagina las pintaria a las dos, y el
+        // query no sirve porque despues de un POST la URL no lo trae: en ese caso la activa la
+        // marca menuLateral.jsp desde el servidor, que si sabe cual se esta viendo.
+        if (entradasPorPagina[linkPage.toLowerCase()] > 1) {
+            return;
+        }
 
-                // Update the toggle button
-                var collapseId = $(this).attr('id');
-                var toggleBtn = $('[data-bs-target="#' + collapseId + '"]');
-                if (toggleBtn.length) {
-                    toggleBtn.removeClass('collapsed');
-                    toggleBtn.attr('aria-expanded', 'true');
-                }
-            });
+        // Add active class
+        $(this).addClass('active');
+    });
+
+    // Se despliegan los acordeones que contienen la entrada activa, la haya marcado este script
+    // o la propia vista.
+    $('.sb-sidenav-menu .nav-link.active').parents('.collapse').each(function() {
+        $(this).addClass('show');
+
+        // Update the toggle button
+        var collapseId = $(this).attr('id');
+        var toggleBtn = $('[data-bs-target="#' + collapseId + '"]');
+        if (toggleBtn.length) {
+            toggleBtn.removeClass('collapsed');
+            toggleBtn.attr('aria-expanded', 'true');
         }
     });
 });

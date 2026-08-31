@@ -267,6 +267,9 @@ public class MovimientoBancarioServlet extends HttpServlet {
         request.setAttribute("titulo", TIPO_CREDITO.equals(tipo) ? "CARGAR CRÉDITOS" : "CARGAR DÉBITOS");
         request.setAttribute("movimiento", mov);
         request.setAttribute("esNuevo", esNuevo);
+        // Las dos entradas del menu apuntan a este servlet: sin esto no hay forma de saber cual
+        // pintar como activa, porque la URL despues de un POST no trae el tipo.
+        request.setAttribute("menuActivo", TIPO_CREDITO.equals(tipo) ? "movimientoCredito" : "movimientoDebito");
 
         try {
             request.setAttribute("listaCuentas", cuentaService.listarCuenta());
