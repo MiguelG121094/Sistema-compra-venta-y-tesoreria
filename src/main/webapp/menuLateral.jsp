@@ -117,6 +117,8 @@ usuario inicio sesion, se debe agregar esta validacon en cada una de las vistas 
                         <nav class="sb-sidenav-menu-nested nav">
                             <a class="nav-link" href="ProvisionCuentaPagarServlet?menu=ProvisionCuentaPagar&accion=ListarModal">Provisión de Cta. Pagar</a>
                             <a class="nav-link" href="OrdenPagoServlet?menu=OrdenPago&accion=ListarModal">Orden de Pago</a>
+                            <a class="nav-link" href="MovimientoBancarioServlet?menu=MovimientoBancario&tipo=debito&accion=Listar">Cargar otros débitos</a>
+                            <a class="nav-link" href="MovimientoBancarioServlet?menu=MovimientoBancario&tipo=credito&accion=Listar">Cargar otros créditos</a>
                         </nav>
                     </div>
 

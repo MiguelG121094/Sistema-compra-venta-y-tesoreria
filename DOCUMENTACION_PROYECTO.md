@@ -224,8 +224,8 @@ Faltan crear los DAOs para las siguientes entidades:
 [ ] TarjetaDAO
 [ ] ConciliacionBancariaDAO
 [ ] ConciliacionBancariaDetalleDAO
-[ ] DebitoDAO
-[ ] CreditoDAO
+[x] DebitoDAO ✅ (2026-08-31)
+[x] CreditoDAO ✅ (2026-08-31)
 [ ] RecaudacionDepositarDAO
 [ ] RecaudacionDepositarDetalleDAO
 [ ] TipoComprobanteDAO
@@ -312,7 +312,7 @@ Faltan crear las vistas para las nuevas funcionalidades:
 - [x] Orden de Pago ✅ (2026-07 — N formas de pago mixtas transferencia/cheque multi-cuenta, descuenta `cta_pag_saldo`, consume la provisión y anula con reversa total; ver plan §C). **Probada end-to-end el 2026-08-17.**
 - [x] Emisión de Cheques ✅ (2026-07 — se emiten desde la Orden de Pago, con N° tomado del rango de la chequera)
 - [x] Entrega de cheques al proveedor ✅ (2026-08-17 — se registra desde la Orden de Pago: estado `'Entregado'`, `chq_fecha_entrega`, `chq_entregado_a` y el N° de recibo, todo en una transacción; ver plan §G2)
-- [ ] Débitos / Créditos bancarios (plan §D) — **próximo**
+- [x] Débitos / Créditos bancarios ✅ (2026-08-31 — `MovimientoBancarioServlet` + `movimientoBancario.jsp`, una vista parametrizada por tipo; cierra también el registro de depósitos, porque la boleta es una fila de `creditos`; ver plan §D)
 - [x] Gestión de Chequeras ✅ (2026-08-31 — `ChequeraServlet` + `chequera.jsp`, calcados de Cuentas Bancarias; validan solapamiento de rangos y muestran el consumo de la chequera; ver plan §G1)
 - [ ] Gestión de Fondo Fijo + Rendición (plan §E)
 - [ ] Conciliación Bancaria (plan §F — el objetivo final)
@@ -388,6 +388,33 @@ Todas las entidades siguen el patrón POJO:
 ---
 
 ## Historial de Cambios
+
+### 2026-08-31 — Otros débitos y créditos bancarios
+
+Cierra §D del plan de tesorería y, con él, los requerimientos 3.8 y 3.9 de una vez: la boleta de
+depósito es una fila de `creditos`, como dice el comentario del esquema, así que no son dos módulos.
+
+Un solo `MovimientoBancarioServlet` + `movimientoBancario.jsp` sirven a los dos tipos, parametrizados
+por `tipo=debito|credito`, igual que `NotaCreditoDebitoServlet` con las notas. Para que la vista pudiera
+ser una sola, `Debito` y `Credito` implementan la interfaz `MovimientoBancario`. En el menú son dos
+entradas, así que el usuario ve dos pantallas.
+
+**Hizo falta agregar dos columnas por tabla**, porque el prototipo pedía cosas que el esquema no tenía
+dónde guardar:
+
+- `debitos_estado` / `creditos_estado` (`VARCHAR(20)`, *Vigente* / *Anulado*): el prototipo tiene botón
+  Anular. Anular marca y no borra, porque `conciliacion_bancaria_detalle` referencia estas filas y un
+  movimiento ya conciliado no puede desaparecer.
+- `debitos_tipo_cambio` / `creditos_tipo_cambio` (`DOUBLE PRECISION`, nullable): mismo criterio que
+  `forma_pag_tipo_cambio` en la orden de pago, para poder conciliar en guaraníes un movimiento sobre una
+  cuenta en dólares.
+
+La moneda es readonly y sale de la cuenta —no hay `id_moneda` en estas tablas, misma decisión que en la
+orden de pago—, y el combo de banco sólo filtra las cuentas en el cliente, sin persistirse. No se usó
+Session+Token: el movimiento es una sola fila y no hay carrito que sostener entre pedidos. Los
+movimientos no mueven ningún saldo, porque la cuenta bancaria no lo tiene: se cruzan en la conciliación.
+
+---
 
 ### 2026-08-31 — ABM de chequeras
 

@@ -10,7 +10,7 @@ import java.util.Date;
  *
  * @author Miguel
  */
-public class Debito implements java.io.Serializable {
+public class Debito implements MovimientoBancario {
 
     private static final long serialVersionUID = 1L;
 
@@ -20,6 +20,8 @@ public class Debito implements java.io.Serializable {
     private String detalle;
     private Cuenta cuenta;
     private Long monto;
+    private Double tipoCambio;
+    private String estado;
 
     public Debito() {
     }
@@ -36,6 +38,12 @@ public class Debito implements java.io.Serializable {
         this.detalle = detalle;
         this.cuenta = cuenta;
         this.monto = monto;
+    }
+
+    /** Alias de getIdDebito() que pide MovimientoBancario, para compartir la vista. */
+    @Override
+    public Long getId() {
+        return idDebito;
     }
 
     public Long getIdDebito() {
@@ -84,5 +92,21 @@ public class Debito implements java.io.Serializable {
 
     public void setMonto(Long monto) {
         this.monto = monto;
+    }
+
+    public Double getTipoCambio() {
+        return tipoCambio;
+    }
+
+    public void setTipoCambio(Double tipoCambio) {
+        this.tipoCambio = tipoCambio;
+    }
+
+    public String getEstado() {
+        return estado;
+    }
+
+    public void setEstado(String estado) {
+        this.estado = estado;
     }
 }

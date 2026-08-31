@@ -116,9 +116,13 @@ CREATE TABLE public.debitos (
                 debitos_detalle VARCHAR(255) NOT NULL,
                 id_cuenta INTEGER NOT NULL,
                 debito_monto INTEGER NOT NULL,
+                debitos_tipo_cambio DOUBLE PRECISION,
+                debitos_estado VARCHAR(20) NOT NULL,
                 CONSTRAINT id_debitos PRIMARY KEY (id_debitos)
 );
 COMMENT ON TABLE public.debitos IS 'comisiones bancarias, comisiones por cheques en dolars, gastos administrativos del banco';
+COMMENT ON COLUMN public.debitos.debitos_tipo_cambio IS 'cambio de dolar a guaranies del dia, solo si la cuenta es en dolares';
+COMMENT ON COLUMN public.debitos.debitos_estado IS 'Vigente, Anulado';
 COMMENT ON COLUMN public.debitos.debitos_detalle IS 'concepto de que se carga el debito, ejemplo descuento de comisiones bancaria, debito automatico de TC';
 
 
@@ -842,9 +846,13 @@ CREATE TABLE public.creditos (
                 id_cuenta INTEGER NOT NULL,
                 id_cobro INTEGER,
                 credito_monto INTEGER NOT NULL,
+                creditos_tipo_cambio DOUBLE PRECISION,
+                creditos_estado VARCHAR(20) NOT NULL,
                 CONSTRAINT id_creditos PRIMARY KEY (id_creditos)
 );
 COMMENT ON TABLE public.creditos IS 'deposito bancario, comisiones cobradas, capitalizacion de intereses';
+COMMENT ON COLUMN public.creditos.creditos_tipo_cambio IS 'cambio de dolar a guaranies del dia, solo si la cuenta es en dolares';
+COMMENT ON COLUMN public.creditos.creditos_estado IS 'Vigente, Anulado';
 COMMENT ON COLUMN public.creditos.creditos_nro_comprobante IS 'comprobante puede ser nro de boleta de deposito';
 COMMENT ON COLUMN public.creditos.creditos_detalle IS 'concepto de que se carga el credito, ejemplo ingresos como una venta donde se carga la boleta de deposito';
 

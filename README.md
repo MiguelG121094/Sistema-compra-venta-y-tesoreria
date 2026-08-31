@@ -363,8 +363,8 @@ Sistema-compra-venta-y-tesoreria/
 | Cuenta bancaria (+ moneda, tipo de cuenta, entidad financiera) | ✅ | ✅ | ✅ | ✅ **Completo** — ABM con `CuentaServlet` + `cuenta.jsp` |
 | Provisión de Cuenta a Pagar | ✅ | ✅ | ✅ | ✅ **Completo** — `ProvisionCuentaPagarServlet` + `provision.jsp` (netea el saldo a favor de las NC) |
 | Orden de Pago (+ formas de pago, cheque, chequera) | ✅ | ✅ | ✅ | ✅ **Completo** — `OrdenPagoServlet` + `ordenPago.jsp`; descuenta el saldo, emite cheques, registra su entrega al proveedor y anula con reversa total. Probada end-to-end (2026-08-17) |
-| Débitos / Créditos bancarios | ✅ | ❌ | ❌ | Próximo (alimentan la conciliación) |
-| Depósitos bancarios (boletas) | ✅ | ❌ | ❌ | Pendiente — es el mismo ABM que Créditos; `creditos.id_cobro` ya es nullable |
+| Débitos / Créditos bancarios | ✅ | ✅ | ✅ | ✅ **Completo** — `MovimientoBancarioServlet` + `movimientoBancario.jsp`, una vista por tipo; se anulan, no se borran |
+| Depósitos bancarios (boletas) | ✅ | ✅ | ✅ | ✅ **Completo** — se cargan como un crédito, con la boleta en el comprobante; `id_cobro` queda vacío hasta que exista Ventas |
 | Chequeras (ABM) | ✅ | ✅ | ✅ | ✅ **Completo** — `ChequeraServlet` + `chequera.jsp`; valida solapamiento de rangos y avisa el consumo de la chequera |
 | Anulación individual de cheques | ✅ | ⚠️ | ❌ | Pendiente — hoy sólo se anulan en cascada al anular la orden de pago (ver `MODULO_TESORERIA_PLAN.md` §G3) |
 | Informes | — | — | — | Pendiente — sin planificar (ver `MODULO_TESORERIA_PLAN.md` §H) |

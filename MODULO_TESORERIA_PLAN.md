@@ -56,8 +56,8 @@ Mapeo de los requerimientos del módulo contra lo que existe (revisado 2026-08-3
 | 3.5 | Asignar fondo fijo | ❌ Pendiente | §E |
 | 3.6 | Rendir fondo fijo | ❌ Pendiente | §E |
 | 3.7 | Registrar reposición de fondo fijo | ❌ Pendiente | §E |
-| 3.8 | Cargar débitos y créditos | ❌ Pendiente | §D |
-| 3.9 | Registrar depósitos (boletas bancarias) | ❌ Pendiente — mismo ABM que 3.8; `creditos.id_cobro` ya es nullable ✅ | §D |
+| 3.8 | Cargar débitos y créditos | ✅ **Completo** (2026-08-31) | §D |
+| 3.9 | Registrar depósitos (boletas bancarias) | ✅ **Completo** (2026-08-31) — mismo circuito que 3.8 | §D |
 | 3.10 | Generar conciliación bancaria | ❌ Pendiente (objetivo final) | §F |
 | 3.11 | Generar informes | ❌ Pendiente — **sin planificar hasta ahora** | §H |
 
@@ -473,8 +473,13 @@ Decisiones tomadas al implementarlo:
 
 > **📍 DÓNDE NOS QUEDAMOS (2026-08-31):** Provisión, **Orden de Pago** y **entrega de cheques**
 > terminadas. El circuito corre, la provisión pasa a `'Procesada'` y el cheque queda `'Entregado'`.
-> El **ABM de chequeras** (§G1) se hizo el 2026-08-31, así que ya no depende del seed. Lo próximo es
-> **Débitos/Créditos** (§D); de cheques queda la anulación individual (§G3).
+> **Débitos y créditos** (§D) quedaron hechos el 2026-08-31, con lo que cierran 3.8 y 3.9. Con eso ya
+> están cargados los tres orígenes de movimiento que la conciliación necesita: órdenes de pago,
+> débitos y créditos. Lo próximo es **Fondo Fijo** (§E); de cheques queda la anulación individual (§G3).
+>
+> _Historial:_ **Débitos y créditos (D) COMPLETOS** (2026-08-31) — `MovimientoBancarioServlet` +
+> `movimientoBancario.jsp`, una sola vista parametrizada por tipo. Hizo falta agregar dos columnas por
+> tabla: el estado (para poder anular) y el tipo de cambio. Ver §D.
 >
 > _Historial:_ **ABM de chequeras (G1) COMPLETO** (2026-08-31) — `ChequeraServlet` + `chequera.jsp`
 > calcados de Cuentas Bancarias, con control de solapamiento de rangos y del consumo de la chequera.
@@ -507,20 +512,48 @@ Decisiones tomadas al implementarlo:
 **Tablas:** `debitos` (egresos: comisiones, GA banco, débitos automáticos), `creditos` (ingresos:
 depósitos/boletas; enlaza `id_cobro` del lado ventas).
 
-ABM sobre una `cuenta`. Alimentan la conciliación (son movimientos del banco que no vienen de una OP).
+✅ **Implementado el 2026-08-31.** Cierra 3.8 y 3.9. Movimientos del banco que no vienen de una orden
+de pago y que alimentan la conciliación.
 
-**Componentes:** `DebitoDAO`/`CreditoDAO` + Services + Servlet(s) + JSP(s). ABM relativamente simple.
+**Componentes:** `DebitoDAO` / `CreditoDAO`, `DebitoService` / `CreditoService`, y **un solo**
+`MovimientoBancarioServlet` + `movimientoBancario.jsp` parametrizados por tipo (`tipo=debito|credito`),
+igual que `NotaCreditoDebitoServlet` hace con las notas: es el mismo formulario y lo único que cambia es
+la tabla donde cae el movimiento. En el menú son dos entradas, así que el usuario ve dos pantallas.
+
+Para que la vista pudiera ser una sola, `Debito` y `Credito` implementan la interfaz
+`MovimientoBancario` (`getId`, `getMonto`, `getEstado`…): así la JSP no tiene que preguntar qué está
+mirando para saber qué getter llamar.
+
+**Dos columnas nuevas por tabla** (`debitos_estado` / `creditos_estado` y `debitos_tipo_cambio` /
+`creditos_tipo_cambio`), porque el prototipo pedía cosas que el esquema no tenía dónde guardar:
+
+- **Estado** (`VARCHAR(20)`, *Vigente* / *Anulado*): el prototipo tiene botón **Anular** y no había
+  columna. Anular **marca, no borra**: `conciliacion_bancaria_detalle` referencia `id_debitos` e
+  `id_creditos`, así que un movimiento ya conciliado no puede desaparecer. Es además el criterio del
+  resto del módulo (cheque, orden de pago, provisión).
+- **Tipo de cambio** (`DOUBLE PRECISION`, nullable): mismo criterio que `forma_pag_tipo_cambio` en la
+  orden de pago. Una comisión sobre una cuenta en dólares necesita la cotización para entrar a la
+  conciliación en guaraníes. Es opcional: en una cuenta en guaraníes se deja vacío.
+
+**Decisiones de la vista:**
+
+- **Moneda es readonly y sale de la cuenta**, no se carga ni se guarda: no hay `id_moneda` en estas
+  tablas, y es la misma decisión que se tomó en la orden de pago (§C6).
+- **Banco es un combo de filtro** que no se persiste: la tabla sólo guarda `id_cuenta`. Filtra las
+  cuentas del combo de al lado, en el cliente, sin ida y vuelta al servidor.
+- **Sin Session+Token.** El movimiento es una sola fila, no hay carrito que sostener entre pedidos, así
+  que no hace falta el estado en sesión que sí usan la orden de pago y la provisión.
+- **No mueven ningún saldo.** `cuenta` no tiene columna de saldo: el movimiento se cruza recién en la
+  conciliación (§F).
 
 **⭐ Acá también entra el registro de depósitos bancarios (requerimiento 3.9).** La boleta de
 depósito **es** una fila de `creditos`: el propio esquema lo dice —
 *"`creditos_nro_comprobante`: comprobante puede ser nro de boleta de deposito"*. O sea que 3.8 y
 3.9 se resuelven con el mismo ABM, no son dos módulos.
 
-> **Bloqueo resuelto en Power Architect, pendiente de subir a la BD (2026-08-13).**
-> `creditos.id_cobro` era **`NOT NULL`**, y un cobro pertenece al ciclo de **ventas**, que todavía
-> no tiene UI: con esa restricción no se podía registrar un depósito sin implementar Cobros antes.
-> Ya está cambiado a **nullable** en Power Architect; **falta regenerar y subir el esquema**. Hasta
-> que eso ocurra, el ABM de créditos no puede insertar un depósito suelto.
+> **Bloqueo resuelto (2026-08-17).** `creditos.id_cobro` era **`NOT NULL`**, y un cobro pertenece al
+> ciclo de **ventas**, que todavía no tiene UI: con esa restricción no se podía registrar un depósito
+> sin implementar Cobros antes. Ya está nullable y subido a la BD.
 >
 > Con `id_cobro` nullable quedan dos orígenes para un crédito: **con cobro** (depósito de una
 > recaudación de ventas, cuando exista ese módulo) y **sin cobro** (depósito directo, transferencia
@@ -688,8 +721,7 @@ PDF para los informes que realmente se impriman y archiven.
 3. ✅ **Orden de pago** (C) — descuento de saldo + **N formas de pago mixtas** con cheque real desde chequera. *(HECHA — falta la prueba end-to-end.)*
 4. ⏳ **Probar la Orden de Pago de punta a punta** — es el requerimiento 3.2 y todo lo que sigue se
    apoya en que funcione (el descuento de saldo, el cheque emitido y la reversa al anular). *(PRÓXIMO.)*
-5. **Débitos / Créditos** (D) — ABM de movimientos bancarios; cierra **3.8 y 3.9** de una vez.
-   Requiere haber subido el esquema con `creditos.id_cobro` nullable.
+5. ~~**Débitos / Créditos** (D)~~ ✅ hecho el 2026-08-31; cerró **3.8 y 3.9** de una vez.
 6. **Gestión de cheques** (G) — una pantalla cierra **3.3**, completa **3.4** y saca el bloqueo de
    la chequera agotada. Barata en relación a lo que resuelve.
 7. **Fondo Fijo + rendición** (E) — **3.5, 3.6 y 3.7**; reutiliza B y C. Agregar antes las
@@ -732,8 +764,9 @@ PDF para los informes que realmente se impriman y archiven.
 
 **D. Débitos / Créditos** *(cierra 3.8 y 3.9)*
 - [x] ✅ **`creditos.id_cobro` nullable** — cambiado en Power Architect y subido a la BD (2026-08-17)
-- [ ] `DebitoDAO`/`CreditoDAO` + Services + Servlets + JSPs (ABM)
-- [ ] En el ABM de créditos, dejar `id_cobro` vacío: el enlace con cobros llega recién con Ventas
+- [x] ✅ `DebitoDAO`/`CreditoDAO` + Services + `MovimientoBancarioServlet` + `movimientoBancario.jsp` (2026-08-31)
+- [x] ✅ En el ABM de créditos, `id_cobro` queda vacío: el enlace con cobros llega recién con Ventas
+- [x] ✅ Columnas nuevas `debitos_estado`/`creditos_estado` y `debitos_tipo_cambio`/`creditos_tipo_cambio`
 
 **E. Fondo Fijo** *(cierra 3.5, 3.6 y 3.7)*
 - [ ] Revisar secuencia (PK no serial) de `fondo_fijo_rendicion(_detalle)`

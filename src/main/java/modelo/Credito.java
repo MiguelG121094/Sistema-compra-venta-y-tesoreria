@@ -10,7 +10,7 @@ import java.util.Date;
  *
  * @author Miguel
  */
-public class Credito implements java.io.Serializable {
+public class Credito implements MovimientoBancario {
 
     private static final long serialVersionUID = 1L;
 
@@ -21,6 +21,8 @@ public class Credito implements java.io.Serializable {
     private Cuenta cuenta;
     private Cobro cobro;
     private Long monto;
+    private Double tipoCambio;
+    private String estado;
 
     public Credito() {
     }
@@ -38,6 +40,12 @@ public class Credito implements java.io.Serializable {
         this.cuenta = cuenta;
         this.cobro = cobro;
         this.monto = monto;
+    }
+
+    /** Alias de getIdCredito() que pide MovimientoBancario, para compartir la vista. */
+    @Override
+    public Long getId() {
+        return idCredito;
     }
 
     public Long getIdCredito() {
@@ -94,5 +102,21 @@ public class Credito implements java.io.Serializable {
 
     public void setMonto(Long monto) {
         this.monto = monto;
+    }
+
+    public Double getTipoCambio() {
+        return tipoCambio;
+    }
+
+    public void setTipoCambio(Double tipoCambio) {
+        this.tipoCambio = tipoCambio;
+    }
+
+    public String getEstado() {
+        return estado;
+    }
+
+    public void setEstado(String estado) {
+        this.estado = estado;
     }
 }
