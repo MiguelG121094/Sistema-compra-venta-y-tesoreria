@@ -39,13 +39,25 @@
                         </div>
                         <div style="border-bottom: 1px solid black; width: 100%; margin: 20px 0;"></div>
 
+                        <%-- Si el alta o la edición se rechazan, el formulario se rearma con lo que vino en
+                             el request y no queda vacío. Sólo si además falló: cuando sale bien tiene que
+                             quedar limpio para cargar el siguiente. Un Eliminar rechazado también manda el
+                             id, y no tiene que dejar el formulario en modo edición. --%>
+                        <c:set var="rearmar" value="${(param.accion eq 'Insertar' or param.accion eq 'Actualizar') and tipoAlert ne 'alert-success'}" />
+                        <c:set var="vId" value="${rearmar and not empty param.id ? param.id : cuentaEdit.getIdCuenta()}" />
+                        <c:set var="vEntidad" value="${rearmar ? param.idEntidadFinanciera : cuentaEdit.getEntidadFinanciera().getIdEntidadFinanciera()}" />
+                        <c:set var="vTipoCuenta" value="${rearmar ? param.idTipoCuenta : cuentaEdit.getTipoCuenta().getIdTipoCuenta()}" />
+                        <c:set var="vMoneda" value="${rearmar ? param.idMoneda : cuentaEdit.getMoneda().getIdMoneda()}" />
+                        <c:set var="vNumero" value="${rearmar ? param.numero : cuentaEdit.getNumero()}" />
+                        <c:set var="editando" value="${not empty vId}" />
+
                         <div class="d-flex">
                             <!-- Formulario -->
                             <div class="col-sm-2" style="width: 33%;">
                                 <div class="card">
                                     <div class="card-body">
                                         <form action="CuentaServlet?menu=Cuenta" method="POST">
-                                            <input type="hidden" name="id" value="${cuentaEdit.getIdCuenta()}">
+                                            <input type="hidden" name="id" value="${vId}">
 
                                             <div class="mb-3">
                                                 <label class="form-label">Entidad Financiera</label>
@@ -53,7 +65,7 @@
                                                     <option value="">Seleccionar...</option>
                                                     <c:forEach var="ent" items="${listaEntidades}">
                                                         <option value="${ent.getIdEntidadFinanciera()}"
-                                                            ${cuentaEdit.getEntidadFinanciera().getIdEntidadFinanciera() == ent.getIdEntidadFinanciera() ? 'selected' : ''}>
+                                                            ${vEntidad == ent.getIdEntidadFinanciera() ? 'selected' : ''}>
                                                             ${ent.getNombre()}
                                                         </option>
                                                     </c:forEach>
@@ -66,7 +78,7 @@
                                                     <option value="">Seleccionar...</option>
                                                     <c:forEach var="tc" items="${listaTiposCuenta}">
                                                         <option value="${tc.getIdTipoCuenta()}"
-                                                            ${cuentaEdit.getTipoCuenta().getIdTipoCuenta() == tc.getIdTipoCuenta() ? 'selected' : ''}>
+                                                            ${vTipoCuenta == tc.getIdTipoCuenta() ? 'selected' : ''}>
                                                             ${tc.getDescripcion()}
                                                         </option>
                                                     </c:forEach>
@@ -79,7 +91,7 @@
                                                     <option value="">Seleccionar...</option>
                                                     <c:forEach var="mon" items="${listaMonedas}">
                                                         <option value="${mon.getIdMoneda()}"
-                                                            ${cuentaEdit.getMoneda().getIdMoneda() == mon.getIdMoneda() ? 'selected' : ''}>
+                                                            ${vMoneda == mon.getIdMoneda() ? 'selected' : ''}>
                                                             ${mon.getDescripcion()}
                                                         </option>
                                                     </c:forEach>
@@ -89,14 +101,14 @@
                                             <div class="mb-3">
                                                 <label class="form-label">N° de Cuenta</label>
                                                 <input type="text" inputmode="numeric" class="form-control" name="numero"
-                                                       value="${cuentaEdit.getNumero()}" required="true">
+                                                       value="${vNumero}" required="true">
                                             </div>
 
                                             <button type="submit" name="accion" value="Insertar" class="btn btn-success"
-                                                    <c:if test="${not empty cuentaEdit or not puedeInsertar}"><c:out value="disabled='disabled'"/></c:if>>Agregar</button>
+                                                    <c:if test="${editando or not puedeInsertar}"><c:out value="disabled='disabled'"/></c:if>>Agregar</button>
 
                                             <button type="submit" name="accion" value="Actualizar" class="btn btn-primary"
-                                                    <c:if test="${empty cuentaEdit or not puedeEditar}"><c:out value="disabled='disabled'"/></c:if>>Actualizar</button>
+                                                    <c:if test="${not editando or not puedeEditar}"><c:out value="disabled='disabled'"/></c:if>>Actualizar</button>
 
                                             <a href="CuentaServlet?menu=Cuenta&accion=Cancelar" class="btn btn-danger">Cancelar</a>
                                         </form>

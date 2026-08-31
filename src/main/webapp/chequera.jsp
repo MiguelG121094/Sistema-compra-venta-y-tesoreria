@@ -40,13 +40,25 @@
                         </div>
                         <div style="border-bottom: 1px solid black; width: 100%; margin: 20px 0;"></div>
 
+                        <%-- Si el alta o la edición se rechazan, el formulario se rearma con lo que vino en
+                             el request y no queda vacío. Sólo si además falló: cuando sale bien tiene que
+                             quedar limpio para cargar el siguiente. Un Eliminar rechazado también manda el
+                             id, y no tiene que dejar el formulario en modo edición. --%>
+                        <c:set var="rearmar" value="${(param.accion eq 'Insertar' or param.accion eq 'Actualizar') and tipoAlert ne 'alert-success'}" />
+                        <c:set var="vId" value="${rearmar and not empty param.id ? param.id : chequeraEdit.getIdChequera()}" />
+                        <c:set var="vCuenta" value="${rearmar ? param.idCuenta : chequeraEdit.getCuenta().getIdCuenta()}" />
+                        <c:set var="vSerie" value="${rearmar ? param.serie : chequeraEdit.getSerie()}" />
+                        <c:set var="vDesde" value="${rearmar ? param.desdeNumero : chequeraEdit.getDesdeNumero()}" />
+                        <c:set var="vHasta" value="${rearmar ? param.hastaNumero : chequeraEdit.getHastaNumero()}" />
+                        <c:set var="editando" value="${not empty vId}" />
+
                         <div class="d-flex">
                             <!-- Formulario -->
                             <div class="col-sm-2" style="width: 33%;">
                                 <div class="card">
                                     <div class="card-body">
                                         <form action="ChequeraServlet?menu=Chequera" method="POST">
-                                            <input type="hidden" name="id" value="${chequeraEdit.getIdChequera()}">
+                                            <input type="hidden" name="id" value="${vId}">
 
                                             <div class="mb-3">
                                                 <label class="form-label">Cuenta bancaria</label>
@@ -54,7 +66,7 @@
                                                     <option value="">Seleccionar...</option>
                                                     <c:forEach var="cta" items="${listaCuentas}">
                                                         <option value="${cta.getIdCuenta()}"
-                                                            ${chequeraEdit.getCuenta().getIdCuenta() == cta.getIdCuenta() ? 'selected' : ''}>
+                                                            ${vCuenta == cta.getIdCuenta() ? 'selected' : ''}>
                                                             ${cta.getEntidadFinanciera().getNombre()} - ${cta.getNumero()} (${cta.getMoneda().getDescripcion()})
                                                         </option>
                                                     </c:forEach>
@@ -64,26 +76,26 @@
                                             <div class="mb-3">
                                                 <label class="form-label">Serie</label>
                                                 <input type="text" inputmode="numeric" class="form-control" name="serie"
-                                                       value="${chequeraEdit.getSerie()}" required="true">
+                                                       value="${vSerie}" required="true">
                                             </div>
 
                                             <div class="mb-3">
                                                 <label class="form-label">Desde N°</label>
                                                 <input type="text" inputmode="numeric" class="form-control" name="desdeNumero"
-                                                       value="${chequeraEdit.getDesdeNumero()}" required="true">
+                                                       value="${vDesde}" required="true">
                                             </div>
 
                                             <div class="mb-3">
                                                 <label class="form-label">Hasta N°</label>
                                                 <input type="text" inputmode="numeric" class="form-control" name="hastaNumero"
-                                                       value="${chequeraEdit.getHastaNumero()}" required="true">
+                                                       value="${vHasta}" required="true">
                                             </div>
 
                                             <button type="submit" name="accion" value="Insertar" class="btn btn-success"
-                                                    <c:if test="${not empty chequeraEdit or not puedeInsertar}"><c:out value="disabled='disabled'"/></c:if>>Agregar</button>
+                                                    <c:if test="${editando or not puedeInsertar}"><c:out value="disabled='disabled'"/></c:if>>Agregar</button>
 
                                             <button type="submit" name="accion" value="Actualizar" class="btn btn-primary"
-                                                    <c:if test="${empty chequeraEdit or not puedeEditar}"><c:out value="disabled='disabled'"/></c:if>>Actualizar</button>
+                                                    <c:if test="${not editando or not puedeEditar}"><c:out value="disabled='disabled'"/></c:if>>Actualizar</button>
 
                                             <a href="ChequeraServlet?menu=Chequera&accion=Cancelar" class="btn btn-danger">Cancelar</a>
                                         </form>

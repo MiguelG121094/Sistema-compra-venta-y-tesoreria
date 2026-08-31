@@ -138,7 +138,8 @@ public class MovimientoBancarioServlet extends HttpServlet {
 
         MovimientoBancario mov = leerMovimientoFormulario(request, tipo);
         if (mov == null) {
-            // el mensaje de validación ya fue seteado; el formulario sigue abierto
+            // El mensaje de validación ya fue seteado. La vista se rearma con lo que vino en el
+            // request, así que el usuario no pierde lo que ya había cargado.
             mostrarVista(request, response, tipo, null, true);
             return;
         }

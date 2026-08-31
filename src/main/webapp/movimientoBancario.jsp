@@ -58,6 +58,16 @@
 
                         <c:set var="anulado" value="${not empty movimiento and movimiento.estado eq 'Anulado'}" />
 
+                        <%-- Si el Generar se rechaza, la vista se rearma con lo que el usuario había
+                             escrito (viene en el request) y no con el movimiento, que no llegó a existir. --%>
+                        <c:set var="vBanco" value="${not empty param.banco ? param.banco : movimiento.cuenta.entidadFinanciera.idEntidadFinanciera}" />
+                        <c:set var="vCuenta" value="${not empty param.idCuenta ? param.idCuenta : movimiento.cuenta.idCuenta}" />
+                        <c:set var="vTipoCambio" value="${not empty param.tipoCambio ? param.tipoCambio : movimiento.tipoCambio}" />
+                        <c:set var="vComprobante" value="${not empty param.comprobante ? param.comprobante : movimiento.numeroComprobante}" />
+                        <c:set var="vDetalle" value="${not empty param.detalle ? param.detalle : movimiento.detalle}" />
+                        <c:set var="vImporte" value="${not empty param.importe ? param.importe : movimiento.monto}" />
+                        <c:set var="vFecha"><c:choose><c:when test="${not empty param.fecha}">${param.fecha}</c:when><c:otherwise><fmt:formatDate value="${movimiento.fecha}" pattern="yyyy-MM-dd"/></c:otherwise></c:choose></c:set>
+
                         <!-- Botones principales -->
                         <div class="row mb-3">
                             <div class="col-auto">
@@ -99,12 +109,12 @@
                                         </div>
                                         <div class="col-md-2">
                                             <div class="form-floating mb-3 mb-md-0">
-                                                <select class="form-control" id="banco" onchange="filtrarCuentas();"
+                                                <select class="form-control" id="banco" name="banco" onchange="filtrarCuentas();"
                                                         <c:if test="${not esNuevo}">disabled</c:if>>
                                                     <option value="">Todos</option>
                                                     <c:forEach var="ent" items="${listaEntidades}">
                                                         <option value="${ent.idEntidadFinanciera}"
-                                                                <c:if test="${movimiento.cuenta.entidadFinanciera.idEntidadFinanciera == ent.idEntidadFinanciera}">selected</c:if>>${ent.nombre}</option>
+                                                                <c:if test="${vBanco == ent.idEntidadFinanciera}">selected</c:if>>${ent.nombre}</option>
                                                     </c:forEach>
                                                 </select>
                                                 <label for="banco">Banco</label>
@@ -119,7 +129,7 @@
                                                         <option value="${cta.idCuenta}"
                                                                 data-banco="${cta.entidadFinanciera.idEntidadFinanciera}"
                                                                 data-moneda="${cta.moneda.descripcion}"
-                                                                <c:if test="${movimiento.cuenta.idCuenta == cta.idCuenta}">selected</c:if>>${cta.numero}</option>
+                                                                <c:if test="${vCuenta == cta.idCuenta}">selected</c:if>>${cta.numero}</option>
                                                     </c:forEach>
                                                 </select>
                                                 <label for="cuenta">Nro de cuenta</label>
@@ -135,7 +145,7 @@
                                         <div class="col-md-2">
                                             <div class="form-floating mb-3 mb-md-0">
                                                 <input class="form-control" id="tipoCambio" name="tipoCambio" type="text" inputmode="decimal"
-                                                       placeholder="Tipo de cambio" value="${movimiento.tipoCambio}"
+                                                       placeholder="Tipo de cambio" value="${vTipoCambio}"
                                                        <c:if test="${not esNuevo}">readonly</c:if> />
                                                 <label for="tipoCambio">Tipo de cambio</label>
                                             </div>
@@ -153,7 +163,7 @@
                                         <div class="col-md-3">
                                             <div class="form-floating mb-3 mb-md-0">
                                                 <input class="form-control" id="comprobante" name="comprobante" type="text" inputmode="numeric"
-                                                       placeholder="Comprobante N°" value="${movimiento.numeroComprobante}"
+                                                       placeholder="Comprobante N°" value="${vComprobante}"
                                                        <c:if test="${not esNuevo}">readonly</c:if> />
                                                 <label for="comprobante">Comprobante N°</label>
                                             </div>
@@ -162,7 +172,7 @@
                                             <div class="form-floating mb-3 mb-md-0">
                                                 <input class="form-control" id="fecha" name="fecha" type="date"
                                                        placeholder="Fecha de emisión"
-                                                       value="<fmt:formatDate value='${movimiento.fecha}' pattern='yyyy-MM-dd'/>"
+                                                       value="${vFecha}"
                                                        <c:if test="${not esNuevo}">readonly</c:if> />
                                                 <label for="fecha">Fecha de emisión</label>
                                             </div>
@@ -170,7 +180,7 @@
                                         <div class="col-md-4">
                                             <div class="form-floating mb-3 mb-md-0">
                                                 <input class="form-control" id="detalle" name="detalle" type="text" maxlength="255"
-                                                       placeholder="Detalle" value="${movimiento.detalle}"
+                                                       placeholder="Detalle" value="${vDetalle}"
                                                        <c:if test="${not esNuevo}">readonly</c:if> />
                                                 <label for="detalle">Detalle</label>
                                             </div>
@@ -178,7 +188,7 @@
                                         <div class="col-md-2">
                                             <div class="form-floating mb-3 mb-md-0">
                                                 <input class="form-control mask-miles" id="importe" name="importe" type="text" inputmode="numeric"
-                                                       placeholder="Importe" value="${movimiento.monto}"
+                                                       placeholder="Importe" value="${vImporte}"
                                                        <c:if test="${not esNuevo}">readonly</c:if> />
                                                 <label for="importe">Importe</label>
                                             </div>
