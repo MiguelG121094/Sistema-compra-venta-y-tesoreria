@@ -673,7 +673,6 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                                 <thead>
                                                     <tr>
                                                         <th class="text-bg-dark text-center">Id. Artículo</th>
-                                                        <th class="text-bg-dark text-center">Código</th>
                                                         <th class="text-bg-dark text-center">Descripción</th>
                                                         <th class="text-bg-dark text-center">Precio Compra</th>
                                                         <th class="text-bg-dark text-center">Tipo Impuesto</th>
@@ -684,7 +683,6 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                                     <c:forEach var="art" items="${listaArticulos}">
                                                         <tr>
                                                             <td class="text-center">${art.idArticulo}</td>
-                                                            <td class="text-center">${art.codigo}</td>
                                                             <td class="text-center">${art.descripcion}</td>
                                                             <td class="text-center">
                                                                 <fmt:formatNumber value="${art.precioCompra}" pattern="#,###"/>

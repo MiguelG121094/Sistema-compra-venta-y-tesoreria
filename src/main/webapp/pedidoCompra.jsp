@@ -167,7 +167,6 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                                     <thead>
                                                         <tr>
                                                             <th class="text-bg-dark text-center">Nro Art.</th>
-                                                            <th class="text-bg-dark text-center">Código</th>
                                                             <th class="text-bg-dark text-center">Tipo de Articulo</th>
                                                             <th class="text-bg-dark text-center">Marca</th>
                                                             <th class="text-bg-dark text-center">Dscripción</th>
@@ -181,7 +180,6 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                                         <c:forEach var="listAticulos" items="${listaAticulos}">
                                                             <tr>
                                                                 <td class="text-center">${listAticulos.getIdArticulo()}</td>
-                                                                <td class="text-center">${listAticulos.getCodigo()}</td>
                                                                 <td class="text-center">${listAticulos.getTipoArticulo().getDescripcion()}</td>
                                                                 <td class="text-center">${listAticulos.getMarca().getDescripcion()}</td>
                                                                 <td class="text-center">${listAticulos.getDescripcion()}</td>
@@ -197,7 +195,6 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                                     <tfoot>
                                                         <tr>
                                                             <th class="text-bg-dark text-center">Nro Art.</th>
-                                                            <th class="text-bg-dark text-center">Código</th>
                                                             <th class="text-bg-dark text-center">Tipo de Articulo</th>
                                                             <th class="text-bg-dark text-center">Marca</th>
                                                             <th class="text-bg-dark text-center">Dscripción</th>
@@ -575,7 +572,7 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                         url: "DataTables 2/es-ES.json",
                     },
                     //Tamaño de las olumnas
-                    columns: [null, null, null, null, null, null, null, null]
+                    columns: [null, null, null, null, null, null,null]
                 });
             });
             //Otra manera de inicializar la tabla y ponerle lenguaje
