@@ -111,7 +111,7 @@
                                             <div class="form-floating mb-3 mb-md-0">
                                                 <select class="form-control" id="banco" name="banco" onchange="filtrarCuentas();"
                                                         <c:if test="${not esNuevo}">disabled</c:if>>
-                                                    <option value="">Todos</option>
+                                                    <option value="">Seleccionar...</option>
                                                     <c:forEach var="ent" items="${listaEntidades}">
                                                         <option value="${ent.idEntidadFinanciera}"
                                                                 <c:if test="${vBanco == ent.idEntidadFinanciera}">selected</c:if>>${ent.nombre}</option>
@@ -306,16 +306,25 @@
                     $(this).val($(this).cleanVal());
                 });
             }
-            // El combo de banco sólo filtra: lo que se guarda es la cuenta.
+            // El combo de banco sólo filtra: lo que se guarda es la cuenta. La cuenta se elige
+            // después del banco, así que hasta que no haya uno elegido su combo va deshabilitado.
             function filtrarCuentas() {
-                var banco = document.getElementById('banco').value;
+                var banco = document.getElementById('banco');
                 var cuentas = document.getElementById('cuenta');
+                var sinBanco = (banco.value === '');
+                // Si el banco viene deshabilitado el movimiento ya está generado: no se toca nada.
+                if (!banco.disabled) {
+                    cuentas.disabled = sinBanco;
+                }
+                if (sinBanco) {
+                    cuentas.value = '';
+                }
                 for (var i = 0; i < cuentas.options.length; i++) {
                     var op = cuentas.options[i];
                     if (!op.value) {
                         continue;
                     }
-                    var visible = (banco === '' || op.getAttribute('data-banco') === banco);
+                    var visible = (!sinBanco && op.getAttribute('data-banco') === banco.value);
                     op.hidden = !visible;
                     op.disabled = !visible;
                     if (!visible && op.selected) {
