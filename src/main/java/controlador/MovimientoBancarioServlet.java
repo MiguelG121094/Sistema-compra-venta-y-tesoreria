@@ -284,6 +284,9 @@ public class MovimientoBancarioServlet extends HttpServlet {
             request.setAttribute("listaEntidades", entidadFinancieraService.listarEntidadFinanciera());
             request.setAttribute("listaMovimientos", TIPO_CREDITO.equals(tipo)
                     ? creditoService.listarCreditos() : debitoService.listarDebitos());
+            // Numero que se muestra al abrir uno nuevo: es el id serial, todavia sin confirmar.
+            request.setAttribute("proximoNumero", TIPO_CREDITO.equals(tipo)
+                    ? creditoService.proximoNumero() : debitoService.proximoNumero());
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "Error al cargar los datos de la vista", e);
             mostrarMensaje(request, "Error de base de datos: " + e.getMessage(), "alert-danger");

@@ -103,7 +103,7 @@
                                         <div class="col-md-2">
                                             <div class="form-floating mb-3 mb-md-0">
                                                 <input class="form-control" id="numero" type="text" placeholder="${etiqueta} Nro" readonly
-                                                       value="${movimiento.id}" />
+                                                       value="${not empty movimiento ? movimiento.id : (esNuevo ? proximoNumero : '')}" />
                                                 <label for="numero">${etiqueta} Nro</label>
                                             </div>
                                         </div>
@@ -153,7 +153,7 @@
                                         <div class="col-md-2">
                                             <div class="form-floating mb-3 mb-md-0">
                                                 <input class="form-control" id="estado" type="text" placeholder="Estado" readonly
-                                                       value="${movimiento.estado}" />
+                                                       value="${not empty movimiento ? movimiento.estado : (esNuevo ? 'Vigente' : '')}" />
                                                 <label for="estado">Estado</label>
                                             </div>
                                         </div>
@@ -228,14 +228,14 @@
                                         <table id="tablaMovimientos" class="table table-bordered table-striped">
                                             <thead>
                                                 <tr>
-                                                    <th class="text-center">Nro</th>
-                                                    <th class="text-center">Fecha</th>
-                                                    <th class="text-center">Cuenta</th>
-                                                    <th class="text-center">Comprobante</th>
-                                                    <th class="text-center">Detalle</th>
-                                                    <th class="text-center">Importe</th>
-                                                    <th class="text-center">Estado</th>
-                                                    <th class="text-center">Acción</th>
+                                                    <th class="text-bg-dark text-center">Nro</th>
+                                                    <th class="text-bg-dark text-center">Fecha</th>
+                                                    <th class="text-bg-dark text-center">Cuenta</th>
+                                                    <th class="text-bg-dark text-center">Comprobante</th>
+                                                    <th class="text-bg-dark text-center">Detalle</th>
+                                                    <th class="text-bg-dark text-center">Importe</th>
+                                                    <th class="text-bg-dark text-center">Estado</th>
+                                                    <th class="text-bg-dark text-center">Acción</th>
                                                 </tr>
                                             </thead>
                                             <tbody>

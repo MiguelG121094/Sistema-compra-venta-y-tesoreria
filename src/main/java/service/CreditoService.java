@@ -36,6 +36,12 @@ public class CreditoService {
         }
     }
 
+    public long proximoNumero() throws SQLException {
+        try (Connection conn = Conexion.getConnection()) {
+            return new CreditoDAO(conn).proximoNumero();
+        }
+    }
+
     public Long insertarCredito(Credito credito) throws SQLException {
         Connection conn = null;
         try {

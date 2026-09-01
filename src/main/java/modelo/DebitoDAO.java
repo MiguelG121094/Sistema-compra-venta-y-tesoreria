@@ -75,6 +75,20 @@ public class DebitoDAO {
         return lista;
     }
 
+    /**
+     * Numero que le va a tocar al proximo debito. Es el id, que es serial, asi que el valor
+     * definitivo se confirma recien al insertar: si dos usuarios abren uno a la vez ven el mismo,
+     * igual que pasa con el numero de la orden de pago.
+     */
+    public long proximoNumero() throws SQLException {
+        String sql = "SELECT COALESCE(MAX(id_debitos), 0) + 1 FROM debitos";
+        try (PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+            rs.next();
+            return rs.getLong(1);
+        }
+    }
+
     public Long insertarDebito(Debito debito) throws SQLException {
         String sql = "INSERT INTO debitos (debitos_nro_comprobante, debitos_fecha, debitos_detalle, "
                    + "id_cuenta, debito_monto, debitos_tipo_cambio, debitos_estado) "

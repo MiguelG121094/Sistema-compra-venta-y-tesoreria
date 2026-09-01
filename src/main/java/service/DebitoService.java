@@ -35,6 +35,12 @@ public class DebitoService {
         }
     }
 
+    public long proximoNumero() throws SQLException {
+        try (Connection conn = Conexion.getConnection()) {
+            return new DebitoDAO(conn).proximoNumero();
+        }
+    }
+
     public Long insertarDebito(Debito debito) throws SQLException {
         Connection conn = null;
         try {

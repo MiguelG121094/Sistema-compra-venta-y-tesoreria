@@ -79,6 +79,20 @@ public class CreditoDAO {
         return lista;
     }
 
+    /**
+     * Numero que le va a tocar al proximo credito. Es el id, que es serial, asi que el valor
+     * definitivo se confirma recien al insertar: si dos usuarios abren uno a la vez ven el mismo,
+     * igual que pasa con el numero de la orden de pago.
+     */
+    public long proximoNumero() throws SQLException {
+        String sql = "SELECT COALESCE(MAX(id_creditos), 0) + 1 FROM creditos";
+        try (PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+            rs.next();
+            return rs.getLong(1);
+        }
+    }
+
     public Long insertarCredito(Credito credito) throws SQLException {
         String sql = "INSERT INTO creditos (creditos_nro_comprobante, creditos_fecha, creditos_detalle, "
                    + "id_cuenta, id_cobro, credito_monto, creditos_tipo_cambio, creditos_estado) "
