@@ -11,7 +11,11 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.servlet.ServletException;
@@ -23,12 +27,12 @@ import javax.servlet.http.HttpSession;
 import modelo.Credito;
 import modelo.Cuenta;
 import modelo.Debito;
+import modelo.EntidadFinanciera;
 import modelo.MovimientoBancario;
 import modelo.Usuario;
 import service.CreditoService;
 import service.CuentaService;
 import service.DebitoService;
-import service.EntidadFinancieraService;
 
 @WebServlet(name = "MovimientoBancarioServlet",
         urlPatterns = {"/MovimientoBancarioServlet", "/DebitoServlet", "/CreditoServlet"})
@@ -43,7 +47,6 @@ public class MovimientoBancarioServlet extends HttpServlet {
     private final DebitoService debitoService = new DebitoService();
     private final CreditoService creditoService = new CreditoService();
     private final CuentaService cuentaService = new CuentaService();
-    private final EntidadFinancieraService entidadFinancieraService = new EntidadFinancieraService();
 
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
@@ -280,8 +283,9 @@ public class MovimientoBancarioServlet extends HttpServlet {
         request.setAttribute("menuActivo", TIPO_CREDITO.equals(tipo) ? "movimientoCredito" : "movimientoDebito");
 
         try {
-            request.setAttribute("listaCuentas", cuentaService.listarCuenta());
-            request.setAttribute("listaEntidades", entidadFinancieraService.listarEntidadFinanciera());
+            List<Cuenta> cuentas = cuentaService.listarCuenta();
+            request.setAttribute("listaCuentas", cuentas);
+            request.setAttribute("listaEntidades", bancosConCuenta(cuentas));
             request.setAttribute("listaMovimientos", TIPO_CREDITO.equals(tipo)
                     ? creditoService.listarCreditos() : debitoService.listarDebitos());
             // Numero que se muestra al abrir uno nuevo: es el id serial, todavia sin confirmar.
@@ -292,6 +296,24 @@ public class MovimientoBancarioServlet extends HttpServlet {
             mostrarMensaje(request, "Error de base de datos: " + e.getMessage(), "alert-danger");
         }
         request.getRequestDispatcher(JSP_MOVIMIENTO).forward(request, response);
+    }
+
+    /**
+     * Bancos que aparecen en alguna cuenta registrada, sin repetir y en el orden en que vienen.
+     * El combo de banco sirve para llegar a una cuenta, asi que listar entidades financieras que
+     * no tienen ninguna solo lleva a un combo de cuentas vacio.
+     */
+    private List<EntidadFinanciera> bancosConCuenta(List<Cuenta> cuentas) {
+        Map<Long, EntidadFinanciera> bancos = new LinkedHashMap<>();
+        if (cuentas != null) {
+            for (Cuenta cuenta : cuentas) {
+                EntidadFinanciera banco = cuenta.getEntidadFinanciera();
+                if (banco != null) {
+                    bancos.put(banco.getIdEntidadFinanciera(), banco);
+                }
+            }
+        }
+        return new ArrayList<>(bancos.values());
     }
 
     private String etiqueta(String tipo) {
