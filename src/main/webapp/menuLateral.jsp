@@ -93,6 +93,7 @@ usuario inicio sesion, se debe agregar esta validacon en cada una de las vistas 
                                     <a class="nav-link" href="tipoArticulo.jsp">Agregar Banco</a>
                                     <a class="nav-link" href="CuentaServlet?menu=Cuenta&accion=Listar">Cuentas Bancarias</a>
                                     <a class="nav-link" href="ChequeraServlet?menu=Chequera&accion=Listar">Chequeras</a>
+                                    <a class="nav-link" href="FondoFijoServlet?menu=FondoFijo&accion=Listar">Fondo Fijo</a>
                                 </nav>
                             </div>
                             <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#pagesCollapseError2" aria-expanded="false" aria-controls="pagesCollapseError2">
