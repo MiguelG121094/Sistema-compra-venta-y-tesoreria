@@ -19,6 +19,7 @@ public class FondoFijoRendicion implements java.io.Serializable {
     private Date fechaEmisionRendicion;
     private Date fechaReposicion;
     private Long numeroRendicion;
+    private String estado;
 
     public FondoFijoRendicion() {
     }
@@ -28,12 +29,13 @@ public class FondoFijoRendicion implements java.io.Serializable {
     }
 
     public FondoFijoRendicion(Long idFondoFijoRendicion, FondoFijo fondoFijo,
-            Date fechaEmisionRendicion, Date fechaReposicion, Long numeroRendicion) {
+            Date fechaEmisionRendicion, Date fechaReposicion, Long numeroRendicion, String estado) {
         this.idFondoFijoRendicion = idFondoFijoRendicion;
         this.fondoFijo = fondoFijo;
         this.fechaEmisionRendicion = fechaEmisionRendicion;
         this.fechaReposicion = fechaReposicion;
         this.numeroRendicion = numeroRendicion;
+        this.estado = estado;
     }
 
     public Long getIdFondoFijoRendicion() {
@@ -74,5 +76,13 @@ public class FondoFijoRendicion implements java.io.Serializable {
 
     public void setNumeroRendicion(Long numeroRendicion) {
         this.numeroRendicion = numeroRendicion;
+    }
+
+    public String getEstado() {
+        return estado;
+    }
+
+    public void setEstado(String estado) {
+        this.estado = estado;
     }
 }

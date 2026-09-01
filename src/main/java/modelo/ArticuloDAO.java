@@ -46,7 +46,8 @@ public class ArticuloDAO {
                 if (rs.next()) {
                     articulo = new Articulo(rs.getLong(1), tipoArticuloDAO.cargarTipoaArticulo(rs.getLong(2)), marcaDAO.getMarca(rs.getLong(3)),
                             tipoImpuestoDAO.getTipoImpuesto(rs.getLong(4)), presentacionDAO.getPresentacion(rs.getLong(5)),
-                            rs.getString(6), rs.getLong(7), rs.getLong(8), rs.getString(9));
+                            rs.getString(6), rs.getLong(7), rs.getLong(8), rs.getString(9),
+                            rs.getString("art_codigo"));
                 }
             }
         }   
@@ -65,7 +66,8 @@ public class ArticuloDAO {
                 while (rs.next()) {
                     articulo = new Articulo(rs.getLong(1), tipoArticuloDAO.cargarTipoaArticulo(rs.getLong(2)), marcaDAO.getMarca(rs.getLong(3)),
                             tipoImpuestoDAO.getTipoImpuesto(rs.getLong(4)), presentacionDAO.getPresentacion(rs.getLong(5)),
-                            rs.getString(6), rs.getLong(7), rs.getLong(8), rs.getString(9));
+                            rs.getString(6), rs.getLong(7), rs.getLong(8), rs.getString(9),
+                            rs.getString("art_codigo"));
                     articuloList.add(articulo);
                 }
         }

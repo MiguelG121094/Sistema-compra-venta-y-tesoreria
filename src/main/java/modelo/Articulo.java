@@ -21,6 +21,7 @@ public class Articulo implements java.io.Serializable {
     private Long precioCompra;
     private Long precioVenta;
     private String estado;
+    private String codigo;
 
     public Articulo() {
     }
@@ -29,7 +30,7 @@ public class Articulo implements java.io.Serializable {
         this.idArticulo = idArticulo;
     }
 
-    public Articulo(Long idArticulo, TipoArticulo tipoArticulo, Marca marca, TipoImpuesto tipoImpuesto, Presentacion presentacion, String descripcion, Long precioCompra, Long precioVenta, String estado) {
+    public Articulo(Long idArticulo, TipoArticulo tipoArticulo, Marca marca, TipoImpuesto tipoImpuesto, Presentacion presentacion, String descripcion, Long precioCompra, Long precioVenta, String estado, String codigo) {
         this.idArticulo = idArticulo;
         this.tipoArticulo = tipoArticulo;
         this.marca = marca;
@@ -39,6 +40,7 @@ public class Articulo implements java.io.Serializable {
         this.precioCompra = precioCompra;
         this.precioVenta = precioVenta;
         this.estado = estado;
+        this.codigo = codigo;
     }
 
     public Long getIdArticulo() {
@@ -111,6 +113,15 @@ public class Articulo implements java.io.Serializable {
 
     public void setEstado(String estado) {
         this.estado = estado;
+    }
+
+    /** Codigo de barras del articulo (art_codigo). */
+    public String getCodigo() {
+        return codigo;
+    }
+
+    public void setCodigo(String codigo) {
+        this.codigo = codigo;
     }
     
     
