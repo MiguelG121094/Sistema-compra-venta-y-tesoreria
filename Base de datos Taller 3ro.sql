@@ -116,13 +116,11 @@ CREATE TABLE public.debitos (
                 debitos_detalle VARCHAR(255) NOT NULL,
                 id_cuenta INTEGER NOT NULL,
                 debito_monto INTEGER NOT NULL,
+                debitos_estado VARCHAR,
                 debitos_tipo_cambio DOUBLE PRECISION,
-                debitos_estado VARCHAR(20) NOT NULL,
                 CONSTRAINT id_debitos PRIMARY KEY (id_debitos)
 );
 COMMENT ON TABLE public.debitos IS 'comisiones bancarias, comisiones por cheques en dolars, gastos administrativos del banco';
-COMMENT ON COLUMN public.debitos.debitos_tipo_cambio IS 'cambio de dolar a guaranies del dia, solo si la cuenta es en dolares';
-COMMENT ON COLUMN public.debitos.debitos_estado IS 'Vigente, Anulado';
 COMMENT ON COLUMN public.debitos.debitos_detalle IS 'concepto de que se carga el debito, ejemplo descuento de comisiones bancaria, debito automatico de TC';
 
 
@@ -554,17 +552,22 @@ COMMENT ON TABLE public.fondo_fijo IS 'analizar flujo: FACTURA FONDO FIJO → CU
 
 ALTER SEQUENCE public.fondo_fijo_id_fondo_fijo_seq OWNED BY public.fondo_fijo.id_fondo_fijo;
 
+CREATE SEQUENCE public.fondo_fijo_rendicion_id_fondofijo_rendicion_seq;
+
 CREATE TABLE public.fondo_fijo_rendicion (
-                id_fondofijo_rendicion INTEGER NOT NULL,
+                id_fondofijo_rendicion INTEGER NOT NULL DEFAULT nextval('public.fondo_fijo_rendicion_id_fondofijo_rendicion_seq'),
                 id_fondo_fijo INTEGER NOT NULL,
                 fecha_emision_rendicion DATE,
                 ff_rendicion_fecha_reposicion DATE,
                 nro_rendicion INTEGER,
+                ff_rendicion_estado VARCHAR,
                 CONSTRAINT id_fondo_fijo_rend PRIMARY KEY (id_fondofijo_rendicion)
 );
 COMMENT ON TABLE public.fondo_fijo_rendicion IS 'siempre se paga el total de las facturas porque son montos menores analizar flujo: FACTURA FONDO FIJO → CUENTA POR PAGAR → RENDICIÓN → PROVISIÓN → ORDEN PAGO o FACTURA FONDO FIJO → RENDICIÓN → PROVISIÓN → ORDEN PAGO (2da opcion es mejor segun IA)';
 COMMENT ON COLUMN public.fondo_fijo_rendicion.nro_rendicion IS 'Numero con el cual se le va a identificar a la rendicion de varias facturas';
 
+
+ALTER SEQUENCE public.fondo_fijo_rendicion_id_fondofijo_rendicion_seq OWNED BY public.fondo_fijo_rendicion.id_fondofijo_rendicion;
 
 CREATE SEQUENCE public.usuario_id_usuario_seq;
 
@@ -846,13 +849,11 @@ CREATE TABLE public.creditos (
                 id_cuenta INTEGER NOT NULL,
                 id_cobro INTEGER,
                 credito_monto INTEGER NOT NULL,
+                creditos_estado VARCHAR,
                 creditos_tipo_cambio DOUBLE PRECISION,
-                creditos_estado VARCHAR(20) NOT NULL,
                 CONSTRAINT id_creditos PRIMARY KEY (id_creditos)
 );
 COMMENT ON TABLE public.creditos IS 'deposito bancario, comisiones cobradas, capitalizacion de intereses';
-COMMENT ON COLUMN public.creditos.creditos_tipo_cambio IS 'cambio de dolar a guaranies del dia, solo si la cuenta es en dolares';
-COMMENT ON COLUMN public.creditos.creditos_estado IS 'Vigente, Anulado';
 COMMENT ON COLUMN public.creditos.creditos_nro_comprobante IS 'comprobante puede ser nro de boleta de deposito';
 COMMENT ON COLUMN public.creditos.creditos_detalle IS 'concepto de que se carga el credito, ejemplo ingresos como una venta donde se carga la boleta de deposito';
 
@@ -1116,8 +1117,10 @@ COMMENT ON TABLE public.provision_cuenta_pagar_detalle IS 'Facturas incluidas en
 
 ALTER SEQUENCE public.provision_cuenta_pagar_detalle_id_provi_cta_pagar_detalle_seq OWNED BY public.provision_cuenta_pagar_detalle.id_provi_cta_pagar_detalle;
 
+CREATE SEQUENCE public.fondo_fijo_rendicion_detalle_id_ff_rendicion_detalle_seq;
+
 CREATE TABLE public.fondo_fijo_rendicion_detalle (
-                id_ff_rendicion_detalle INTEGER NOT NULL,
+                id_ff_rendicion_detalle INTEGER NOT NULL DEFAULT nextval('public.fondo_fijo_rendicion_detalle_id_ff_rendicion_detalle_seq'),
                 id_fondofijo_rendicion INTEGER NOT NULL,
                 id_cta_pagar INTEGER NOT NULL,
                 id_fact_comp_cab INTEGER NOT NULL,
@@ -1125,6 +1128,8 @@ CREATE TABLE public.fondo_fijo_rendicion_detalle (
                 CONSTRAINT fondo_fijo_rendicion_detalle_pk PRIMARY KEY (id_ff_rendicion_detalle)
 );
 
+
+ALTER SEQUENCE public.fondo_fijo_rendicion_detalle_id_ff_rendicion_detalle_seq OWNED BY public.fondo_fijo_rendicion_detalle.id_ff_rendicion_detalle;
 
 CREATE SEQUENCE public.orden_pago_detalle_id_orden_pago_det_seq;
 
