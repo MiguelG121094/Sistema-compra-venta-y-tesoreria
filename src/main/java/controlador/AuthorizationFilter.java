@@ -10,7 +10,7 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import modelo.Permiso;
 
-@WebFilter(urlPatterns = {"/FacturaCompraServlet", "/PedidoCompraServlet", "/PresupuestoServlet", "/OrdenCompraServlet", "/NotaCreditoDebitoServlet", "/CuentaServlet", "/ChequeraServlet", "/ProvisionCuentaPagarServlet", "/OrdenPagoServlet", "/MovimientoBancarioServlet", "/DebitoServlet", "/CreditoServlet", "/FondoFijoServlet"})
+@WebFilter(urlPatterns = {"/FacturaCompraServlet", "/PedidoCompraServlet", "/PresupuestoServlet", "/OrdenCompraServlet", "/NotaCreditoDebitoServlet", "/CuentaServlet", "/ChequeraServlet", "/ProvisionCuentaPagarServlet", "/OrdenPagoServlet", "/MovimientoBancarioServlet", "/DebitoServlet", "/CreditoServlet", "/FondoFijoServlet", "/FondoFijoRendicionServlet"})
 public class AuthorizationFilter implements Filter {
 
     private static final Map<String, String> URL_MODULO = new HashMap<>();
@@ -28,6 +28,7 @@ public class AuthorizationFilter implements Filter {
         URL_MODULO.put("DebitoServlet", "tesoreria");
         URL_MODULO.put("CreditoServlet", "tesoreria");
         URL_MODULO.put("FondoFijoServlet", "tesoreria");
+        URL_MODULO.put("FondoFijoRendicionServlet", "tesoreria");
     }
 
     @Override

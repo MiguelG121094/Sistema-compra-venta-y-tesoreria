@@ -265,6 +265,7 @@ public class CuentaPagarDAO {
     private static final String ESTADO_SALDO_FAVOR = "Saldo a favor";
     private static final String ESTADO_ANULADO     = "Anulado";
     private static final String ESTADO_EN_PROVISION = "En provision";
+    private static final String ESTADO_RENDIDA     = "Rendida";
 
     public enum TipoNota { CREDITO, DEBITO }
 
@@ -453,6 +454,120 @@ public class CuentaPagarDAO {
         }
 
         // 3. Calcular el estado en Java y actualizar
+        String nuevoEstado = calcularEstadoPorSaldo(saldo);
+        String sqlUpdate = "UPDATE cuenta_pagar SET cta_pag_estado = ? "
+                         + "WHERE id_cta_pagar = ? AND id_fact_comp_cab = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sqlUpdate)) {
+            stmt.setString(1, nuevoEstado);
+            stmt.setLong(2, idCtaPagar);
+            stmt.setLong(3, idFacturaCompra);
+            stmt.executeUpdate();
+        }
+    }
+
+    // ==================== RENDICIÓN DE FONDO FIJO ====================
+
+    /**
+     * Cuentas a pagar de facturas de fondo fijo que todavia se pueden rendir. Se excluyen las ya
+     * rendidas para que la misma factura no entre en dos rendiciones, y se reusa el criterio de la
+     * provision para las provisionadas y anuladas. Ver MODULO_TESORERIA_PLAN.md §E.
+     */
+    public List<CuentaPagar> listarCuentasPagarFondoFijo() throws SQLException {
+        List<CuentaPagar> cuentas = new ArrayList<>();
+        String sql = "SELECT cp.id_cta_pagar, cp.id_fact_comp_cab, cp.cta_pag_monto, cp.cta_pag_estado, "
+                   + "cp.cta_pag_fecha_venci, cp.cta_pag_saldo, cp.cta_pag_plazo, "
+                   + "f.fact_comp_numero, f.fact_comp_fecha_emision, f.id_proveedor "
+                   + "FROM cuenta_pagar cp "
+                   + "JOIN factura_compra_cabecera f ON cp.id_fact_comp_cab = f.id_fact_comp_cab "
+                   + "WHERE f.fact_comp_tipo_factura = 'fondoFijo' AND cp.cta_pag_saldo <> 0 "
+                   + "AND cp.cta_pag_estado NOT IN ('En provision', 'Anulado', 'Rendida') "
+                   + "ORDER BY cp.id_cta_pagar";
+
+        ProveedorDAO proveedorDAO = new ProveedorDAO(conn);
+
+        try (PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+            while (rs.next()) {
+                FacturaCompra fc = new FacturaCompra(rs.getLong("id_fact_comp_cab"));
+                fc.setNumero(rs.getString("fact_comp_numero"));
+                fc.setFechaEmision(rs.getDate("fact_comp_fecha_emision"));
+                fc.setProveedor(proveedorDAO.getProveedor(rs.getLong("id_proveedor")));
+
+                CuentaPagar cp = new CuentaPagar();
+                cp.setIdCuentaPagar(rs.getLong("id_cta_pagar"));
+                cp.setFacturaCompra(fc);
+                cp.setMonto(rs.getLong("cta_pag_monto"));
+                cp.setEstado(rs.getString("cta_pag_estado"));
+                cp.setFechaVencimiento(rs.getDate("cta_pag_fecha_venci"));
+                cp.setSaldo(rs.getLong("cta_pag_saldo"));
+                long plazo = rs.getLong("cta_pag_plazo");
+                cp.setPlazo(rs.wasNull() ? null : plazo);
+                cuentas.add(cp);
+            }
+        }
+        return cuentas;
+    }
+
+    /**
+     * Marca la cuenta como rendida, sin tocar el saldo: la rendicion solo agrupa las facturas del
+     * fondo fijo, el pago lo sigue haciendo la orden de pago. Bloquea la fila con FOR UPDATE y exige
+     * que este disponible, de modo que dos rendiciones simultaneas no puedan tomar la misma factura.
+     */
+    public void marcarRendida(Long idCtaPagar, Long idFacturaCompra) throws SQLException {
+        String estadoActual = null;
+        String sqlSelect = "SELECT cta_pag_estado FROM cuenta_pagar "
+                         + "WHERE id_cta_pagar = ? AND id_fact_comp_cab = ? FOR UPDATE";
+        try (PreparedStatement stmt = conn.prepareStatement(sqlSelect)) {
+            stmt.setLong(1, idCtaPagar);
+            stmt.setLong(2, idFacturaCompra);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    estadoActual = rs.getString("cta_pag_estado");
+                }
+            }
+        }
+        if (estadoActual == null) {
+            throw new SQLException("La cuenta a pagar " + idCtaPagar + " no existe");
+        }
+        if (ESTADO_RENDIDA.equals(estadoActual)) {
+            throw new SQLException("La factura ya fue rendida en otra rendición");
+        }
+        if (ESTADO_EN_PROVISION.equals(estadoActual) || ESTADO_ANULADO.equals(estadoActual)) {
+            throw new SQLException("La cuenta a pagar está '" + estadoActual + "' y no se puede rendir");
+        }
+
+        String sqlUpdate = "UPDATE cuenta_pagar SET cta_pag_estado = ? "
+                         + "WHERE id_cta_pagar = ? AND id_fact_comp_cab = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sqlUpdate)) {
+            stmt.setString(1, ESTADO_RENDIDA);
+            stmt.setLong(2, idCtaPagar);
+            stmt.setLong(3, idFacturaCompra);
+            stmt.executeUpdate();
+        }
+    }
+
+    /**
+     * Revierte la marca al anular la rendicion: recalcula el estado desde el saldo, solo si la
+     * cuenta seguia 'Rendida'. Mismo criterio que revertirProvision.
+     */
+    public void revertirRendicion(Long idCtaPagar, Long idFacturaCompra) throws SQLException {
+        Long saldo = null;
+        String estadoActual = null;
+        String sqlSelect = "SELECT cta_pag_saldo, cta_pag_estado FROM cuenta_pagar "
+                         + "WHERE id_cta_pagar = ? AND id_fact_comp_cab = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sqlSelect)) {
+            stmt.setLong(1, idCtaPagar);
+            stmt.setLong(2, idFacturaCompra);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    saldo = rs.getLong("cta_pag_saldo");
+                    estadoActual = rs.getString("cta_pag_estado");
+                }
+            }
+        }
+        if (saldo == null || !ESTADO_RENDIDA.equals(estadoActual)) {
+            return;
+        }
         String nuevoEstado = calcularEstadoPorSaldo(saldo);
         String sqlUpdate = "UPDATE cuenta_pagar SET cta_pag_estado = ? "
                          + "WHERE id_cta_pagar = ? AND id_fact_comp_cab = ?";

@@ -120,6 +120,7 @@ usuario inicio sesion, se debe agregar esta validacon en cada una de las vistas 
                             <a class="nav-link" href="OrdenPagoServlet?menu=OrdenPago&accion=ListarModal">Orden de Pago</a>
                             <a class="nav-link ${menuActivo eq 'movimientoDebito' ? 'active' : ''}" href="DebitoServlet?menu=MovimientoBancario&accion=Listar">Cargar otros débitos</a>
                             <a class="nav-link ${menuActivo eq 'movimientoCredito' ? 'active' : ''}" href="CreditoServlet?menu=MovimientoBancario&accion=Listar">Cargar otros créditos</a>
+                            <a class="nav-link" href="FondoFijoRendicionServlet?menu=RendicionFondoFijo&accion=ListarModal">Rendición de Fondo Fijo</a>
                         </nav>
                     </div>
 
