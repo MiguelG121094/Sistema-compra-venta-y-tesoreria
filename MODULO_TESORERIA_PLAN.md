@@ -951,7 +951,14 @@ PDF para los informes que realmente se impriman y archiven.
 - **PK/FK compuesta** `(id_cta_pagar, id_fact_comp_cab)`: los detalles de provisión, orden de pago y
   rendición la referencian juntos. Cuidado al insertar/consultar.
 - ~~`orden_pago_detalle` con PK solo `id_orden_pago`~~ → ✅ **resuelto**: ahora tiene serial `id_orden_pago_det` (N facturas por OP).
-- **`fondo_fijo_rendicion(_detalle)`** sin secuencia serial en la PK (pendiente para §E).
+- ~~**`fondo_fijo_rendicion(_detalle)`** sin secuencia serial en la PK~~ → ✅ **resuelto** (2026-09-01).
+- **La marca `'Rendida'` no sobrevive a un pago parcial.** `descontarSaldo` recalcula el estado de
+  la cuenta a pagar a partir del saldo, así que si queda saldo la cuenta vuelve a `'Pendiente'` y
+  pierde la marca: el resto reaparecería en la provisión **del comercio**, que ya cobró. Por eso la
+  reposición de fondo fijo se provisiona **por el total** y el detalle que viene de una rendición no
+  se edita ni se recorta (§E.1.5). **Tenerlo en cuenta si alguna vez se habilita el pago parcial en
+  ese camino**: hay que hacer que `descontarSaldo` devuelva a `'Rendida'` las cuentas que vienen de
+  una rendición, antes que cualquier otra cosa.
 - **Cheque desde chequera:** el próximo `chq_numero` debe validarse dentro de `[chequera_desde_nro, chequera_hasta_nro]`; controlar "chequera agotada" (§C). ~~Hoy no hay ABM de chequeras~~ → ✅ **resuelto** (2026-08-31, §G1): se cargan desde la aplicación y la grilla avisa el consumo del rango. Queda el riesgo de fondo: el próximo número se calcula **por chequera y no por cuenta**, así que dos rangos solapados de la misma cuenta darían el mismo número de cheque; por eso el ABM valida el solapamiento.
 - ~~**`creditos.id_cobro`** era `NOT NULL` y bloqueaba el registro de depósitos~~ → ✅ **resuelto**: nullable y subido (2026-08-17).
 - ~~**`cheque` no tiene columnas de entrega** (fecha ni receptor)~~ → ✅ **resuelto**: se agregaron `chq_fecha_entrega` y `chq_entregado_a` (2026-08-17). `chq_a_la_orden` sigue siendo a nombre de quién se emite, no quién retiró (§G2).

@@ -876,3 +876,9 @@ Gestión financiera completa: cuentas bancarias, cheques, cobros, pagos, caja, f
     patrón de variables de instancia por ahora, asumiendo uso mono-usuario. Si el sistema pasa a
     usarse por más de una persona a la vez, migrar a Session+Token deja de ser opcional: los datos
     se mezclan entre usuarios. Ver `ARQUITECTURA_SERVLETS.md`.
+17. **Sin reposición parcial de fondo fijo.** Decisión 2026-09-04: la provisión armada desde una
+    rendición se guarda por el total y su detalle no se edita ni se recorta. El motivo no es de
+    interfaz sino de datos: `descontarSaldo` recalcula el estado de la cuenta a pagar por saldo, así
+    que un pago parcial le saca la marca `'Rendida'` y el resto reaparece en la provisión del
+    comercio, que ya cobró. Si el negocio llega a necesitar reponer en cuotas, los cuatro pasos
+    están en `MODULO_TESORERIA_PLAN.md` §E.1.5.
