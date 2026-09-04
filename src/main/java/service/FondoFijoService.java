@@ -33,6 +33,15 @@ public class FondoFijoService {
         }
     }
 
+    public boolean esResponsableDeFondoFijo(Long idProveedor) throws SQLException {
+        try (Connection conn = Conexion.getConnection()) {
+            return new FondoFijoDAO(conn).esResponsableDeFondoFijo(idProveedor);
+        } catch (SQLException e) {
+            System.out.println("Error en FondoFijoService: " + e);
+            return false;
+        }
+    }
+
     public void insertarFondoFijo(FondoFijo fondoFijo) throws SQLException {
         Connection conn = null;
         try {

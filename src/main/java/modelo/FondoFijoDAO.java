@@ -98,6 +98,21 @@ public class FondoFijoDAO {
         }
     }
 
+    /** El proveedor es responsable de algun fondo fijo. */
+    public boolean esResponsableDeFondoFijo(Long idProveedor) throws SQLException {
+        if (idProveedor == null) {
+            return false;
+        }
+        String sql = "SELECT COUNT(*) FROM fondo_fijo WHERE id_proveedor = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, idProveedor);
+            try (ResultSet rs = stmt.executeQuery()) {
+                rs.next();
+                return rs.getLong(1) > 0;
+            }
+        }
+    }
+
     /** Rendiciones que cuelgan del fondo fijo: mientras haya alguna, no se puede borrar. */
     public long contarRendiciones(Long idFondoFijo) throws SQLException {
         String sql = "SELECT COUNT(*) FROM fondo_fijo_rendicion WHERE id_fondo_fijo = ?";

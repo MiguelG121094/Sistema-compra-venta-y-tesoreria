@@ -31,6 +31,7 @@ import modelo.ProvisionCuentaPagarDetalle;
 import modelo.Usuario;
 import service.CuentaPagarService;
 import service.FondoFijoRendicionService;
+import service.FondoFijoService;
 import service.OrdenPagoService;
 import service.ProveedorService;
 import service.ProvisionCuentaPagarService;
@@ -47,6 +48,7 @@ public class ProvisionCuentaPagarServlet extends HttpServlet {
     private final ProveedorService proveedorService = new ProveedorService();
     private final OrdenPagoService ordenPagoService = new OrdenPagoService();   // guard de anulación
     private final FondoFijoRendicionService rendicionService = new FondoFijoRendicionService();
+    private final FondoFijoService fondoFijoService = new FondoFijoService();
 
     // ==================== ESTADO DEL DOCUMENTO ====================
 
@@ -270,7 +272,14 @@ public class ProvisionCuentaPagarServlet extends HttpServlet {
             estado.indexSeleccionado = null;
             estado.importeEditor = null;
             if (estado.listaCuentasPagar == null || estado.listaCuentasPagar.isEmpty()) {
-                mostrarMensaje(request, "El proveedor no tiene cuentas a pagar para provisionar", "alert-warning");
+                // El responsable del fondo fijo nunca tiene facturas propias: las de su rendición son
+                // de los comercios. Su reposición se carga por el otro camino, no por acá (§E.1).
+                if (fondoFijoService.esResponsableDeFondoFijo(prov.getIdProveedor())) {
+                    mostrarMensaje(request, "Es responsable de fondo fijo: su reposición se carga "
+                            + "con \"Buscar rendición Fondo Fijo\"", "alert-info");
+                } else {
+                    mostrarMensaje(request, "El proveedor no tiene cuentas a pagar para provisionar", "alert-warning");
+                }
             }
         }
         guardarEstado(session, token, estado);
