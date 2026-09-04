@@ -508,9 +508,11 @@ CREATE TABLE public.provision_cuenta_pagar (
                 prov_cta_pag_estado VARCHAR NOT NULL,
                 prov_cta_pag_fecha DATE NOT NULL,
                 id_proveedor INTEGER NOT NULL,
+                id_fondofijo_rendicion INTEGER,
                 CONSTRAINT id_provi_cta_pagar PRIMARY KEY (id_provi_cta_pagar_cabecera)
 );
 COMMENT ON TABLE public.provision_cuenta_pagar IS 'la provision es por proveedor, primero se selcciona el proveedor y en base a este se traen sus cuentas a pagar (sus facturas con saldo pendiente)';
+COMMENT ON COLUMN public.provision_cuenta_pagar.id_fondofijo_rendicion IS 'rendicion de fondo fijo que origino la provision; nulo en las provisiones normales por proveedor';
 
 
 ALTER SEQUENCE public.provision_cuenta_pagar_id_provi_cta_pagar_cabecera_seq OWNED BY public.provision_cuenta_pagar.id_provi_cta_pagar_cabecera;
@@ -1904,6 +1906,13 @@ NOT DEFERRABLE;
 ALTER TABLE public.provision_cuenta_pagar ADD CONSTRAINT proveedor_provision_cuenta_pagar_fk
 FOREIGN KEY (id_proveedor)
 REFERENCES public.proveedor (id_proveedor)
+ON DELETE NO ACTION
+ON UPDATE NO ACTION
+NOT DEFERRABLE;
+
+ALTER TABLE public.provision_cuenta_pagar ADD CONSTRAINT fondo_fijo_rendicion_provision_cuenta_pagar_fk
+FOREIGN KEY (id_fondofijo_rendicion)
+REFERENCES public.fondo_fijo_rendicion (id_fondofijo_rendicion)
 ON DELETE NO ACTION
 ON UPDATE NO ACTION
 NOT DEFERRABLE;

@@ -55,7 +55,7 @@ Mapeo de los requerimientos del módulo contra lo que existe (revisado 2026-08-3
 | 3.4 | Procesos especiales (anular OP / anular cheques) | ⚠️ Parcial: anular OP ✅ (sin probar); anular un cheque suelto ❌ | §C.1 / §G3 |
 | 3.5 | Asignar fondo fijo | ✅ **Completo** (2026-09-01) | §E |
 | 3.6 | Rendir fondo fijo | ✅ **Completo** (2026-09-03) | §E |
-| 3.7 | Registrar reposición de fondo fijo | ⚠️ Parcial: la OP ya tiene el tipo 'reposiciónFF'; falta definir a quién se le paga | §E |
+| 3.7 | Registrar reposición de fondo fijo | ⚠️ **Flujo definido** (§E.1), falta implementarlo | §E.1 |
 | 3.8 | Cargar débitos y créditos | ✅ **Completo** (2026-08-31) | §D |
 | 3.9 | Registrar depósitos (boletas bancarias) | ✅ **Completo** (2026-08-31) — mismo circuito que 3.8 | §D |
 | 3.10 | Generar conciliación bancaria | ❌ Pendiente (objetivo final) | §F |
@@ -612,12 +612,113 @@ calcado de Cuentas Bancarias), y `FondoFijoRendicionDAO` —cabecera y detalle e
 - **`nro_rendicion` es un correlativo propio** (`MAX + 1`), distinto del id, igual que `ord_pag_numero`.
   `ff_rendicion_fecha_reposicion` queda nula hasta que se pague la OP de reposición.
 
-> **⚠️ Pendiente de definición (3.7).** La provisión filtra las cuentas a pagar **por proveedor**, y las
-> facturas rendidas son de los comercios, no del responsable. Tal como está, la provisión y la OP que
-> siguen a una rendición le pagan a cada comercio y no al responsable, que es a quien conceptualmente
-> se le repone la caja. Para que la OP le pague a él haría falta una cuenta a pagar a su nombre, y
-> `cuenta_pagar` exige una factura. Es la duda que el comentario de la tabla dejó como "analizar
-> flujo" y sigue abierta.
+---
+
+### E.1 Flujo completo del fondo fijo *(definido el 2026-09-04)*
+
+Esta sección cierra el "analizar flujo" que arrastraban los comentarios de las tablas y el
+requerimiento 3.7. Está escrita con el detalle suficiente para llevarla a una especificación de caso
+de uso.
+
+#### E.1.1 La idea de fondo
+
+La caja chica funciona así: **el responsable del fondo fijo paga de su bolsillo (de la caja asignada)
+las compras chicas, y después pide que se le reponga ese dinero.**
+
+De ahí salen las dos identidades que conviven en el circuito, y confundirlas es lo que hacía parecer
+que el esquema no cerraba:
+
+| Quién | Qué es en el sistema | Para qué |
+|---|---|---|
+| El comercio (Agua Bes, Retail…) | `factura_compra_cabecera.id_proveedor` | Deja registro de **a quién se le compró** |
+| El responsable del fondo fijo | `fondo_fijo.id_proveedor` | Es **a quién se le repone** la plata, y por eso tiene que ser un proveedor: una orden de pago se emite a un proveedor |
+
+La factura se carga con el proveedor **real**, el comercio. La reposición se le paga al
+**responsable**. La rendición es el documento que une las dos puntas.
+
+#### E.1.2 El circuito, paso a paso
+
+**1. Carga de la factura (módulo Compras).** Se carga en Factura de Compra con el proveedor real y
+`fact_comp_tipo_factura = 'fondoFijo'`. Como toda factura, genera su `cuenta_pagar` con estado
+`'Pendiente'` y saldo igual al total. Al ser de fondo fijo no tiene orden de compra, presupuesto ni
+pedido detrás.
+
+**2. Rendición (requerimiento 3.6).** El responsable presenta las facturas que pagó con su caja.
+
+- Elige su fondo fijo en *Buscar Responsable*; se cargan su nombre y su monto asignado.
+- Desde *Lista de Cuentas a Pagar* elige las facturas `'fondoFijo'` disponibles. El monto rendido es
+  siempre el total de la factura: son montos chicos y se rinden enteros.
+- Al **Generar**, en una sola transacción: se inserta la cabecera con `ff_rendicion_estado = 'Generada'`
+  y su `nro_rendicion` (correlativo propio), se inserta el detalle, y **cada cuenta a pagar pasa a
+  `'Rendida'`** con la fila bloqueada por `FOR UPDATE`.
+- La marca `'Rendida'` **no toca el saldo**: cumple dos funciones, que la factura no entre en dos
+  rendiciones y que no se pueda pagar por el camino normal al comercio.
+
+**3. Provisión de la reposición (requerimiento 3.1, segundo camino).** La provisión tiene ahora dos
+formas de cargarse:
+
+- *Lista de Cuentas a Pagar* — la de siempre, por proveedor, para las compras normales.
+- *Buscar Rendición de Fondo Fijo* — lista las rendiciones en `'Generada'`. Al elegir una se cargan de
+  golpe **todas sus facturas** como líneas del detalle y **el proveedor de la cabecera se setea con el
+  del fondo fijo**, o sea el responsable. El usuario no elige proveedor: lo define la rendición.
+- Al guardar, además de lo que ya hace, la provisión **guarda su `id_fondofijo_rendicion`** y marca la
+  rendición como `'Provisionada'`, para que no se provisione dos veces.
+
+Acá está la clave que hace que todo esto funcione sin inventar tablas: **la cabecera de la provisión
+apunta al responsable mientras su detalle apunta a las facturas de los comercios.** Ni el esquema ni
+`ProvisionCuentaPagarService` exigen que coincidan; el único que ataba las dos cosas era el filtro
+`WHERE f.id_proveedor = ?` de `listarCuentasPagarPorProveedor`, que es una consulta y no una regla.
+
+**4. Orden de pago de reposición (requerimiento 3.7).** Se genera sobre esa provisión, como cualquier
+otra. `OrdenPagoServlet` toma el proveedor **de la provisión**, así que la OP sale a nombre del
+responsable — que es lo correcto: a él se le repone. El *Tipo de pago* es `'reposicionFF'`, el valor
+que la cabecera de la OP ya tenía previsto. Al generarla se descuenta el saldo de cada cuenta a pagar
+y se completa `ff_rendicion_fecha_reposicion` en la rendición, que es el último eslabón.
+
+#### E.1.3 Estados
+
+| Documento | Estados | Transiciones |
+|---|---|---|
+| `cuenta_pagar` | `Pendiente` → `Rendida` → `En provision` → `Cancelado` | La rendición marca `'Rendida'`; la provisión, `'En provision'`; la OP descuenta el saldo y recalcula |
+| `fondo_fijo_rendicion` | `Generada` → `Provisionada`; `Anulado` | La provisión la marca; anular la provisión la devuelve a `'Generada'` |
+| `provision_cuenta_pagar` | `Pendiente` → `Procesada`; `Anulado` | Sin cambios respecto de la provisión normal |
+
+Las anulaciones revierten hacia atrás, cada una un solo paso:
+
+- **Anular la OP** devuelve el saldo y la provisión vuelve a `'Pendiente'`.
+- **Anular la provisión** devuelve las cuentas a `'Rendida'` —no a `'Pendiente'`, porque siguen
+  rendidas— y la rendición a `'Generada'`.
+- **Anular la rendición** devuelve las cuentas al estado que les corresponde por saldo y las deja
+  disponibles para rendirse de nuevo. Solo se puede si la rendición todavía está `'Generada'`.
+
+#### E.1.4 Lo que hay que tocar para implementarlo
+
+- [x] ✅ `provision_cuenta_pagar.id_fondofijo_rendicion` **nullable**, FK a `fondo_fijo_rendicion`
+  (2026-09-04). Nulo en las provisiones normales. Sin esta columna no hay forma de saber de qué
+  rendición salió una provisión, y se caen tres cosas: marcarla, revertirla al anular y completar la
+  fecha de reposición.
+- [ ] Modal *Buscar Rendición de Fondo Fijo* en `provision.jsp` + su acción en el servlet, que carga el
+  detalle completo y fija el proveedor.
+- [ ] **Excluir `'Rendida'` de `listarCuentasPagarPorProveedor()`**, que hoy solo excluye
+  `'En provision'` y `'Anulado'`. Sin esto una factura rendida sigue apareciendo en la provisión normal
+  del comercio y se puede llegar a pagar dos veces, una a cada uno.
+- [ ] Marcar la rendición `'Provisionada'` al guardar la provisión, y devolverla a `'Generada'` al
+  anularla.
+- [ ] Que `revertirProvision` devuelva a `'Rendida'` —y no a `'Pendiente'`— las cuentas que vienen de
+  una rendición.
+- [ ] Completar `ff_rendicion_fecha_reposicion` al generar la OP de la provisión que tiene rendición.
+
+#### E.1.5 Detalles a tener en cuenta
+
+- **El monto asignado del fondo fijo no limita la rendición.** Es de referencia: se muestra al elegir
+  el responsable, pero no se valida contra el total rendido. Si se quiere que sea un tope, es una
+  validación a agregar.
+- **Una rendición agrupa compras de varios comercios.** No hay ni tiene que haber un filtro por
+  proveedor en el modal de cuentas a pagar de la rendición.
+- **No hay vínculo entre una factura de fondo fijo y una caja puntual.** Si dos responsables tuvieran
+  fondo fijo al mismo tiempo, cualquiera de los dos podría rendir cualquier factura `'fondoFijo'`.
+  Resolverlo pediría una columna en `factura_compra_cabecera`; hoy no hace falta porque hay un solo
+  responsable.
 
 ---
 
@@ -815,7 +916,8 @@ PDF para los informes que realmente se impriman y archiven.
 **E. Fondo Fijo** *(cierra 3.5, 3.6 y 3.7)*
 - [x] ✅ Secuencias de `fondo_fijo_rendicion(_detalle)` agregadas (2026-09-01), junto con `ff_rendicion_estado`
 - [x] ✅ `FondoFijoDAO`, `FondoFijoRendicionDAO` (+detalle), Services, Servlets y JSPs (2026-09-01/03)
-- [ ] Definir a quién se le paga la reposición (3.7): hoy la provisión agrupa por proveedor y las facturas son de los comercios
+- [x] ✅ Definido a quién se le paga la reposición (3.7): al responsable, con la provisión cargada desde la rendición — ver §E.1
+- [ ] Implementar el segundo camino de carga de la provisión y el cierre del circuito (§E.1.4)
 
 **F. Conciliación** *(cierra 3.10)*
 - [ ] `ConciliacionBancariaDAO` (+detalle), Service, Servlet, JSP

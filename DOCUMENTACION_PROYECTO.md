@@ -412,9 +412,12 @@ cuentas a pagar de facturas `'fondoFijo'`, y Generar con confirmación.
   `fondo_fijo.id_proveedor` es el responsable como cobrador de la reposición, y por eso el seed trae un
   proveedor "Responsable fondo fijo".
 
-Quedó pendiente de definición el requerimiento 3.7: la provisión agrupa por proveedor y las facturas
-rendidas son de los comercios, así que hoy la OP que sigue a una rendición le paga a cada comercio y no
-al responsable. Ver el aviso al final de §E del plan.
+**El circuito completo quedó definido el 2026-09-04 en §E.1 del plan**, con el detalle necesario para
+llevarlo a una especificación de caso de uso. La clave: la factura se carga con el comercio real, pero
+la reposición se le paga al responsable, y el puente es una provisión cuya **cabecera apunta al
+responsable mientras su detalle apunta a las facturas de los comercios** — algo que ni el esquema ni el
+Service impiden. Para eso se agregó `provision_cuenta_pagar.id_fondofijo_rendicion` (nullable). Falta
+implementar el segundo camino de carga de la provisión; la lista está en §E.1.4.
 
 ---
 
