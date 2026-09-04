@@ -368,7 +368,7 @@ Sistema-compra-venta-y-tesoreria/
 | Chequeras (ABM) | ✅ | ✅ | ✅ | ✅ **Completo** — `ChequeraServlet` + `chequera.jsp`; valida solapamiento de rangos y avisa el consumo de la chequera |
 | Anulación individual de cheques | ✅ | ⚠️ | ❌ | Pendiente — hoy sólo se anulan en cascada al anular la orden de pago (ver `MODULO_TESORERIA_PLAN.md` §G3) |
 | Informes | — | — | — | Pendiente — sin planificar (ver `MODULO_TESORERIA_PLAN.md` §H) |
-| Fondo Fijo + Rendición | ✅ | ❌ | ❌ | Pendiente |
+| Fondo Fijo + Rendición | ✅ | ✅ | ✅ | ✅ **Completo** — ABM en `FondoFijoServlet` y rendición en `FondoFijoRendicionServlet`; la rendición marca las cuentas y no toca el saldo |
 | Conciliación Bancaria | ✅ | ❌ | ❌ | Pendiente (objetivo final del módulo) |
 | Timbrado | ✅ | ✅ | ✅ | Backend listo |
 | Libro IVA Compra | ✅ | ✅ | ✅ | Backend listo (integrado en Factura Compra) |

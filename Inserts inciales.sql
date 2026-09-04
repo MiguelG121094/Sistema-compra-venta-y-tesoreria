@@ -249,6 +249,11 @@ VALUES('Codisa', NULL, 2, '444444-4', 'Codisa', NULL, NULL);
 INSERT INTO public.proveedor
 (prov_razon_social, id_persona, id_tipo_entidad, prov_ruc, prov_nombre_comercial, prov_direccion, prov_telefono)
 VALUES('Palermo SA', NULL, 2, '555555-5', 'Palermo', NULL, NULL);
+-- El responsable del fondo fijo se carga como proveedor porque la reposicion se le paga con una
+-- orden de pago, y una OP se emite a un proveedor. Es a quien apunta fondo_fijo.id_proveedor.
+INSERT INTO public.proveedor
+(prov_razon_social, id_persona, id_tipo_entidad, prov_ruc, prov_nombre_comercial, prov_direccion, prov_telefono)
+VALUES('Responsable fondo fijo', NULL, 1, '666666-6', 'Responsable fondo fijo', NULL, NULL);  -- id 9
 
 
 -- INSERT USUARIO

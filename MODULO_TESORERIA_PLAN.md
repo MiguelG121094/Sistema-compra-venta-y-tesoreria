@@ -53,9 +53,9 @@ Mapeo de los requerimientos del módulo contra lo que existe (revisado 2026-08-3
 | 3.2 | Generar órdenes de pago | ✅ **Completo y probado** (2026-08-17) | §C |
 | 3.3 | Registrar entrega de cheques a proveedores | ✅ **Completo** (2026-08-17) | §G2 |
 | 3.4 | Procesos especiales (anular OP / anular cheques) | ⚠️ Parcial: anular OP ✅ (sin probar); anular un cheque suelto ❌ | §C.1 / §G3 |
-| 3.5 | Asignar fondo fijo | ❌ Pendiente | §E |
-| 3.6 | Rendir fondo fijo | ❌ Pendiente | §E |
-| 3.7 | Registrar reposición de fondo fijo | ❌ Pendiente | §E |
+| 3.5 | Asignar fondo fijo | ✅ **Completo** (2026-09-01) | §E |
+| 3.6 | Rendir fondo fijo | ✅ **Completo** (2026-09-03) | §E |
+| 3.7 | Registrar reposición de fondo fijo | ⚠️ Parcial: la OP ya tiene el tipo 'reposiciónFF'; falta definir a quién se le paga | §E |
 | 3.8 | Cargar débitos y créditos | ✅ **Completo** (2026-08-31) | §D |
 | 3.9 | Registrar depósitos (boletas bancarias) | ✅ **Completo** (2026-08-31) — mismo circuito que 3.8 | §D |
 | 3.10 | Generar conciliación bancaria | ❌ Pendiente (objetivo final) | §F |
@@ -471,11 +471,14 @@ Decisiones tomadas al implementarlo:
 - **`forma_pag_estado`** nace en `'Pendiente'` = pendiente de conciliación bancaria (§F la cierra).
 - Cambiar de provisión o generar/anular **invalida el documento en sesión** (se limpia el token).
 
-> **📍 DÓNDE NOS QUEDAMOS (2026-08-31):** Provisión, **Orden de Pago** y **entrega de cheques**
-> terminadas. El circuito corre, la provisión pasa a `'Procesada'` y el cheque queda `'Entregado'`.
-> **Débitos y créditos** (§D) quedaron hechos el 2026-08-31, con lo que cierran 3.8 y 3.9. Con eso ya
-> están cargados los tres orígenes de movimiento que la conciliación necesita: órdenes de pago,
-> débitos y créditos. Lo próximo es **Fondo Fijo** (§E); de cheques queda la anulación individual (§G3).
+> **📍 DÓNDE NOS QUEDAMOS (2026-09-04):** cerrados Provisión, **Orden de Pago**, entrega de cheques,
+> ABM de chequeras, **débitos y créditos** (§D) y **fondo fijo + rendición** (§E). Los tres orígenes de
+> movimiento que la conciliación necesita —órdenes de pago, débitos y créditos— ya están cargados.
+> Lo próximo es la **conciliación bancaria** (§F), el objetivo final. Quedan además la anulación
+> individual de cheques (§G3) y los informes (§H), los dos postergados a propósito.
+>
+> _Historial:_ **Fondo fijo (E) COMPLETO** (2026-09-01/03) — el ABM cierra 3.5 y la rendición 3.6.
+> De 3.7 falta definir a quién se le paga la reposición: ver el aviso al final de §E.
 >
 > _Historial:_ **Débitos y créditos (D) COMPLETOS** (2026-08-31) — `MovimientoBancarioServlet` +
 > `movimientoBancario.jsp`, una sola vista parametrizada por tipo. Hizo falta agregar dos columnas por
@@ -575,10 +578,46 @@ facturas FF, `nro_rendicion`), `fondo_fijo_rendicion_detalle` (FK compuesta a `c
 PENDIENTE*) → **rendición** (siempre por el **total**, son montos chicos) → **provisión** → **orden de
 pago** de reposición. Reutiliza los sub-módulos B y C.
 
-**Componentes:** `FondoFijoDAO`, `FondoFijoRendicionDAO` + `...DetalleDAO`, Services, Servlet, JSP.
+✅ **Implementado el 2026-09-01/03.** Cierra 3.5 y 3.6.
 
-> `fondo_fijo_rendicion` y su detalle **no tienen PK serial** (no declaran `nextval`) → el id se
-> asigna manualmente o hay que agregar la secuencia. A revisar al implementar.
+**Componentes:** `FondoFijoDAO` + `FondoFijoService` + `FondoFijoServlet` + `fondoFijo.jsp` (el ABM,
+calcado de Cuentas Bancarias), y `FondoFijoRendicionDAO` —cabecera y detalle en el mismo DAO, como
+`ProvisionCuentaPagarDAO`— + `FondoFijoRendicionService` + `FondoFijoRendicionServlet` +
+`fondoFijoRendicion.jsp`, con Session+Token porque hay un carrito de facturas.
+
+> ~~`fondo_fijo_rendicion` y su detalle no tienen PK serial~~ → ✅ **resuelto** (2026-09-01): las dos
+> secuencias se agregaron en Power Architect y están en el esquema. En el mismo cambio entró
+> `ff_rendicion_estado`, que es donde vive el 'Anulado'.
+
+**Decisiones al implementarlo:**
+
+- **La rendición no toca el saldo.** Marca cada cuenta a pagar como `'Rendida'`, y nada más: el pago
+  lo sigue haciendo provisión → orden de pago. La marca existe para que la misma factura no entre en
+  dos rendiciones; `marcarRendida` bloquea la fila con `FOR UPDATE` y exige que esté disponible.
+- **No hizo falta tocar la provisión.** Su consulta filtra por exclusión
+  (`cta_pag_estado NOT IN ('En provision', 'Anulado')`), así que una cuenta `'Rendida'` le sigue
+  apareciendo y el circuito rendición → provisión → OP no se corta.
+- **Anular revierte con reversa**, como la OP: devuelve cada cuenta al estado que le corresponde por
+  saldo y marca la rendición `'Anulado'`. El detalle no se borra, queda como trazabilidad.
+- **Se elige primero el responsable** y recién ahí se habilita la lista de cuentas a pagar. El caso de
+  uso lo pone al revés, pero la rendición pertenece a un fondo fijo y el orden inverso dejaba la
+  cabecera a medio llenar.
+- **Las facturas NO se filtran por el proveedor del fondo fijo.** Una rendición agrupa compras de
+  varios comercios —el prototipo mismo muestra dos— y el esquema no tiene ningún vínculo entre una
+  factura de fondo fijo y una caja puntual. `fondo_fijo.id_proveedor` es **el responsable como
+  cobrador**: la reposición se le paga con una OP, y una OP se emite a un proveedor. Por eso el seed
+  trae un proveedor "Responsable fondo fijo".
+- **El monto rendido es siempre el saldo completo** de la factura, sin editor de importe: son montos
+  chicos y se rinden enteros, como dice el comentario de la tabla.
+- **`nro_rendicion` es un correlativo propio** (`MAX + 1`), distinto del id, igual que `ord_pag_numero`.
+  `ff_rendicion_fecha_reposicion` queda nula hasta que se pague la OP de reposición.
+
+> **⚠️ Pendiente de definición (3.7).** La provisión filtra las cuentas a pagar **por proveedor**, y las
+> facturas rendidas son de los comercios, no del responsable. Tal como está, la provisión y la OP que
+> siguen a una rendición le pagan a cada comercio y no al responsable, que es a quien conceptualmente
+> se le repone la caja. Para que la OP le pague a él haría falta una cuenta a pagar a su nombre, y
+> `cuenta_pagar` exige una factura. Es la duda que el comentario de la tabla dejó como "analizar
+> flujo" y sigue abierta.
 
 ---
 
@@ -774,8 +813,9 @@ PDF para los informes que realmente se impriman y archiven.
 - [x] ✅ Columnas nuevas `debitos_estado`/`creditos_estado` y `debitos_tipo_cambio`/`creditos_tipo_cambio`
 
 **E. Fondo Fijo** *(cierra 3.5, 3.6 y 3.7)*
-- [ ] Revisar secuencia (PK no serial) de `fondo_fijo_rendicion(_detalle)`
-- [ ] `FondoFijoDAO`, `FondoFijoRendicionDAO` (+detalle), Services, Servlet, JSP
+- [x] ✅ Secuencias de `fondo_fijo_rendicion(_detalle)` agregadas (2026-09-01), junto con `ff_rendicion_estado`
+- [x] ✅ `FondoFijoDAO`, `FondoFijoRendicionDAO` (+detalle), Services, Servlets y JSPs (2026-09-01/03)
+- [ ] Definir a quién se le paga la reposición (3.7): hoy la provisión agrupa por proveedor y las facturas son de los comercios
 
 **F. Conciliación** *(cierra 3.10)*
 - [ ] `ConciliacionBancariaDAO` (+detalle), Service, Servlet, JSP

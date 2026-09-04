@@ -314,7 +314,7 @@ Faltan crear las vistas para las nuevas funcionalidades:
 - [x] Entrega de cheques al proveedor ✅ (2026-08-17 — se registra desde la Orden de Pago: estado `'Entregado'`, `chq_fecha_entrega`, `chq_entregado_a` y el N° de recibo, todo en una transacción; ver plan §G2)
 - [x] Débitos / Créditos bancarios ✅ (2026-08-31 — `MovimientoBancarioServlet` + `movimientoBancario.jsp`, una vista parametrizada por tipo; cierra también el registro de depósitos, porque la boleta es una fila de `creditos`; ver plan §D)
 - [x] Gestión de Chequeras ✅ (2026-08-31 — `ChequeraServlet` + `chequera.jsp`, calcados de Cuentas Bancarias; validan solapamiento de rangos y muestran el consumo de la chequera; ver plan §G1)
-- [ ] Gestión de Fondo Fijo + Rendición (plan §E)
+- [x] Gestión de Fondo Fijo + Rendición ✅ (2026-09-01/03 — `FondoFijoServlet` + `fondoFijo.jsp` para el ABM y `FondoFijoRendicionServlet` + `fondoFijoRendicion.jsp` para la rendición; cierra 3.5 y 3.6, ver plan §E)
 - [ ] Conciliación Bancaria (plan §F — el objetivo final)
 - [ ] Recepción de Cheques, Arqueo de Caja, Recaudaciones a Depositar *(lado cobros — requiere Ventas; plan §9)*
 - [ ] UI de Cuenta a Pagar (backend ya integrado con Factura Compra)
@@ -388,6 +388,35 @@ Todas las entidades siguen el patrón POJO:
 ---
 
 ## Historial de Cambios
+
+### 2026-09-01 al 03 — Fondo fijo: ABM y rendición
+
+Cierra §E del plan de tesorería, con él los requerimientos 3.5 y 3.6, y deja la conciliación (§F) como
+único paso que falta del camino principal.
+
+**ABM de fondo fijo** (`FondoFijoServlet` + `fondoFijo.jsp`), calcado de Cuentas Bancarias. Era una
+precondición de la rendición: el buscador de responsable lista los fondos fijos creados, y sin pantalla
+para cargarlos salía vacío. No deja borrar un fondo fijo que ya tiene rendiciones.
+
+**Rendición** (`FondoFijoRendicionServlet` + `fondoFijoRendicion.jsp`), con Session+Token porque hay un
+carrito de facturas. Cabecera con Buscar Responsable, grilla de detalle alimentada desde el modal de
+cuentas a pagar de facturas `'fondoFijo'`, y Generar con confirmación.
+
+- **La rendición no toca el saldo:** marca cada cuenta a pagar como `'Rendida'` para que no entre en dos
+  rendiciones, con `FOR UPDATE` sobre la fila. El pago lo sigue haciendo provisión → orden de pago.
+- **No hizo falta tocar la provisión**, porque su consulta filtra por exclusión y las cuentas `'Rendida'`
+  le siguen apareciendo.
+- **Anular revierte con reversa**, como la orden de pago; el detalle queda como trazabilidad.
+- **Se elige primero el responsable** y recién ahí se habilita la lista de cuentas a pagar.
+- **Las facturas no se filtran por proveedor:** una rendición agrupa compras de varios comercios.
+  `fondo_fijo.id_proveedor` es el responsable como cobrador de la reposición, y por eso el seed trae un
+  proveedor "Responsable fondo fijo".
+
+Quedó pendiente de definición el requerimiento 3.7: la provisión agrupa por proveedor y las facturas
+rendidas son de los comercios, así que hoy la OP que sigue a una rendición le paga a cada comercio y no
+al responsable. Ver el aviso al final de §E del plan.
+
+---
 
 ### 2026-08-31 — Otros débitos y créditos bancarios
 
@@ -806,8 +835,8 @@ Todos los backends (Pedido, Factura, Nota Crédito/Débito/Remisión) tienen mod
 Gestión financiera completa: cuentas bancarias, cheques, cobros, pagos, caja, fondo fijo, conciliación bancaria.
 - ✅ **Hechos:** Referenciales bancarios (§A), Provisión de Cuenta a Pagar (§B) y **Orden de Pago** (§C,
   con emisión de cheques y descuento de saldo — pendiente de prueba end-to-end).
-- ⏳ **Camino que resta hacia la conciliación:** Débitos/Créditos (§D) → Fondo Fijo + rendición (§E) →
-  **Conciliación bancaria** (§F, el objetivo final).
+- ⏳ **Camino que resta hacia la conciliación:** ~~Débitos/Créditos (§D)~~ ✅ → ~~Fondo Fijo + rendición
+  (§E)~~ ✅ → **Conciliación bancaria** (§F, el objetivo final), que ya es el próximo paso.
 - El lado **cobros/caja/arqueo/recaudaciones** (§9 del plan) queda para cuando se aborde Ventas.
 
 ---

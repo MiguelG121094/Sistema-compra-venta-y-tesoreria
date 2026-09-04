@@ -82,14 +82,20 @@
                                 <button type="button" class="btn btn-info text-white" data-bs-toggle="modal" data-bs-target="#modalBuscarRendicion">Buscar Rendición</button>
                             </div>
                             <div class="col-auto">
-                                <button type="button" class="btn btn-info text-white" data-bs-toggle="modal" data-bs-target="#modalCuentasPagar"
-                                        <c:if test="${empty token or not esNuevo or empty fondoFijoSeleccionado}">disabled
-                                            title="${empty fondoFijoSeleccionado ? 'Primero seleccione el responsable' : 'Presione Nuevo para iniciar una rendición'}"</c:if>>Lista de Cuentas a Pagar</button>
+                                <c:set var="ctasBloqueadas" value="${empty token or not esNuevo or empty fondoFijoSeleccionado}" />
+                                <span class="d-inline-block" tabindex="0"
+                                      <c:if test="${ctasBloqueadas}">title="${empty token or not esNuevo ? 'Presione Nuevo para iniciar una rendición' : 'Primero seleccione el responsable'}"</c:if>>
+                                    <button type="button" class="btn btn-info text-white" data-bs-toggle="modal" data-bs-target="#modalCuentasPagar"
+                                            <c:if test="${ctasBloqueadas}">disabled style="pointer-events: none;"</c:if>>Lista de Cuentas a Pagar</button>
+                                </span>
                             </div>
                             <div class="col-auto">
-                                <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#modalConfirmarAnular"
-                                        <c:if test="${empty idRendicionExistente or anulada or not puedeBorrar}">disabled
-                                            title="${anulada ? 'La rendición ya está anulada' : 'Cargue una rendición para anularla'}"</c:if>>Anular</button>
+                                <c:set var="anularBloqueado" value="${empty idRendicionExistente or anulada or not puedeBorrar}" />
+                                <span class="d-inline-block" tabindex="0"
+                                      <c:if test="${anularBloqueado}">title="${not puedeBorrar ? 'No tiene permisos' : (anulada ? 'La rendición ya está anulada' : 'Cargue una rendición para anularla')}"</c:if>>
+                                    <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#modalConfirmarAnular"
+                                            <c:if test="${anularBloqueado}">disabled style="pointer-events: none;"</c:if>>Anular</button>
+                                </span>
                             </div>
                         </div>
 
@@ -107,8 +113,11 @@
                                 <div class="col custom-card">
                                     <div class="row mb-3 align-items-center">
                                         <div class="col-md-2">
-                                            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalResponsables"
-                                                    <c:if test="${empty token or not esNuevo}">disabled title="Presione Nuevo para iniciar una rendición"</c:if>>Buscar Responsable</button>
+                                            <span class="d-inline-block" tabindex="0"
+                                                  <c:if test="${empty token or not esNuevo}">title="Presione Nuevo para iniciar una rendición"</c:if>>
+                                                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalResponsables"
+                                                        <c:if test="${empty token or not esNuevo}">disabled style="pointer-events: none;"</c:if>>Buscar Responsable</button>
+                                            </span>
                                         </div>
                                         <div class="col-md-3">
                                             <div class="form-floating">
@@ -191,8 +200,11 @@
                                         <div class="col-auto">
                                             <c:choose>
                                                 <c:when test="${puedeInsertar}">
-                                                    <button type="button" class="btn btn-success" onclick="generarRendicion();"
-                                                            <c:if test="${empty token or not esNuevo}">disabled title="Presione Nuevo para iniciar una rendición"</c:if>>Generar</button>
+                                                    <span class="d-inline-block" tabindex="0"
+                                                          <c:if test="${empty token or not esNuevo}">title="Presione Nuevo para iniciar una rendición"</c:if>>
+                                                        <button type="button" class="btn btn-success" onclick="generarRendicion();"
+                                                                <c:if test="${empty token or not esNuevo}">disabled style="pointer-events: none;"</c:if>>Generar</button>
+                                                    </span>
                                                 </c:when>
                                                 <c:otherwise>
                                                     <button type="button" class="btn btn-success" disabled title="No tiene permisos">Generar</button>
