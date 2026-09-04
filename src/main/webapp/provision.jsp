@@ -56,8 +56,11 @@
                                     </c:otherwise>
                                 </c:choose>
                                 <button type="button" class="btn btn-info text-white" data-bs-toggle="modal" data-bs-target="#modalBuscarProvision">Buscar Provisión</button>
-                                <button type="button" class="btn btn-info text-white" data-bs-toggle="modal" data-bs-target="#modalListaCuentas"
-                                        <c:if test="${empty token or not esNuevo or empty proveedorSeleccionado}">disabled</c:if>>Lista de Cuentas a Pagar</button>
+                                <span class="d-inline-block" tabindex="0"
+                                      <c:if test="${esDeRendicion}">title="La reposición ya trae las facturas de la rendición"</c:if>>
+                                    <button type="button" class="btn btn-info text-white" data-bs-toggle="modal" data-bs-target="#modalListaCuentas"
+                                            <c:if test="${empty token or not esNuevo or empty proveedorSeleccionado or esDeRendicion}">disabled style="pointer-events: none;"</c:if>>Lista de Cuentas a Pagar</button>
+                                </span>
                                 <c:choose>
                                     <c:when test="${not empty idProvisionExistente and provision.estado ne 'Anulado' and puedeBorrar}">
                                         <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#modalConfirmarAnular">Anular</button>
@@ -184,11 +187,16 @@
                                                         <td class="text-center">${empty det.cuentaPagar.plazo ? '-' : det.cuentaPagar.plazo} días</td>
                                                         <c:if test="${not empty token and esNuevo}">
                                                             <td class="text-center">
-                                                                <c:if test="${puedeInsertar}">
+                                                                <%-- La reposición de fondo fijo se provisiona por el total: el detalle
+                                                                     que viene de una rendición no se edita ni se recorta. --%>
+                                                                <c:if test="${puedeInsertar and not esDeRendicion}">
                                                                     <a href="ProvisionCuentaPagarServlet?menu=ProvisionCuentaPagar&accion=EditarLinea&token=${token}&index=${st.index}"
                                                                        class="btn btn-warning btn-sm">Editar</a>
                                                                     <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#modalEliminarLinea"
                                                                             onclick="document.getElementById('indexLinea').value=${st.index};">Eliminar</button>
+                                                                </c:if>
+                                                                <c:if test="${esDeRendicion}">
+                                                                    <span class="text-muted small">Por el total</span>
                                                                 </c:if>
                                                             </td>
                                                         </c:if>

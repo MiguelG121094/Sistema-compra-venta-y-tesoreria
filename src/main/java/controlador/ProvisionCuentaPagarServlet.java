@@ -121,6 +121,7 @@ public class ProvisionCuentaPagarServlet extends HttpServlet {
         request.setAttribute("listaCuentasPagar", estado.listaCuentasPagar);
         request.setAttribute("listaProvisiones", estado.listaProvisiones);
         request.setAttribute("listaRendiciones", estado.listaRendiciones);
+        request.setAttribute("esDeRendicion", estado.provision.getFondoFijoRendicion() != null);
         request.setAttribute("totalProvision", calcularNeto(estado.listaDetalle));
     }
 
@@ -366,11 +367,32 @@ public class ProvisionCuentaPagarServlet extends HttpServlet {
         forward(request, response, JSP_PROVISION);
     }
 
+    /**
+     * El detalle que viene de una rendición de fondo fijo no se edita: se repone el total de cada
+     * factura, no una parte. Una reposición parcial dejaría el saldo restante cobrable por el
+     * comercio, porque al descontar el saldo la cuenta pierde la marca 'Rendida'. Ver §E.1 del plan.
+     */
+    private boolean detalleBloqueado(HttpServletRequest request, ProvisionState estado) {
+        if (estado.provision.getFondoFijoRendicion() == null) {
+            return false;
+        }
+        mostrarMensaje(request, "La reposición de fondo fijo se provisiona por el total: "
+                + "el detalle de la rendición no se modifica", "alert-warning");
+        return true;
+    }
+
     /** Agrega (o actualiza) la línea del detalle con el importe a pagar del editor. */
     private void accionAgregarLinea(HttpServletRequest request, HttpServletResponse response,
             HttpSession session, String token) throws ServletException, IOException {
         ProvisionState estado = obtenerEstadoORedireccionar(request, response, session, token);
         if (estado == null) return;
+
+        if (detalleBloqueado(request, estado)) {
+            guardarEstado(session, token, estado);
+            cargarDatosParaVista(request, estado, token);
+            forward(request, response, JSP_PROVISION);
+            return;
+        }
 
         String importeStr = request.getParameter("importe");
         if (estado.cuentaEnEditor == null) {
@@ -444,6 +466,13 @@ public class ProvisionCuentaPagarServlet extends HttpServlet {
         ProvisionState estado = obtenerEstadoORedireccionar(request, response, session, token);
         if (estado == null) return;
 
+        if (detalleBloqueado(request, estado)) {
+            guardarEstado(session, token, estado);
+            cargarDatosParaVista(request, estado, token);
+            forward(request, response, JSP_PROVISION);
+            return;
+        }
+
         String idxStr = request.getParameter("index");
         if (idxStr != null && !idxStr.isEmpty()) {
             int idx = Integer.parseInt(idxStr);
@@ -463,6 +492,15 @@ public class ProvisionCuentaPagarServlet extends HttpServlet {
             HttpSession session, String token) throws ServletException, IOException {
         ProvisionState estado = obtenerEstadoORedireccionar(request, response, session, token);
         if (estado == null) return;
+
+        // Sacar una factura de la rendición la dejaría 'Rendida' para siempre: la rendición se marca
+        // 'Provisionada' igual y esa factura no vuelve a ofrecerse en ningún lado.
+        if (detalleBloqueado(request, estado)) {
+            guardarEstado(session, token, estado);
+            cargarDatosParaVista(request, estado, token);
+            forward(request, response, JSP_PROVISION);
+            return;
+        }
 
         String idxStr = request.getParameter("index");
         if (idxStr != null && !idxStr.isEmpty()) {

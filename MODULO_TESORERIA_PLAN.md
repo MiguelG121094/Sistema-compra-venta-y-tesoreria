@@ -708,6 +708,18 @@ Las anulaciones revierten hacia atrás, cada una un solo paso:
 - **El monto asignado del fondo fijo no limita la rendición.** Es de referencia: se muestra al elegir
   el responsable, pero no se valida contra el total rendido. Si se quiere que sea un tope, es una
   validación a agregar.
+- **No hay reposición parcial** (decidido el 2026-09-04). El detalle que la provisión trae de una
+  rendición no se edita ni se recorta: se repone el total de cada factura. Coincide con la regla del
+  módulo —*"siempre se paga el total de las facturas porque son montos menores"*— y evita un agujero
+  concreto: al descontar el saldo, `descontarSaldo` recalcula el estado por saldo y la cuenta pierde la
+  marca `'Rendida'`, así que el resto reaparecería en la provisión **del comercio**, que ya cobró.
+  Sacar una línea tiene el mismo problema al revés: la rendición se marca `'Provisionada'` igual y esa
+  factura queda `'Rendida'` sin volver a ofrecerse en ningún lado. Por eso están bloqueadas las tres
+  acciones —agregar, editar y eliminar— en la vista y en el servlet.
+  Si alguna vez hiciera falta reponer en cuotas, hay que: que `descontarSaldo` devuelva a `'Rendida'`
+  las cuentas que vienen de una rendición, agregar un estado `'Parcial'` a la rendición para que el
+  modal la siga ofreciendo, mostrar el saldo pendiente por rendición y completar
+  `ff_rendicion_fecha_reposicion` con la última OP y no con la primera.
 - **Una rendición agrupa compras de varios comercios.** No hay ni tiene que haber un filtro por
   proveedor en el modal de cuentas a pagar de la rendición.
 - **No hay vínculo entre una factura de fondo fijo y una caja puntual.** Si dos responsables tuvieran
