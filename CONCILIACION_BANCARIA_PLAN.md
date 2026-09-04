@@ -106,75 +106,177 @@ graba: `OrdenPagoServlet` completa `forma_pag_fecha` con la fecha de emisión de
 
 **No hace falta convertir monedas.** La conciliación es por cuenta, y todos los movimientos de una
 cuenta están en su moneda. El tipo de cambio (`forma_pag_tipo_cambio`, `debitos_tipo_cambio`) sirve
-para llevar a guaraníes, que es otro problema.
+para llevar a guaraníes, que es otro problema. El ejemplo lo confirma: la primera fila es un débito
+*"OC $66.000 TC 6.045"*, una compra de dólares con su cotización, y el importe de la grilla está en la
+moneda de la cuenta.
+
+⚠️ **Esta tabla queda corta:** falta el arrastre de los movimientos que quedaron sin conciliar en
+períodos anteriores. Ver §6.1.
 
 ---
 
-## 5. Los saldos
+## 5. Los saldos: se parte del extracto y se llega al libro
+
+**Acá tenía el cálculo al revés.** Una conciliación bancaria no suma movimientos para llegar a un
+saldo: **arranca en el saldo del extracto y lo ajusta con las partidas conciliatorias hasta llegar al
+saldo del libro.** Es el formato del ejemplo `resumen_conciliacion_ejemplo.jpg`:
 
 ```
-saldo_final = saldo_inicial + Σ(créditos conciliados) − Σ(débitos conciliados)
+SALDO SEGÚN EXTRACTO BANCARIO                                    1.478.195
+  MENOS:
+    Cheques emitidos no cobrados en el banco
+    Notas de crédito bancarias no contabilizadas
+    Depósitos no contabilizados
+  MÁS:
+    Depósitos no acreditados por el banco
+    Cheques no contabilizados
+    Otros gastos bancarios no documentados
+    Débitos de tarjeta por error
+    Cheques adelantados no cobrados
+SALDO SEGÚN LIBRO                                                1.478.195
 ```
 
-- **`saldo_inicial`**: el saldo con el que arranca el período. Lo natural es tomarlo del
-  `saldo_final` de la conciliación anterior de esa misma cuenta, y pedirlo a mano sólo la primera vez.
-- **`saldo_final`**: lo calcula el sistema. Ojo: sólo debería sumar **lo conciliado**, si no siempre
-  daría igual al saldo del sistema y la conciliación no serviría de nada.
-- **`saldo_banco`**: lo carga el usuario leyendo el extracto.
+Mapeo con las columnas de la cabecera:
 
-La pantalla tiene que mostrar la **diferencia** entre los dos últimos bien a la vista. Si es cero,
-la conciliación cierra. Si no, lo que queda sin tildar es la explicación.
+| Columna | Qué es |
+|---|---|
+| `conc_banc_saldo_banco` | **Saldo según extracto bancario** — lo carga el usuario |
+| `conc_bancaria_saldo_final` | **Saldo según libro** — al que se llega ajustando |
+| `conc_bancaria_saldo_inicial` | Saldo del libro al comienzo del período |
+
+Las partidas conciliatorias **son los ítems que quedaron sin tildar**. La conciliación cierra cuando
+el saldo ajustado coincide con el del libro; lo que no se explica es una diferencia real.
 
 > `cuenta` no tiene columna de saldo, así que no hay un "saldo del sistema" que actualizar. El saldo
 > vive únicamente en las conciliaciones, encadenado de una a la siguiente.
 
 ---
 
-## 6. Cheques en tránsito
+## 6. Tres tipos, no dos — y el arrastre de los cheques
 
-Es la partida conciliatoria clásica y el motivo principal por el que este módulo existe.
+El comentario de `conc_bancaria_tipo` dice `'Cred'=Crédito, 'Deb'=Débito, **etc**`. Ese "etc" es el
+tercer tipo, que se ve en la columna TIP del ejemplo: **`Ch` = cheque**.
 
-Un cheque emitido en marzo y entregado al proveedor puede cobrarse en mayo. En la conciliación de
-marzo **aparece pero no se tilda**: el sistema lo descontó, el banco todavía no. En la de mayo, cuando
-figure en el extracto, se tilda.
+El cheque es un tipo propio y no un débito más porque **se concilia distinto**:
 
-Hoy `chq_estado` contempla `'Cobrado'` —lo dice el comentario de la columna y el javadoc de `Cheque`—
-pero **nada lo setea nunca**. La conciliación es el lugar natural: al tildar el ítem de un cheque,
-el cheque pasa a `'Cobrado'`. Ver decisión D3.
+| Tipo | Qué es | Al armar la grilla |
+|---|---|---|
+| `Cr` | Crédito / depósito | **Nace tildado** |
+| `Db` | Débito / transferencia | **Nace tildado** |
+| `Ch` | Cheque emitido | **Nace destildado** |
 
-Lo mismo con `forma_pag_estado`, que nace en `'Pendiente'` esperando a este módulo: al tildar el ítem
-debería pasar a `'Conciliado'`.
+El motivo es de negocio: un débito o un crédito se cargan cuando ya ocurrieron en el banco, así que
+están conciliados por definición. **Un cheque tiene alrededor de un mes para cobrarse**: al conciliar
+a fin de mes puede no haberse presentado todavía.
+
+### 6.1 El arrastre entre períodos
+
+Esto es lo más importante que aportan los ejemplos y no estaba contemplado:
+
+> Un cheque que no se tildó en agosto **tiene que volver a aparecer en la conciliación de setiembre**,
+> y así hasta que se cobre o se anule.
+
+O sea que la grilla **no es "los movimientos del período"**, es:
+
+```
+movimientos del período  +  los de períodos anteriores que quedaron sin conciliar
+```
+
+Esto se puede resolver sin columnas nuevas: un movimiento está pendiente mientras su
+`forma_pag_estado` siga en `'Pendiente'` (nace así en `OrdenPagoServlet`) o, para los cheques, mientras
+`chq_estado` no sea `'Cobrado'`. Al tildar y grabar, esos estados se cierran y el movimiento deja de
+arrastrarse. Es exactamente para lo que esos dos campos estaban esperando.
 
 ---
 
-## 7. Flujo propuesto de la pantalla
+## 7. La grilla, según el ejemplo
 
-Patrón documento, como la Orden de Pago: **Nuevo / Buscar / Generar / Cancelar**, con Session+Token
+`conciliacion_ejemplo.jpg` muestra una pantalla ya en uso. Sus columnas:
+
+| Columna | De dónde sale en nuestro esquema |
+|---|---|
+| **CO** | checkbox → `conc_bancaria_conciliado` |
+| **EMISIÓN** | cheque: `chq_fecha_emision`; débito/crédito: su fecha |
+| **FECHA** | la del movimiento — `forma_pag_fecha`, `debitos_fecha`, `creditos_fecha` |
+| **NÚMERO** | cheque/transferencia: `ord_pag_numero`; débito/crédito: su nro de comprobante |
+| **DETALLE** | concepto — `debitos_detalle` / `creditos_detalle`; para la OP, el proveedor |
+| **BANCO / CUENTA** | de `cuenta` → entidad financiera y número |
+| **NRO. DOC.** | cheque: `chq_numero`; débito/crédito: `*_nro_comprobante` |
+| **TIP** | `Db` / `Cr` / `Ch` |
+| **IMPORTE** | `forma_pag_monto` / `debito_monto` / `credito_monto` |
+
+**Dos fechas y no una.** Emisión y fecha del movimiento coinciden casi siempre, pero en un cheque no:
+se emite en una y se cobra en otra. Es lo que hace visible el arrastre.
+
+Debajo, la pantalla del ejemplo tiene: buscador, rango de fechas, filtro **Mostrar** (Débitos /
+Créditos / Cheques / Todos), selector de banco y cuenta, y ordenamiento por columna. Buscar y ordenar
+los cubre DataTables sin código; el filtro por tipo es un `<select>` que filtra la grilla.
+
+> Las columnas BANCO y CUENTA son redundantes para nosotros: nuestra conciliación es **por cuenta**, así
+> que van en la cabecera y no en cada fila.
+
+---
+
+## 8. El resumen es un informe aparte
+
+`resumen_conciliacion_ejemplo.jpg` no es otra pantalla de carga: es **el informe** de una conciliación
+ya grabada, con formato contable y pie de firmas ("Hecho por" / "Revisado por"). Se genera a partir de
+lo guardado, no se carga.
+
+Además del cuadro de saldos de §5, lleva cuatro planillas de detalle:
+
+| Planilla | Qué lista | ¿Lo tenemos? |
+|---|---|---|
+| **Cheques pendientes de cobro** | Cheque N°, Fecha, **Portador**, Importe | ✅ Los ítems `Ch` sin tildar. El portador es `chq_a_la_orden` |
+| **Depósitos no acreditados por el banco** | Comprobante N°, Fecha, Importe | ✅ Los ítems `Cr` sin tildar |
+| **Depósitos no contabilizados** | Comp. N°, Fecha, Importe | ❌ Están en el banco y no en el sistema |
+| **Cheques no contabilizados** | Cheque N°, Fecha, Importe | ❌ Ídem |
+
+**Las dos primeras salen solas de lo que ya vamos a tener.** Las dos últimas, y las líneas "no
+contabilizado" del cuadro de saldos, son por definición movimientos que el banco tiene y el sistema
+no. Con nuestro módulo eso se resuelve **cargándolos como débito o crédito** y volviendo a conciliar:
+ahí dejan de ser partida conciliatoria. Que en el ejemplo estén todas en cero muestra justamente un
+mes bien conciliado.
+
+Esto reordena el alcance: **el informe es parte de §H (Informes)**, no de esta pantalla. Conviene
+dejarlo para después de que la conciliación funcione, pero diseñar la cabecera y el detalle sabiendo
+que este es el resultado que se espera.
+
+---
+
+## 9. Flujo propuesto de la pantalla
+
+Patrón documento, como la Orden de Pago: **Nuevo / Buscar / Grabar / Cancelar**, con Session+Token
 porque hay una grilla que se sostiene entre pedidos.
 
 1. **Nuevo** habilita la cabecera. El usuario elige **cuenta** y **período** (desde / hasta).
-2. Al confirmar el período, el sistema **trae los movimientos** de la tabla de §4 y arma la grilla,
-   todos destildados. El `saldo_inicial` se propone desde la conciliación anterior de esa cuenta.
-3. El usuario carga el **saldo del banco** del extracto y va **tildando** los ítems que encuentra en él.
-4. La pantalla recalcula en vivo el **saldo final** y la **diferencia contra el banco**.
-5. **Generar** guarda la cabecera y el detalle —incluidos los ítems no tildados, que son la
-   explicación de la diferencia— y actualiza los estados de lo conciliado.
+2. Al confirmar el período, el sistema arma la grilla con los movimientos de §4 **más los pendientes
+   arrastrados** (§6.1). Los `Db` y `Cr` vienen tildados; los `Ch`, destildados.
+3. El usuario carga el **saldo del extracto** y ajusta los tildes contra el papel del banco: tilda los
+   cheques que se cobraron y destilda lo que el banco no muestre.
+4. La pantalla recalcula en vivo el **saldo según libro** y la **diferencia**.
+5. **Grabar** guarda cabecera y detalle —los ítems sin tildar incluidos, que son la explicación de la
+   diferencia— y cierra los estados de lo conciliado: `forma_pag_estado` → `'Conciliado'`,
+   `chq_estado` → `'Cobrado'`.
 
 ---
 
-## 8. Decisiones abiertas
+## 10. Decisiones
 
-| # | Decisión | Por qué importa |
+Los ejemplos resolvieron varias de las que estaban abiertas:
+
+| # | Decisión | Estado |
 |---|---|---|
-| **D1** | ¿La cabecera necesita un estado para poder anular o reabrir una conciliación? | No hay columna. Sin ella, una conciliación mal hecha no se deshace, y los estados que haya tocado (cheques `'Cobrado'`, formas `'Conciliado'`) quedan mal para siempre. Es el mismo caso de `debitos_estado` y `ff_rendicion_estado`. |
-| **D2** | ¿El saldo inicial se encadena desde la conciliación anterior o lo carga el usuario? | Encadenarlo evita errores de tipeo y hace que la serie cierre sola, pero obliga a conciliar en orden y sin huecos. |
-| **D3** | Al tildar un ítem de cheque, ¿el cheque pasa a `'Cobrado'`? | Es el único lugar del sistema donde ese estado tendría sentido. Si no, `'Cobrado'` queda muerto para siempre. |
-| **D4** | ¿Se puede tildar un ítem que el banco muestra pero el sistema no tiene? | Sería un movimiento no registrado (una comisión que nadie cargó). Lo correcto es cargarlo primero como débito y volver; pero se puede permitir agregarlo desde acá. |
-| **D5** | ¿El extracto se importa o se tilda a mano? | Importar (CSV) es mucho más cómodo con volumen, pero cada banco tiene su formato. Tildar a mano no necesita nada y sirve para empezar. |
+| **D3** | Al tildar un ítem de cheque, ¿el cheque pasa a `'Cobrado'`? | ✅ **Sí.** Es lo que hace que el cheque deje de arrastrarse al mes siguiente, y el único lugar del sistema donde ese estado tiene sentido |
+| **D5** | ¿El extracto se importa o se tilda a mano? | ✅ **A mano.** La pantalla del ejemplo trabaja así, con buscador y filtro por tipo |
+| **D6** | ¿Tres tipos en `conc_bancaria_tipo`? | ✅ **Sí**: `Cred` / `Deb` / `Ch`, con el tildado automático de §6 |
+| **D1** | ¿La cabecera necesita un estado para anular o reabrir? | ⏳ **Abierta.** No hay columna. Sin ella, una conciliación mal hecha no se deshace y los estados que haya tocado —cheques `'Cobrado'`, formas `'Conciliado'`— quedan mal para siempre. Mismo caso que `debitos_estado` y `ff_rendicion_estado` |
+| **D2** | ¿El saldo inicial se encadena desde la conciliación anterior o lo carga el usuario? | ⏳ **Abierta** |
+| **D4** | ¿Se puede cargar desde acá un movimiento que el banco muestra y el sistema no? | ⏳ **Abierta.** Lo limpio es cargarlo como débito/crédito en su pantalla y volver; permitirlo desde acá es más cómodo pero duplica el alta |
 
 ---
 
-## 9. Riesgos y particularidades
+## 11. Riesgos y particularidades
 
 - **PK compuesta sin serial** en el detalle: `conc_bancaria_nro_item` lo asigna la aplicación (1..N
   dentro de la conciliación). No es un problema, pero hay que recordarlo al insertar.
@@ -183,18 +285,28 @@ porque hay una grilla que se sostiene entre pedidos.
 - **Períodos solapados o con huecos.** Nada impide conciliar dos veces el mismo mes, ni saltarse uno.
   Si el saldo inicial se encadena (D2), conviene validar que el `desde` sea el día siguiente al
   `hasta` de la conciliación anterior de esa cuenta.
+- **El arrastre depende de los estados.** Si algo deja `forma_pag_estado` o `chq_estado` mal, un
+  movimiento se arrastra para siempre o desaparece antes de tiempo. Son los dos campos a cuidar.
 - **Montos `INTEGER`**: aplica lo mismo que al resto del módulo (§8 del plan de tesorería).
-- **`conc_bancaria_tipo`** es texto libre (`'Cred'` / `'Deb'`), sin constraint. Definir las constantes
-  en un solo lugar del código.
+- **`conc_bancaria_tipo`** es texto libre, sin constraint. Definir las constantes en un solo lugar.
 
 ---
 
-## 10. Componentes a construir
+## 12. Componentes a construir
 
 1. `ConciliacionBancariaDAO` — cabecera y detalle en el mismo DAO, como `ProvisionCuentaPagarDAO`.
-   Incluye la consulta de movimientos del período (§4) y el `saldo_final` de la conciliación anterior.
-2. `ConciliacionBancariaService` — transaccional: guarda cabecera + detalle y actualiza los estados de
-   lo conciliado (`forma_pag_estado`, `chq_estado`) en una sola unidad.
+   Incluye la consulta de movimientos del período **con arrastre** (§4 y §6.1) y el `saldo_final` de la
+   conciliación anterior.
+2. `ConciliacionBancariaService` — transaccional: guarda cabecera + detalle y cierra los estados de lo
+   conciliado (`forma_pag_estado`, `chq_estado`) en una sola unidad.
 3. `ConciliacionBancariaServlet` — Session+Token, calcado de `OrdenPagoServlet`.
-4. `conciliacionBancaria.jsp` — cabecera + grilla con checkbox por ítem y el recuadro de saldos.
+4. `conciliacionBancaria.jsp` — cabecera, grilla con checkbox y filtro por tipo, y recuadro de saldos.
 5. Registro en `AuthorizationFilter` (módulo `tesoreria`) y link en `menuLateral.jsp`.
+6. *(Después, con §H)* el informe de resumen con el formato de `resumen_conciliacion_ejemplo.jpg`.
+
+---
+
+## 13. Ejemplos de referencia
+
+`src/main/webapp/Images/conciliacion_ejemplo.jpg` — pantalla de carga de un sistema en uso.
+`src/main/webapp/Images/resumen_conciliacion_ejemplo.jpg` — el informe que se espera como resultado.
