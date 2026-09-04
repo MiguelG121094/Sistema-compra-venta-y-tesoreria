@@ -183,9 +183,6 @@
                                                         </c:if>
                                                     </tr>
                                                 </c:forEach>
-                                                <c:if test="${empty listaDetalle}">
-                                                    <tr><td colspan="6" class="text-center text-muted">Sin facturas cargadas.</td></tr>
-                                                </c:if>
                                             </tbody>
                                         </table>
                                     </div>
