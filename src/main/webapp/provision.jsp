@@ -66,7 +66,11 @@
                                         <button type="button" class="btn btn-danger" disabled>Anular</button>
                                     </c:otherwise>
                                 </c:choose>
-                                <button type="button" class="btn btn-info text-white" disabled title="Disponible con el módulo Fondo Fijo">Buscar rendición Fondo Fijo</button>
+                                <span class="d-inline-block" tabindex="0"
+                                      <c:if test="${empty token or not esNuevo}">title="Presione Nuevo para iniciar una provisión"</c:if>>
+                                    <button type="button" class="btn btn-info text-white" data-bs-toggle="modal" data-bs-target="#modalBuscarRendicion"
+                                            <c:if test="${empty token or not esNuevo}">disabled style="pointer-events: none;"</c:if>>Buscar rendición Fondo Fijo</button>
+                                </span>
                             </div>
                         </div>
 
@@ -77,6 +81,7 @@
                             <input type="hidden" name="accion" id="accionPrincipal" value="Generar">
                             <input type="hidden" name="index" id="indexLinea" value="">
                             <input type="hidden" name="idProveedor" id="idProveedorHidden" value="">
+                            <input type="hidden" name="idRendicion" id="idRendicionHidden" value="">
                             <input type="hidden" name="idCtaPagar" id="idCtaPagarHidden" value="">
                             <input type="hidden" name="idFactura" id="idFacturaHidden" value="">
 
@@ -242,6 +247,43 @@
                             </div>
                         </div>
 
+                        <%-- Segundo camino de carga: la provisión se arma desde una rendición de fondo fijo.
+                             Trae todas sus facturas de una vez y el proveedor pasa a ser el responsable del
+                             fondo fijo, que es a quien se le repone la caja. Ver MODULO_TESORERIA_PLAN.md §E.1. --%>
+                        <!-- Modal Buscar rendición Fondo Fijo -->
+                        <div class="modal fade" id="modalBuscarRendicion" tabindex="-1" aria-hidden="true">
+                            <div class="modal-dialog modal-lg">
+                                <div class="modal-content">
+                                    <div class="modal-header"><h5 class="modal-title">Rendiciones de fondo fijo</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                                    <div class="modal-body table-responsive">
+                                        <table id="tablaRendicionesFF" class="table table-bordered table-striped">
+                                            <thead><tr>
+                                                <th class="text-bg-dark text-center">Nro</th>
+                                                <th class="text-bg-dark text-center">Responsable</th>
+                                                <th class="text-bg-dark text-center">Fecha</th>
+                                                <th class="text-bg-dark text-center no-search">Acción</th>
+                                            </tr></thead>
+                                            <tbody>
+                                                <c:forEach var="ren" items="${listaRendiciones}">
+                                                    <tr>
+                                                        <td class="text-center">${ren.numeroRendicion}</td>
+                                                        <td>${ren.fondoFijo.responsable}</td>
+                                                        <td class="text-center"><fmt:formatDate value="${ren.fechaEmisionRendicion}" pattern="dd/MM/yyyy"/></td>
+                                                        <td class="text-center">
+                                                            <button type="button" class="btn btn-primary btn-sm" data-bs-dismiss="modal"
+                                                                    onclick="seleccionarRendicion(${ren.idFondoFijoRendicion});">Seleccionar</button>
+                                                        </td>
+                                                    </tr>
+                                                </c:forEach>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button></div>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Modal Lista de Cuentas a Pagar -->
                         <div class="modal fade" id="modalListaCuentas" tabindex="-1" aria-hidden="true">
                             <div class="modal-dialog modal-lg">
@@ -366,6 +408,11 @@
                 setAccion('CargarProveedor');
                 document.getElementById('formPrincipal').submit();
             }
+            function seleccionarRendicion(id) {
+                document.getElementById('idRendicionHidden').value = id;
+                setAccion('CargarRendicion');
+                document.getElementById('formPrincipal').submit();
+            }
             function seleccionarCuenta(idCta, idFact) {
                 document.getElementById('idCtaPagarHidden').value = idCta;
                 document.getElementById('idFacturaHidden').value = idFact;
@@ -398,6 +445,7 @@
                 $('#tablaProveedores').DataTable({ language: { url: "DataTables 2/es-ES.json" } });
                 $('#tablaCuentas').DataTable({ language: { url: "DataTables 2/es-ES.json" } });
                 $('#tablaProvisiones').DataTable({ language: { url: "DataTables 2/es-ES.json" } });
+                $('#tablaRendicionesFF').DataTable({ language: { url: "DataTables 2/es-ES.json" } });
             });
         </script>
 

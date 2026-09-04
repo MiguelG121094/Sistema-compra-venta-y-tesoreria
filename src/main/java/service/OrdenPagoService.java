@@ -14,6 +14,8 @@ import modelo.OrdenPagoDetalle;
 import modelo.OrdenPagoDetalleDAO;
 import modelo.ChequeDAO;
 import modelo.ChequeraDAO;
+import modelo.FondoFijoRendicionDAO;
+import modelo.ProvisionCuentaPagar;
 import modelo.ProvisionCuentaPagarDAO;
 
 /**
@@ -193,6 +195,15 @@ public class OrdenPagoService {
             // 5. Marcar la provisión como procesada (ya no puede volver a pagarse).
             provisionDAO.actualizarEstado(idProvision, ESTADO_PROV_PROCESADA);
 
+            // 6. Si la provisión venía de una rendición de fondo fijo, esta OP es la reposición:
+            //    se le anota la fecha a la rendición y con eso el circuito cierra (§E.1 del plan).
+            ProvisionCuentaPagar provision = provisionDAO.getProvision(idProvision);
+            if (provision != null && provision.getFondoFijoRendicion() != null) {
+                new FondoFijoRendicionDAO(conn).registrarReposicion(
+                        provision.getFondoFijoRendicion().getIdFondoFijoRendicion(),
+                        orden.getFechaEmision());
+            }
+
             conn.commit();
         } catch (SQLException e) {
             if (conn != null) {
@@ -267,6 +278,13 @@ public class OrdenPagoService {
 
             // 5. Reactivar la provisión (vuelve a estar disponible para generar otra OP).
             provisionDAO.actualizarEstado(orden.getIdProvisionCtaPagar(), ESTADO_PROV_PENDIENTE);
+
+            // 6. Si era una reposición de fondo fijo, la rendición deja de estar repuesta.
+            ProvisionCuentaPagar provision = provisionDAO.getProvision(orden.getIdProvisionCtaPagar());
+            if (provision != null && provision.getFondoFijoRendicion() != null) {
+                new FondoFijoRendicionDAO(conn).registrarReposicion(
+                        provision.getFondoFijoRendicion().getIdFondoFijoRendicion(), null);
+            }
 
             conn.commit();
         } catch (SQLException e) {

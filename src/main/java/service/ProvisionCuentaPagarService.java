@@ -5,6 +5,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
 import modelo.CuentaPagarDAO;
+import modelo.FondoFijoRendicionDAO;
 import modelo.ProvisionCuentaPagar;
 import modelo.ProvisionCuentaPagarDAO;
 import modelo.ProvisionCuentaPagarDetalle;
@@ -84,6 +85,18 @@ public class ProvisionCuentaPagarService {
                     det.getCuentaPagar().getFacturaCompra().getIdFacturaCompra());
             }
 
+            // Si la provisión se armó desde una rendición, la rendición queda tomada: el modal de
+            // la provisión solo ofrece las 'Generada'. Ver MODULO_TESORERIA_PLAN.md §E.1.
+            Long idRendicion = idRendicionDe(provision);
+            if (idRendicion != null) {
+                FondoFijoRendicionDAO rendicionDAO = new FondoFijoRendicionDAO(conn);
+                String estado = rendicionDAO.getEstadoBloqueado(idRendicion);
+                if (!FondoFijoRendicionDAO.ESTADO_GENERADA.equals(estado)) {
+                    throw new SQLException("La rendición ya no está disponible para provisionar");
+                }
+                rendicionDAO.actualizarEstado(idRendicion, FondoFijoRendicionDAO.ESTADO_PROVISIONADA);
+            }
+
             conn.commit();
         } catch (SQLException e) {
             if (conn != null) {
@@ -113,12 +126,22 @@ public class ProvisionCuentaPagarService {
             ProvisionCuentaPagarDAO dao = new ProvisionCuentaPagarDAO(conn);
             CuentaPagarDAO cuentaPagarDAO = new CuentaPagarDAO(conn);
 
+            ProvisionCuentaPagar provision = dao.getProvision(idProvision);
+            Long idRendicion = idRendicionDe(provision);
+
             List<ProvisionCuentaPagarDetalle> detalles = dao.listarDetallesPorProvision(idProvision);
             dao.anularProvision(idProvision);
             for (ProvisionCuentaPagarDetalle det : detalles) {
+                // Si venía de una rendición, la cuenta vuelve a 'Rendida': la factura sigue rendida,
+                // lo que se deshizo es la provisión.
                 cuentaPagarDAO.revertirProvision(
                     det.getCuentaPagar().getIdCuentaPagar(),
-                    det.getCuentaPagar().getFacturaCompra().getIdFacturaCompra());
+                    det.getCuentaPagar().getFacturaCompra().getIdFacturaCompra(),
+                    idRendicion != null);
+            }
+            if (idRendicion != null) {
+                new FondoFijoRendicionDAO(conn).actualizarEstado(
+                        idRendicion, FondoFijoRendicionDAO.ESTADO_GENERADA);
             }
 
             conn.commit();
@@ -134,5 +157,13 @@ public class ProvisionCuentaPagarService {
                 conn.close();
             }
         }
+    }
+
+    /** Id de la rendición que originó la provisión, o null si es una provisión normal. */
+    private Long idRendicionDe(ProvisionCuentaPagar provision) {
+        if (provision == null || provision.getFondoFijoRendicion() == null) {
+            return null;
+        }
+        return provision.getFondoFijoRendicion().getIdFondoFijoRendicion();
     }
 }

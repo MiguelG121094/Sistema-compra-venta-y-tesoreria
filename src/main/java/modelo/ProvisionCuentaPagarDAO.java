@@ -30,12 +30,19 @@ public class ProvisionCuentaPagarDAO {
             LOGGER.log(Level.SEVERE, "Error: la provisión es nula");
             return null;
         }
-        String sql = "INSERT INTO provision_cuenta_pagar (prov_cta_pag_estado, prov_cta_pag_fecha, id_proveedor) "
-                   + "VALUES (?, ?, ?)";
+        String sql = "INSERT INTO provision_cuenta_pagar (prov_cta_pag_estado, prov_cta_pag_fecha, "
+                   + "id_proveedor, id_fondofijo_rendicion) VALUES (?, ?, ?, ?)";
         try (PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             stmt.setString(1, provision.getEstado());
             stmt.setDate(2, new java.sql.Date(provision.getFecha().getTime()));
             stmt.setLong(3, provision.getProveedor().getIdProveedor());
+            // Solo viene cargada cuando la provision se armo desde una rendicion de fondo fijo.
+            if (provision.getFondoFijoRendicion() == null
+                    || provision.getFondoFijoRendicion().getIdFondoFijoRendicion() == null) {
+                stmt.setNull(4, java.sql.Types.INTEGER);
+            } else {
+                stmt.setLong(4, provision.getFondoFijoRendicion().getIdFondoFijoRendicion());
+            }
             int filas = stmt.executeUpdate();
             if (filas == 0) {
                 throw new SQLException("No se insertó la provisión, ninguna fila afectada");
@@ -111,18 +118,24 @@ public class ProvisionCuentaPagarDAO {
         if (idProvision == null) {
             return null;
         }
-        String sql = "SELECT id_provi_cta_pagar_cabecera, prov_cta_pag_estado, prov_cta_pag_fecha, id_proveedor "
+        String sql = "SELECT id_provi_cta_pagar_cabecera, prov_cta_pag_estado, prov_cta_pag_fecha, "
+                   + "id_proveedor, id_fondofijo_rendicion "
                    + "FROM provision_cuenta_pagar WHERE id_provi_cta_pagar_cabecera = ?";
         ProveedorDAO proveedorDAO = new ProveedorDAO(conn);
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setLong(1, idProvision);
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
-                    return new ProvisionCuentaPagar(
+                    ProvisionCuentaPagar provision = new ProvisionCuentaPagar(
                         rs.getLong("id_provi_cta_pagar_cabecera"),
                         rs.getString("prov_cta_pag_estado"),
                         rs.getDate("prov_cta_pag_fecha"),
                         proveedorDAO.getProveedor(rs.getLong("id_proveedor")));
+                    long idRendicion = rs.getLong("id_fondofijo_rendicion");
+                    if (!rs.wasNull()) {
+                        provision.setFondoFijoRendicion(new FondoFijoRendicion(idRendicion));
+                    }
+                    return provision;
                 }
             }
         }

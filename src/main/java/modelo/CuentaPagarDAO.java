@@ -387,7 +387,9 @@ public class CuentaPagarDAO {
                    + "FROM cuenta_pagar cp "
                    + "JOIN factura_compra_cabecera f ON cp.id_fact_comp_cab = f.id_fact_comp_cab "
                    + "WHERE f.id_proveedor = ? AND cp.cta_pag_saldo <> 0 "
-                   + "AND cp.cta_pag_estado NOT IN ('En provision', 'Anulado') "
+                   // Las rendidas se provisionan desde la rendicion, a nombre del responsable: si
+                   // tambien aparecieran aca se podrian pagar dos veces, una a cada uno.
+                   + "AND cp.cta_pag_estado NOT IN ('En provision', 'Anulado', 'Rendida') "
                    + "ORDER BY cp.id_cta_pagar";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setLong(1, idProveedor);
@@ -432,6 +434,16 @@ public class CuentaPagarDAO {
      * solo si estaba 'En provision'. La lógica del estado se resuelve en Java, no en la consulta.
      */
     public void revertirProvision(Long idCtaPagar, Long idFacturaCompra) throws SQLException {
+        revertirProvision(idCtaPagar, idFacturaCompra, false);
+    }
+
+    /**
+     * Igual que la anterior, pero si la provisión venía de una rendición de fondo fijo la cuenta
+     * vuelve a 'Rendida' y no al estado por saldo: la factura sigue rendida, lo que se deshizo es
+     * la provisión. Ver MODULO_TESORERIA_PLAN.md §E.1.3.
+     */
+    public void revertirProvision(Long idCtaPagar, Long idFacturaCompra, boolean veniaDeRendicion)
+            throws SQLException {
         // 1. Leer saldo y estado actual
         Long saldo = null;
         String estadoActual = null;
@@ -454,7 +466,7 @@ public class CuentaPagarDAO {
         }
 
         // 3. Calcular el estado en Java y actualizar
-        String nuevoEstado = calcularEstadoPorSaldo(saldo);
+        String nuevoEstado = veniaDeRendicion ? ESTADO_RENDIDA : calcularEstadoPorSaldo(saldo);
         String sqlUpdate = "UPDATE cuenta_pagar SET cta_pag_estado = ? "
                          + "WHERE id_cta_pagar = ? AND id_fact_comp_cab = ?";
         try (PreparedStatement stmt = conn.prepareStatement(sqlUpdate)) {

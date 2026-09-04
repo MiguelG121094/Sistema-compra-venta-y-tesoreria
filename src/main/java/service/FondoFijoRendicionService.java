@@ -49,6 +49,16 @@ public class FondoFijoRendicionService {
         }
     }
 
+    /** Rendiciones en un estado dado; el modal de la provisión pide las 'Generada'. */
+    public List<FondoFijoRendicion> listarRendicionesPorEstado(String estado) throws SQLException {
+        try (Connection conn = Conexion.getConnection()) {
+            return new FondoFijoRendicionDAO(conn).listarRendicionesPorEstado(estado);
+        } catch (SQLException e) {
+            System.out.println("Error en FondoFijoRendicionService: " + e);
+            return null;
+        }
+    }
+
     public long obtenerProximoNumero() throws SQLException {
         try (Connection conn = Conexion.getConnection()) {
             return new FondoFijoRendicionDAO(conn).obtenerProximoNumero();

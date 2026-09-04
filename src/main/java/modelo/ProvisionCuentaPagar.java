@@ -18,6 +18,8 @@ public class ProvisionCuentaPagar implements java.io.Serializable {
     private String estado;
     private Date fecha;
     private Proveedor proveedor;
+    // Rendicion de fondo fijo que origino la provision; nulo en las provisiones normales.
+    private FondoFijoRendicion fondoFijoRendicion;
 
     public ProvisionCuentaPagar() {
     }
@@ -64,5 +66,13 @@ public class ProvisionCuentaPagar implements java.io.Serializable {
 
     public void setProveedor(Proveedor proveedor) {
         this.proveedor = proveedor;
+    }
+
+    public FondoFijoRendicion getFondoFijoRendicion() {
+        return fondoFijoRendicion;
+    }
+
+    public void setFondoFijoRendicion(FondoFijoRendicion fondoFijoRendicion) {
+        this.fondoFijoRendicion = fondoFijoRendicion;
     }
 }

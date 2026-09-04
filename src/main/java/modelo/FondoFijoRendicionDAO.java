@@ -19,6 +19,7 @@ import java.util.List;
 public class FondoFijoRendicionDAO {
 
     public static final String ESTADO_GENERADA = "Generada";
+    public static final String ESTADO_PROVISIONADA = "Provisionada";
     public static final String ESTADO_ANULADO = "Anulado";
 
     private static final String COLUMNAS =
@@ -70,6 +71,40 @@ public class FondoFijoRendicionDAO {
             }
         }
         return lista;
+    }
+
+    /** Rendiciones en un estado dado: el modal de la provision solo ofrece las 'Generada'. */
+    public List<FondoFijoRendicion> listarRendicionesPorEstado(String estado) throws SQLException {
+        List<FondoFijoRendicion> lista = new ArrayList<>();
+        String sql = "SELECT " + COLUMNAS + " FROM fondo_fijo_rendicion "
+                   + "WHERE ff_rendicion_estado = ? ORDER BY id_fondofijo_rendicion DESC";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, estado);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    lista.add(mapear(rs));
+                }
+            }
+        }
+        return lista;
+    }
+
+    /**
+     * Completa la fecha de reposicion cuando se paga la orden de pago de la reposicion.
+     * Con fecha nula la borra, que es lo que corresponde si esa orden de pago se anula.
+     */
+    public void registrarReposicion(Long idRendicion, java.util.Date fechaReposicion) throws SQLException {
+        String sql = "UPDATE fondo_fijo_rendicion SET ff_rendicion_fecha_reposicion = ? "
+                   + "WHERE id_fondofijo_rendicion = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            if (fechaReposicion == null) {
+                stmt.setNull(1, java.sql.Types.DATE);
+            } else {
+                stmt.setDate(1, new java.sql.Date(fechaReposicion.getTime()));
+            }
+            stmt.setLong(2, idRendicion);
+            stmt.executeUpdate();
+        }
     }
 
     /**

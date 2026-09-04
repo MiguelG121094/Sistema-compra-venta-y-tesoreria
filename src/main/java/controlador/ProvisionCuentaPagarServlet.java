@@ -22,11 +22,15 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import modelo.CuentaPagar;
+import modelo.FondoFijoRendicion;
+import modelo.FondoFijoRendicionDAO;
+import modelo.FondoFijoRendicionDetalle;
 import modelo.Proveedor;
 import modelo.ProvisionCuentaPagar;
 import modelo.ProvisionCuentaPagarDetalle;
 import modelo.Usuario;
 import service.CuentaPagarService;
+import service.FondoFijoRendicionService;
 import service.OrdenPagoService;
 import service.ProveedorService;
 import service.ProvisionCuentaPagarService;
@@ -42,6 +46,7 @@ public class ProvisionCuentaPagarServlet extends HttpServlet {
     private final CuentaPagarService cuentaPagarService = new CuentaPagarService();
     private final ProveedorService proveedorService = new ProveedorService();
     private final OrdenPagoService ordenPagoService = new OrdenPagoService();   // guard de anulación
+    private final FondoFijoRendicionService rendicionService = new FondoFijoRendicionService();
 
     // ==================== ESTADO DEL DOCUMENTO ====================
 
@@ -64,6 +69,7 @@ public class ProvisionCuentaPagarServlet extends HttpServlet {
         List<Proveedor> listaProveedores;
         List<CuentaPagar> listaCuentasPagar;
         List<ProvisionCuentaPagar> listaProvisiones;
+        List<FondoFijoRendicion> listaRendiciones;   // rendiciones de fondo fijo disponibles
     }
 
     // ==================== HELPERS DE SESIÓN ====================
@@ -112,6 +118,7 @@ public class ProvisionCuentaPagarServlet extends HttpServlet {
         request.setAttribute("listaProveedores", estado.listaProveedores);
         request.setAttribute("listaCuentasPagar", estado.listaCuentasPagar);
         request.setAttribute("listaProvisiones", estado.listaProvisiones);
+        request.setAttribute("listaRendiciones", estado.listaRendiciones);
         request.setAttribute("totalProvision", calcularNeto(estado.listaDetalle));
     }
 
@@ -163,6 +170,7 @@ public class ProvisionCuentaPagarServlet extends HttpServlet {
         switch (accion) {
             case "Nuevo":
             case "CargarProveedor":
+            case "CargarRendicion":
             case "SeleccionarCuenta":
             case "AgregarLinea":
             case "EditarLinea":
@@ -189,6 +197,7 @@ public class ProvisionCuentaPagarServlet extends HttpServlet {
             switch (accion) {
                 case "Nuevo":            accionNuevo(request, response, session); break;
                 case "CargarProveedor":  accionCargarProveedor(request, response, session, token); break;
+                case "CargarRendicion":  accionCargarRendicion(request, response, session, token); break;
                 case "SeleccionarCuenta":accionSeleccionarCuenta(request, response, session, token); break;
                 case "AgregarLinea":     accionAgregarLinea(request, response, session, token); break;
                 case "EditarLinea":      accionEditarLinea(request, response, session, token); break;
@@ -225,6 +234,9 @@ public class ProvisionCuentaPagarServlet extends HttpServlet {
         estado.provision.setEstado("Pendiente");
         estado.listaProveedores = proveedorService.listarProveedores();
         estado.listaProvisiones = provisionService.listarProvisiones();
+        // Solo las 'Generada': una rendición ya provisionada no se vuelve a ofrecer.
+        estado.listaRendiciones = rendicionService.listarRendicionesPorEstado(
+                FondoFijoRendicionDAO.ESTADO_GENERADA);
 
         guardarEstado(session, nuevoToken, estado);
         cargarDatosParaVista(request, estado, nuevoToken);
@@ -260,6 +272,60 @@ public class ProvisionCuentaPagarServlet extends HttpServlet {
             if (estado.listaCuentasPagar == null || estado.listaCuentasPagar.isEmpty()) {
                 mostrarMensaje(request, "El proveedor no tiene cuentas a pagar para provisionar", "alert-warning");
             }
+        }
+        guardarEstado(session, token, estado);
+        cargarDatosParaVista(request, estado, token);
+        forward(request, response, JSP_PROVISION);
+    }
+
+    /**
+     * Segundo camino de carga: arma la provisión desde una rendición de fondo fijo. Trae de una vez
+     * todas las facturas de la rendición y pone como proveedor de la cabecera al responsable del
+     * fondo fijo, que es a quien se le repone la caja. Ver MODULO_TESORERIA_PLAN.md §E.1.
+     */
+    private void accionCargarRendicion(HttpServletRequest request, HttpServletResponse response,
+            HttpSession session, String token) throws ServletException, IOException, SQLException {
+        ProvisionState estado = obtenerEstadoORedireccionar(request, response, session, token);
+        if (estado == null) return;
+
+        String idRendStr = request.getParameter("idRendicion");
+        if (idRendStr == null || idRendStr.isEmpty()) {
+            mostrarMensaje(request, "Debe seleccionar una rendición", "alert-warning");
+            guardarEstado(session, token, estado);
+            cargarDatosParaVista(request, estado, token);
+            forward(request, response, JSP_PROVISION);
+            return;
+        }
+
+        Long idRendicion = Long.parseLong(idRendStr);
+        FondoFijoRendicion rendicion = rendicionService.getRendicion(idRendicion);
+        List<FondoFijoRendicionDetalle> detallesRendicion = rendicionService.listarDetalles(idRendicion);
+
+        if (rendicion == null || rendicion.getFondoFijo() == null) {
+            mostrarMensaje(request, "No se pudo cargar la rendición", "alert-warning");
+        } else if (detallesRendicion == null || detallesRendicion.isEmpty()) {
+            mostrarMensaje(request, "La rendición no tiene facturas", "alert-warning");
+        } else {
+            Proveedor responsable = rendicion.getFondoFijo().getProveedor();
+            estado.proveedorSeleccionado = responsable;
+            estado.provision.setProveedor(responsable);
+            estado.provision.setFondoFijoRendicion(rendicion);
+
+            // Las facturas de la rendición son de los comercios, no del responsable, así que no
+            // salen del listado por proveedor: se cargan directas al detalle, por el total rendido.
+            estado.listaCuentasPagar = new ArrayList<>();
+            estado.listaDetalle.clear();
+            for (FondoFijoRendicionDetalle det : detallesRendicion) {
+                ProvisionCuentaPagarDetalle linea = new ProvisionCuentaPagarDetalle();
+                linea.setCuentaPagar(det.getCuentaPagar());
+                linea.setMonto(det.getMontoRendido());
+                estado.listaDetalle.add(linea);
+            }
+            estado.cuentaEnEditor = null;
+            estado.indexSeleccionado = null;
+            estado.importeEditor = null;
+            mostrarMensaje(request, "Rendición N° " + rendicion.getNumeroRendicion()
+                    + " cargada: " + detallesRendicion.size() + " factura(s)", "alert-success");
         }
         guardarEstado(session, token, estado);
         cargarDatosParaVista(request, estado, token);

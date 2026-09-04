@@ -55,7 +55,7 @@ Mapeo de los requerimientos del módulo contra lo que existe (revisado 2026-08-3
 | 3.4 | Procesos especiales (anular OP / anular cheques) | ⚠️ Parcial: anular OP ✅ (sin probar); anular un cheque suelto ❌ | §C.1 / §G3 |
 | 3.5 | Asignar fondo fijo | ✅ **Completo** (2026-09-01) | §E |
 | 3.6 | Rendir fondo fijo | ✅ **Completo** (2026-09-03) | §E |
-| 3.7 | Registrar reposición de fondo fijo | ⚠️ **Flujo definido** (§E.1), falta implementarlo | §E.1 |
+| 3.7 | Registrar reposición de fondo fijo | ✅ **Completo** (2026-09-04) | §E.1 |
 | 3.8 | Cargar débitos y créditos | ✅ **Completo** (2026-08-31) | §D |
 | 3.9 | Registrar depósitos (boletas bancarias) | ✅ **Completo** (2026-08-31) — mismo circuito que 3.8 | §D |
 | 3.10 | Generar conciliación bancaria | ❌ Pendiente (objetivo final) | §F |
@@ -697,16 +697,11 @@ Las anulaciones revierten hacia atrás, cada una un solo paso:
   (2026-09-04). Nulo en las provisiones normales. Sin esta columna no hay forma de saber de qué
   rendición salió una provisión, y se caen tres cosas: marcarla, revertirla al anular y completar la
   fecha de reposición.
-- [ ] Modal *Buscar Rendición de Fondo Fijo* en `provision.jsp` + su acción en el servlet, que carga el
-  detalle completo y fija el proveedor.
-- [ ] **Excluir `'Rendida'` de `listarCuentasPagarPorProveedor()`**, que hoy solo excluye
-  `'En provision'` y `'Anulado'`. Sin esto una factura rendida sigue apareciendo en la provisión normal
-  del comercio y se puede llegar a pagar dos veces, una a cada uno.
-- [ ] Marcar la rendición `'Provisionada'` al guardar la provisión, y devolverla a `'Generada'` al
-  anularla.
-- [ ] Que `revertirProvision` devuelva a `'Rendida'` —y no a `'Pendiente'`— las cuentas que vienen de
-  una rendición.
-- [ ] Completar `ff_rendicion_fecha_reposicion` al generar la OP de la provisión que tiene rendición.
+- [x] ✅ Modal *Buscar Rendición de Fondo Fijo* en `provision.jsp` + acción `CargarRendicion` (2026-09-04)
+- [x] ✅ `'Rendida'` excluida de `listarCuentasPagarPorProveedor()` (2026-09-04): sin eso la factura se podía pagar dos veces, una al comercio y otra al responsable
+- [x] ✅ La rendición pasa a `'Provisionada'` al guardar y vuelve a `'Generada'` al anular (2026-09-04)
+- [x] ✅ `revertirProvision` devuelve a `'Rendida'` las cuentas que vienen de una rendición (2026-09-04)
+- [x] ✅ `ff_rendicion_fecha_reposicion` se completa al generar la OP y se borra si esa OP se anula (2026-09-04)
 
 #### E.1.5 Detalles a tener en cuenta
 
@@ -917,7 +912,7 @@ PDF para los informes que realmente se impriman y archiven.
 - [x] ✅ Secuencias de `fondo_fijo_rendicion(_detalle)` agregadas (2026-09-01), junto con `ff_rendicion_estado`
 - [x] ✅ `FondoFijoDAO`, `FondoFijoRendicionDAO` (+detalle), Services, Servlets y JSPs (2026-09-01/03)
 - [x] ✅ Definido a quién se le paga la reposición (3.7): al responsable, con la provisión cargada desde la rendición — ver §E.1
-- [ ] Implementar el segundo camino de carga de la provisión y el cierre del circuito (§E.1.4)
+- [x] ✅ Implementado el segundo camino de carga de la provisión y el cierre del circuito (2026-09-04, §E.1.4)
 
 **F. Conciliación** *(cierra 3.10)*
 - [ ] `ConciliacionBancariaDAO` (+detalle), Service, Servlet, JSP
