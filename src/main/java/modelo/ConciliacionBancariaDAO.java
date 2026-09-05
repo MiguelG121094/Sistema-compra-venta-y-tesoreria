@@ -486,14 +486,32 @@ public class ConciliacionBancariaDAO {
      * Devuelve el cheque al estado que tenia antes de conciliarse, al anular la conciliacion. El
      * estado anterior no se guarda en ningun lado pero se deduce: si tiene fecha de entrega es
      * porque llego a entregarse. Un cheque anulado no se toca, nunca estuvo conciliado.
+     *
+     * <p>Se lee primero y se decide en Java, en vez de resolverlo con un CASE en el UPDATE.
      */
     public void revertirChequeCobrado(Long idCheque) throws SQLException {
-        String sql = "UPDATE cheque SET chq_estado = "
-                   + "CASE WHEN chq_fecha_entrega IS NOT NULL THEN '" + ChequeDAO.ESTADO_ENTREGADO + "' "
-                   + "ELSE '" + ChequeDAO.ESTADO_EMITIDO + "' END "
-                   + "WHERE id_cheque = ? AND chq_estado = '" + ChequeDAO.ESTADO_COBRADO + "'";
-        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+        String estadoActual = null;
+        java.sql.Date fechaEntrega = null;
+        String consulta = "SELECT chq_estado, chq_fecha_entrega FROM cheque WHERE id_cheque = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(consulta)) {
             stmt.setLong(1, idCheque);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    estadoActual = rs.getString("chq_estado");
+                    fechaEntrega = rs.getDate("chq_fecha_entrega");
+                }
+            }
+        }
+        if (!ChequeDAO.ESTADO_COBRADO.equals(estadoActual)) {
+            return;
+        }
+        String estadoAnterior = fechaEntrega != null
+                ? ChequeDAO.ESTADO_ENTREGADO : ChequeDAO.ESTADO_EMITIDO;
+
+        String sql = "UPDATE cheque SET chq_estado = ? WHERE id_cheque = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, estadoAnterior);
+            stmt.setLong(2, idCheque);
             stmt.executeUpdate();
         }
     }

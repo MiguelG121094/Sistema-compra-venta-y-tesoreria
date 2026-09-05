@@ -373,6 +373,8 @@ definió Miguel:
   ensucia la vista de la OP pero no rompe el arrastre.
 - **Montos `INTEGER`**: aplica lo mismo que al resto del módulo (§8 del plan de tesorería).
 - **`conc_bancaria_tipo`** es texto libre, sin constraint. Definir las constantes en un solo lugar.
+- **Los cálculos van en Java, no en el SQL.** Los saldos se arman recorriendo la lista en el Service
+  (§5.0) y no con un `SUM` en la consulta. En el SQL quedan sólo filtros y orden.
 
 ---
 
