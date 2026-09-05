@@ -158,6 +158,27 @@ el saldo ajustado coincide con el del libro; lo que no se explica es una diferen
 > `cuenta` no tiene columna de saldo, así que no hay un "saldo del sistema" que actualizar. El saldo
 > vive únicamente en las conciliaciones, encadenado de una a la siguiente.
 
+### 5.0 Las dos cuentas, como quedaron en el Service
+
+Son dos números que se calculan por caminos distintos y tienen que dar igual:
+
+```
+saldo_final  (libro)    = saldo_inicial + Σ créditos del período − Σ (débitos + cheques) del período
+saldo ajustado (banco)  = saldo_banco   + Σ créditos sin tildar  − Σ (débitos + cheques) sin tildar
+diferencia              = saldo ajustado − saldo_final
+```
+
+**Los arrastrados no entran en el saldo del libro**, sólo los del período: el libro registró ese cheque
+el mes en que se emitió, no el mes en que el banco lo cobra. Contarlos de nuevo sería restarlos dos
+veces. En el saldo ajustado, en cambio, entran todos los que estén sin tildar, vengan de donde vengan
+— son las partidas conciliatorias.
+
+`conc_bancaria_saldo_final` guarda **el del libro**, que es el que se encadena. Por eso una
+conciliación que no cuadra no ensucia el encadenado: la diferencia queda a la vista en la pantalla,
+pero el saldo que pasa al mes siguiente sigue siendo el contable. Con ese criterio **se permite grabar
+con diferencia** — los ítems sin tildar son justamente su explicación. La diferencia no se guarda, no
+hay columna.
+
 ### 5.1 El encadenado del saldo inicial y el arranque
 
 `conc_bancaria_saldo_inicial` sale del `conc_bancaria_saldo_final` de la **última conciliación vigente
@@ -357,12 +378,13 @@ definió Miguel:
 
 ## 12. Componentes a construir
 
-1. `ConciliacionBancariaDAO` — cabecera y detalle en el mismo DAO, como `ProvisionCuentaPagarDAO`.
-   Incluye la consulta de movimientos del período **con arrastre** (§4 y §6.1) y el `saldo_final` de la
-   conciliación anterior.
-2. `ConciliacionBancariaService` — transaccional: guarda cabecera + detalle y cierra los estados de lo
-   conciliado (`forma_pag_estado`, `chq_estado`) en una sola unidad. También `anular()`, que marca la
-   cabecera y revierte esos mismos estados (§9.1), con la validación de que sea la última vigente.
+1. ✅ `ConciliacionBancariaDAO` — **hecho** (commit `a57c2dd`). Cabecera y detalle en el mismo DAO, como
+   `ProvisionCuentaPagarDAO`. `listarMovimientosAConciliar(idCuenta, hasta)` es la consulta con arrastre
+   (§4 y §6.1); `getUltimaVigente` / `obtenerSaldoInicial` resuelven el encadenado.
+2. ✅ `ConciliacionBancariaService` — **hecho**. Transaccional: cabecera + detalle numerado + cierre de
+   estados en una sola unidad, y `anularConciliacionCompleta` con la reversa de §9.1 y la validación de
+   que sea la última vigente. El saldo inicial se relee y el final se recalcula en el Service (§5.0): no
+   se toman de la pantalla, porque son los que encadenan un período con el siguiente.
 3. `ConciliacionBancariaServlet` — Session+Token, calcado de `OrdenPagoServlet`.
 4. `conciliacionBancaria.jsp` — cabecera, grilla con checkbox y filtro por tipo, y recuadro de saldos.
 5. Registro en `AuthorizationFilter` (módulo `tesoreria`) y link en `menuLateral.jsp`.
