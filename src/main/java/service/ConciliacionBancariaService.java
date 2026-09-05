@@ -232,17 +232,37 @@ public class ConciliacionBancariaService {
     }
 
     /**
+     * Dia en que tiene que arrancar la proxima conciliacion de la cuenta: el siguiente al cierre de
+     * la ultima vigente. Null si es la primera, y ahi el usuario elige desde cuando.
+     *
+     * <p>La pantalla lo usa para proponer el periodo ya armado; el Service lo revalida al grabar.
+     */
+    public Date fechaDesdeEsperada(Long idCuenta) throws SQLException {
+        try (Connection conn = Conexion.getConnection()) {
+            return fechaDesdeEsperada(new ConciliacionBancariaDAO(conn), idCuenta);
+        }
+    }
+
+    private Date fechaDesdeEsperada(ConciliacionBancariaDAO conciliacionDAO, Long idCuenta)
+            throws SQLException {
+        ConciliacionBancaria anterior = conciliacionDAO.getUltimaVigente(idCuenta);
+        if (anterior == null || anterior.getFechaHasta() == null) {
+            return null;
+        }
+        return diaSiguiente(anterior.getFechaHasta());
+    }
+
+    /**
      * El periodo tiene que arrancar el dia siguiente al cierre de la conciliacion anterior de esa
      * cuenta. Con el saldo encadenado no es una comodidad: un hueco deja movimientos que nadie
      * concilio y un solape los cuenta dos veces.
      */
     private void validarPeriodo(ConciliacionBancariaDAO conciliacionDAO, Long idCuenta, Date desde)
             throws SQLException {
-        ConciliacionBancaria anterior = conciliacionDAO.getUltimaVigente(idCuenta);
-        if (anterior == null || anterior.getFechaHasta() == null) {
+        Date esperada = fechaDesdeEsperada(conciliacionDAO, idCuenta);
+        if (esperada == null) {
             return;
         }
-        Date esperada = diaSiguiente(anterior.getFechaHasta());
         if (!mismoDia(desde, esperada)) {
             throw new SQLException("El período debe arrancar el "
                     + new java.text.SimpleDateFormat("dd/MM/yyyy").format(esperada)
