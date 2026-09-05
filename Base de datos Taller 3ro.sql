@@ -100,6 +100,7 @@ CREATE TABLE public.conciliacion_bancaria (
                 conc_bancaria_saldo_inicial INTEGER NOT NULL,
                 conc_bancaria_saldo_final INTEGER NOT NULL,
                 conc_banc_saldo_banco INTEGER NOT NULL,
+                conc_bancaria_estado VARCHAR(20),
                 CONSTRAINT id_conc_bancaria PRIMARY KEY (id_conc_bancaria)
 );
 COMMENT ON TABLE public.conciliacion_bancaria IS 'cuando se guarda una orden de pago viene y guarda tambien en la conciliacion la orden de pago que se hizo en cheque o transferencia y esa conciliacion es de la cuenta de itau y pasa restando el monto que se pagó';
@@ -875,7 +876,7 @@ CREATE TABLE public.conciliacion_bancaria_detalle (
                 id_forma_pago_det INTEGER,
                 CONSTRAINT id_conc_bancaria_det PRIMARY KEY (id_conc_bancaria, conc_bancaria_nro_item)
 );
-COMMENT ON COLUMN public.conciliacion_bancaria_detalle.conc_bancaria_tipo IS '''Cred''=Crédito, ''Deb''=Débito, etc';
+COMMENT ON COLUMN public.conciliacion_bancaria_detalle.conc_bancaria_tipo IS '''Cred''=Crédito, ''Deb''=Débito, ''Ch''=Cheque';
 
 
 CREATE SEQUENCE public.arqueo_caja_id_arqueo_caja_seq;

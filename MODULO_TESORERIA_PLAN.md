@@ -743,10 +743,15 @@ Es la tabla puente que **cruza todos los movimientos** (órdenes de pago, débit
 existan OP, débitos y créditos (por eso va al final) — las tres ya están.
 
 > 📄 **Este sub-módulo tiene documento propio: [`CONCILIACION_BANCARIA_PLAN.md`](CONCILIACION_BANCARIA_PLAN.md)**
-> (analizado el 2026-09-04). Ahí están el análisis completo, el flujo de la pantalla, las decisiones
-> abiertas y los riesgos. Dos cosas que conviene leer antes de tocar nada: el comentario de la tabla
-> describe un diseño que **no** es el que se implementó —la OP nunca escribió en conciliación, y no
-> podría—, y la unidad que se concilia es la **forma de pago**, no la orden de pago.
+> (analizado el 2026-09-04, **decisiones cerradas el 2026-09-05**). Ahí están el análisis completo, el
+> flujo de la pantalla y los riesgos. Dos cosas que conviene leer antes de tocar nada: el comentario de
+> la tabla describe un diseño que **no** es el que se implementó —la OP nunca escribió en conciliación,
+> y no podría—, y la unidad que se concilia es la **forma de pago**, no la orden de pago.
+>
+> Lo definido: la cabecera lleva `conc_bancaria_estado` y se anula revirtiendo los estados que cerró
+> (**ALTER pendiente de aplicar**), el saldo inicial se encadena desde la conciliación anterior y el
+> arranque de una empresa que ya venía conciliando entra como un crédito, y desde la conciliación no
+> se da de alta ningún movimiento: para eso están Débitos y Créditos.
 
 ---
 

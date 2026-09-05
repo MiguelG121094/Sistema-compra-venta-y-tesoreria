@@ -22,6 +22,7 @@ public class ConciliacionBancaria implements java.io.Serializable {
     private Long saldoInicial;
     private Long saldoFinal;
     private Long saldoBanco;
+    private String estado;
 
     public ConciliacionBancaria() {
     }
@@ -31,7 +32,8 @@ public class ConciliacionBancaria implements java.io.Serializable {
     }
 
     public ConciliacionBancaria(Long idConciliacionBancaria, Cuenta cuenta, Date fechaDesde,
-            Date fecha, Date fechaHasta, Long saldoInicial, Long saldoFinal, Long saldoBanco) {
+            Date fecha, Date fechaHasta, Long saldoInicial, Long saldoFinal, Long saldoBanco,
+            String estado) {
         this.idConciliacionBancaria = idConciliacionBancaria;
         this.cuenta = cuenta;
         this.fechaDesde = fechaDesde;
@@ -40,6 +42,7 @@ public class ConciliacionBancaria implements java.io.Serializable {
         this.saldoInicial = saldoInicial;
         this.saldoFinal = saldoFinal;
         this.saldoBanco = saldoBanco;
+        this.estado = estado;
     }
 
     public Long getIdConciliacionBancaria() {
@@ -104,5 +107,13 @@ public class ConciliacionBancaria implements java.io.Serializable {
 
     public void setSaldoBanco(Long saldoBanco) {
         this.saldoBanco = saldoBanco;
+    }
+
+    public String getEstado() {
+        return estado;
+    }
+
+    public void setEstado(String estado) {
+        this.estado = estado;
     }
 }

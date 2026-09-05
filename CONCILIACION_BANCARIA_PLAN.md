@@ -35,9 +35,10 @@ conciliacion_bancaria                       -- cabecera: una cuenta, un período
     conc_bancaria_fecha_desde   NOT NULL    -- período: desde
     conc_bancaria_fecha_hasta   NOT NULL    -- período: hasta
     conc_bancaria_fecha         NOT NULL    -- cuándo se hizo la conciliación
-    conc_bancaria_saldo_inicial NOT NULL
+    conc_bancaria_saldo_inicial NOT NULL    -- encadenado: el saldo final de la conciliación anterior
     conc_bancaria_saldo_final   NOT NULL    -- calculado por el sistema
     conc_banc_saldo_banco       NOT NULL    -- el del extracto, lo carga el usuario
+    conc_bancaria_estado        VARCHAR(20) -- 'Vigente' / 'Anulado' — columna nueva (D1), ver §2.3
 
 conciliacion_bancaria_detalle               -- los ítems del período
     id_conc_bancaria            NOT NULL  ┐ PK compuesta
@@ -48,19 +49,26 @@ conciliacion_bancaria_detalle               -- los ítems del período
     id_forma_pago_det           NULL      ┘
     conc_bancaria_descripcion   NOT NULL
     conc_bancaria_monto         NOT NULL
-    conc_bancaria_tipo          NOT NULL   -- 'Cred' / 'Deb'
+    conc_bancaria_tipo          NOT NULL   -- 'Cred' / 'Deb' / 'Ch' (§6)
     conc_bancaria_conciliado    BOOLEAN NOT NULL
 ```
 
 ### 2.2 POJOs
 
-`ConciliacionBancaria` y `ConciliacionBancariaDetalle` **están completos y alineados** con las tablas,
-incluidos los cuatro enlaces del detalle. No hay que tocarlos.
+`ConciliacionBancariaDetalle` **está completo y alineado** con la tabla, incluidos los cuatro enlaces.
+A `ConciliacionBancaria` se le agregó `estado`, la columna nueva de D1.
 
 ### 2.3 Lo que falta
 
 `ConciliacionBancariaDAO` (+ detalle), `ConciliacionBancariaService`, `ConciliacionBancariaServlet`,
 `conciliacionBancaria.jsp`, el registro en `AuthorizationFilter` y el link del menú.
+
+⚠️ **Requiere un ALTER en la BD** — mismo caso que `debitos_estado` / `creditos_estado`:
+
+```sql
+ALTER TABLE public.conciliacion_bancaria ADD COLUMN conc_bancaria_estado VARCHAR(20);
+UPDATE public.conciliacion_bancaria SET conc_bancaria_estado = 'Vigente';
+```
 
 ---
 
@@ -142,13 +150,26 @@ Mapeo con las columnas de la cabecera:
 |---|---|
 | `conc_banc_saldo_banco` | **Saldo según extracto bancario** — lo carga el usuario |
 | `conc_bancaria_saldo_final` | **Saldo según libro** — al que se llega ajustando |
-| `conc_bancaria_saldo_inicial` | Saldo del libro al comienzo del período |
+| `conc_bancaria_saldo_inicial` | Saldo del libro al comienzo del período — **lo trae el sistema**, no el usuario (D2) |
 
 Las partidas conciliatorias **son los ítems que quedaron sin tildar**. La conciliación cierra cuando
 el saldo ajustado coincide con el del libro; lo que no se explica es una diferencia real.
 
 > `cuenta` no tiene columna de saldo, así que no hay un "saldo del sistema" que actualizar. El saldo
 > vive únicamente en las conciliaciones, encadenado de una a la siguiente.
+
+### 5.1 El encadenado del saldo inicial y el arranque
+
+`conc_bancaria_saldo_inicial` sale del `conc_bancaria_saldo_final` de la **última conciliación vigente
+de esa cuenta**. Si no hay ninguna, arranca en cero. El campo va de sólo lectura en la pantalla.
+
+**Cómo arranca una empresa que ya venía conciliando fuera del sistema:** el saldo con el que llega no
+se carga en la conciliación, se carga como un **crédito** en la pantalla de créditos, con fecha dentro
+del primer período. Así entra a la grilla como un movimiento más, tildado, y la primera conciliación
+cierra contra el extracto sin ningún campo de arranque especial.
+
+Es la misma regla que D4: **todo lo que mueve plata entra por débitos o créditos.** La conciliación no
+da de alta nada.
 
 ---
 
@@ -249,30 +270,51 @@ que este es el resultado que se espera.
 Patrón documento, como la Orden de Pago: **Nuevo / Buscar / Grabar / Cancelar**, con Session+Token
 porque hay una grilla que se sostiene entre pedidos.
 
-1. **Nuevo** habilita la cabecera. El usuario elige **cuenta** y **período** (desde / hasta).
+1. **Nuevo** habilita la cabecera. El usuario elige **cuenta** y **período** (desde / hasta). Al
+   elegir la cuenta, el sistema trae el **saldo inicial** encadenado (§5.1), de sólo lectura.
 2. Al confirmar el período, el sistema arma la grilla con los movimientos de §4 **más los pendientes
    arrastrados** (§6.1). Los `Db` y `Cr` vienen tildados; los `Ch`, destildados.
 3. El usuario carga el **saldo del extracto** y ajusta los tildes contra el papel del banco: tilda los
-   cheques que se cobraron y destilda lo que el banco no muestre.
+   cheques que se cobraron y destilda lo que el banco no muestre. Si el extracto trae algo que el
+   sistema no tiene, se carga en **Débitos / Créditos** y se vuelve a armar la grilla (D4).
 4. La pantalla recalcula en vivo el **saldo según libro** y la **diferencia**.
 5. **Grabar** guarda cabecera y detalle —los ítems sin tildar incluidos, que son la explicación de la
-   diferencia— y cierra los estados de lo conciliado: `forma_pag_estado` → `'Conciliado'`,
-   `chq_estado` → `'Cobrado'`.
+   diferencia— con la cabecera en `'Vigente'`, y cierra los estados de lo conciliado:
+   `forma_pag_estado` → `'Conciliado'`, `chq_estado` → `'Cobrado'`.
+
+### 9.1 Anulación (D1)
+
+Anular **marca, no borra**: la cabecera pasa a `'Anulado'` y la conciliación queda como historia. En la
+misma transacción hay que **revertir todo lo que el grabado cerró**, o los movimientos no vuelven a
+arrastrarse nunca más:
+
+| Se cerró | Vuelve a |
+|---|---|
+| `forma_pag_estado` = `'Conciliado'` | `'Pendiente'` |
+| `chq_estado` = `'Cobrado'` | `'Entregado'` si el cheque tiene `chq_fecha_entrega`; si no, `'Emitido'` |
+
+> El estado anterior del cheque no se guarda en ningún lado, pero se deduce: `chq_fecha_entrega` dice
+> si llegó a entregarse. Un `'Anulado'` no se toca — ese cheque nunca estuvo conciliado.
+
+**Sólo se anula la última conciliación vigente de la cuenta.** Como el saldo inicial se encadena
+(§5.1), anular una del medio dejaría a todas las posteriores partiendo de un saldo que ya no existe.
+La validación va en el Service, contra la fecha `hasta` de la última vigente.
 
 ---
 
 ## 10. Decisiones
 
-Los ejemplos resolvieron varias de las que estaban abiertas:
+**Todas cerradas al 2026-09-05.** Los ejemplos resolvieron D3, D5 y D6; las tres que quedaban las
+definió Miguel:
 
 | # | Decisión | Estado |
 |---|---|---|
 | **D3** | Al tildar un ítem de cheque, ¿el cheque pasa a `'Cobrado'`? | ✅ **Sí.** Es lo que hace que el cheque deje de arrastrarse al mes siguiente, y el único lugar del sistema donde ese estado tiene sentido |
 | **D5** | ¿El extracto se importa o se tilda a mano? | ✅ **A mano.** La pantalla del ejemplo trabaja así, con buscador y filtro por tipo |
 | **D6** | ¿Tres tipos en `conc_bancaria_tipo`? | ✅ **Sí**: `Cred` / `Deb` / `Ch`, con el tildado automático de §6 |
-| **D1** | ¿La cabecera necesita un estado para anular o reabrir? | ⏳ **Abierta.** No hay columna. Sin ella, una conciliación mal hecha no se deshace y los estados que haya tocado —cheques `'Cobrado'`, formas `'Conciliado'`— quedan mal para siempre. Mismo caso que `debitos_estado` y `ff_rendicion_estado` |
-| **D2** | ¿El saldo inicial se encadena desde la conciliación anterior o lo carga el usuario? | ⏳ **Abierta** |
-| **D4** | ¿Se puede cargar desde acá un movimiento que el banco muestra y el sistema no? | ⏳ **Abierta.** Lo limpio es cargarlo como débito/crédito en su pantalla y volver; permitirlo desde acá es más cómodo pero duplica el alta |
+| **D1** | ¿La cabecera necesita un estado para anular o reabrir? | ✅ **Sí.** `conc_bancaria_estado` (`'Vigente'` / `'Anulado'`), agregada al modelo. Anular marca y revierte los estados que el grabado cerró — §9.1 |
+| **D2** | ¿El saldo inicial se encadena desde la conciliación anterior o lo carga el usuario? | ✅ **Se encadena**, y el campo va de sólo lectura. La empresa que ya venía conciliando carga su saldo de arranque como un **crédito** — §5.1 |
+| **D4** | ¿Se puede cargar desde acá un movimiento que el banco muestra y el sistema no? | ✅ **No.** Para eso están Débitos y Créditos; desde la conciliación no se da de alta nada. Un alta duplicado es justo lo que hace que un movimiento aparezca dos veces en la grilla |
 
 ---
 
@@ -281,10 +323,13 @@ Los ejemplos resolvieron varias de las que estaban abiertas:
 - **PK compuesta sin serial** en el detalle: `conc_bancaria_nro_item` lo asigna la aplicación (1..N
   dentro de la conciliación). No es un problema, pero hay que recordarlo al insertar.
 - **Anular una OP o un débito después de conciliarlo.** Si el movimiento ya está en una conciliación
-  cerrada, anularlo deja la conciliación mintiendo. Hoy nada lo impide. Depende de D1.
-- **Períodos solapados o con huecos.** Nada impide conciliar dos veces el mismo mes, ni saltarse uno.
-  Si el saldo inicial se encadena (D2), conviene validar que el `desde` sea el día siguiente al
-  `hasta` de la conciliación anterior de esa cuenta.
+  vigente, anularlo la deja mintiendo. Hoy nada lo impide: `OrdenPagoService` y
+  `MovimientoBancarioServlet` no miran la conciliación. Lo razonable es que la anulación falle si el
+  movimiento está en un detalle de una conciliación `'Vigente'`, y que primero se anule la
+  conciliación (§9.1).
+- **Períodos solapados o con huecos.** Con el saldo encadenado (D2) esto pasa a ser una validación
+  obligatoria, no una comodidad: el `desde` tiene que ser el día siguiente al `hasta` de la última
+  conciliación vigente de la cuenta. Si no, el saldo inicial arrastra movimientos que nadie concilió.
 - **El arrastre depende de los estados.** Si algo deja `forma_pag_estado` o `chq_estado` mal, un
   movimiento se arrastra para siempre o desaparece antes de tiempo. Son los dos campos a cuidar.
 - **Montos `INTEGER`**: aplica lo mismo que al resto del módulo (§8 del plan de tesorería).
@@ -298,7 +343,8 @@ Los ejemplos resolvieron varias de las que estaban abiertas:
    Incluye la consulta de movimientos del período **con arrastre** (§4 y §6.1) y el `saldo_final` de la
    conciliación anterior.
 2. `ConciliacionBancariaService` — transaccional: guarda cabecera + detalle y cierra los estados de lo
-   conciliado (`forma_pag_estado`, `chq_estado`) en una sola unidad.
+   conciliado (`forma_pag_estado`, `chq_estado`) en una sola unidad. También `anular()`, que marca la
+   cabecera y revierte esos mismos estados (§9.1), con la validación de que sea la última vigente.
 3. `ConciliacionBancariaServlet` — Session+Token, calcado de `OrdenPagoServlet`.
 4. `conciliacionBancaria.jsp` — cabecera, grilla con checkbox y filtro por tipo, y recuadro de saldos.
 5. Registro en `AuthorizationFilter` (módulo `tesoreria`) y link en `menuLateral.jsp`.
