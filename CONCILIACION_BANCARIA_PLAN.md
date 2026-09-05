@@ -203,10 +203,27 @@ O sea que la grilla **no es "los movimientos del período"**, es:
 movimientos del período  +  los de períodos anteriores que quedaron sin conciliar
 ```
 
-Esto se puede resolver sin columnas nuevas: un movimiento está pendiente mientras su
-`forma_pag_estado` siga en `'Pendiente'` (nace así en `OrdenPagoServlet`) o, para los cheques, mientras
-`chq_estado` no sea `'Cobrado'`. Al tildar y grabar, esos estados se cierran y el movimiento deja de
-arrastrarse. Es exactamente para lo que esos dos campos estaban esperando.
+Se resuelve sin columnas nuevas, pero **no preguntando por los estados**: un movimiento está pendiente
+mientras **no figure en el detalle de ninguna conciliación que no esté anulada**.
+
+```sql
+NOT EXISTS (SELECT 1 FROM conciliacion_bancaria_detalle cd
+            JOIN conciliacion_bancaria cc ON cd.id_conc_bancaria = cc.id_conc_bancaria
+            WHERE COALESCE(cc.conc_bancaria_estado, 'Vigente') <> 'Anulado'
+            AND cd.<enlace> = <movimiento>)
+```
+
+Dos razones para preguntar contra el detalle y no contra `forma_pag_estado` / `chq_estado`:
+
+1. **Débitos y créditos no tienen estado de conciliación.** `debitos_estado` es Vigente/Anulado, que es
+   otro eje. Para ellos el `NOT EXISTS` es la única forma, así que hacerlo igual para los tres orígenes
+   sale gratis.
+2. **El arrastre deja de depender de que un `UPDATE` haya salido bien.** Era el riesgo que estaba
+   anotado en §11: si un estado quedaba mal, el movimiento se arrastraba para siempre o desaparecía
+   antes de tiempo. Contra el detalle, el dato es el hecho mismo de haber sido conciliado.
+
+`forma_pag_estado` y `chq_estado` **se siguen manteniendo al día** en las dos direcciones (§9.1), porque
+son lo que muestran la orden de pago y el cheque — pero son informativos, no gobiernan la grilla.
 
 ---
 
@@ -330,8 +347,9 @@ definió Miguel:
 - **Períodos solapados o con huecos.** Con el saldo encadenado (D2) esto pasa a ser una validación
   obligatoria, no una comodidad: el `desde` tiene que ser el día siguiente al `hasta` de la última
   conciliación vigente de la cuenta. Si no, el saldo inicial arrastra movimientos que nadie concilió.
-- **El arrastre depende de los estados.** Si algo deja `forma_pag_estado` o `chq_estado` mal, un
-  movimiento se arrastra para siempre o desaparece antes de tiempo. Son los dos campos a cuidar.
+- ~~El arrastre depende de los estados.~~ **Resuelto en el DAO** (§6.1): lo pendiente se pregunta
+  contra el detalle de las conciliaciones vigentes, así que un `forma_pag_estado` mal actualizado
+  ensucia la vista de la OP pero no rompe el arrastre.
 - **Montos `INTEGER`**: aplica lo mismo que al resto del módulo (§8 del plan de tesorería).
 - **`conc_bancaria_tipo`** es texto libre, sin constraint. Definir las constantes en un solo lugar.
 

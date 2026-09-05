@@ -20,6 +20,8 @@ import java.util.logging.Logger;
  */
 public class OrdenPagoDAO {
 
+    public static final String ESTADO_ANULADO = "Anulado";
+
     private Connection conn;
     private SucursalDAO sucursalDAO;
     private ProveedorDAO proveedorDAO;

@@ -18,6 +18,12 @@ import java.util.logging.Logger;
  */
 public class ChequeDAO {
 
+    /** Estados de chq_estado, segun el comentario del esquema. */
+    public static final String ESTADO_EMITIDO = "Emitido";
+    public static final String ESTADO_ENTREGADO = "Entregado";
+    public static final String ESTADO_COBRADO = "Cobrado";
+    public static final String ESTADO_ANULADO = "Anulado";
+
     private Connection conn;
     private static final Logger LOGGER = Logger.getLogger(ChequeDAO.class.getName());
 
