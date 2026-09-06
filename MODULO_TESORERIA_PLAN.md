@@ -873,7 +873,7 @@ PDF para los informes que realmente se impriman y archiven.
 | 10 | Cheque: ¿solo referencia o real? | **Cheque real** desde chequera (Nro dentro del rango); chequera por seed, ABM de chequera para §G | ✅ Decidido — `forma_pago_detalle.id_cheque` (§C, C4) |
 | 11 | Cuenta de la OP: cabecera o detalle | En el **detalle** (`forma_pago_detalle.id_cuenta`) → multi-cuenta; se quitó de la cabecera | ✅ Decidido e implementado (§C, C5) |
 | 8 | Fondo Fijo: flujo | 2ª opción del comment: `FACTURA FF → RENDICIÓN → PROVISIÓN → OP` | A confirmar |
-| 9 | Montos `INTEGER` | Riesgo de overflow (~2.147 mill. de Gs) — preexistente. **Se mantiene por ahora** (decisión 2026-08-17), pero **conviene migrar a `BIGINT`** antes de tener volumen de datos real: ver §8 | Aceptado con reserva |
+| 9 | Montos `INTEGER` | ⚠️ **El overflow ocurrió el 2026-09-05** al cargar un crédito. Script `Migracion montos a BIGINT.sql` listo (46 columnas, sin cambios en Java): ver §8 | Pendiente de aplicar |
 
 ---
 
@@ -977,7 +977,13 @@ PDF para los informes que realmente se impriman y archiven.
   cero en la Orden de Pago, en la **misma transacción** que la OP.
 - **Nombres de constraint** con doble token (`orden_pagoorden_pago_cabecera_fk`) — cosmético, las FKs
   son correctas.
-- **Montos `INTEGER`** (overflow) — preexistente. **Decisión 2026-08-17: se mantienen por ahora**,
+- **Montos `INTEGER`** (overflow) — ⚠️ **el riesgo se materializó el 2026-09-05**: al cargar un crédito
+  PostgreSQL cortó con *"el entero está fuera de rango"*. Está listo el script
+  [`Migracion montos a BIGINT.sql`](Migracion%20montos%20a%20BIGINT.sql) — 46 columnas, **sin ningún
+  cambio en Java**, porque los importes ya son `Long` en los POJOs y los DAOs usan `getLong`/`setLong`.
+  Quedan afuera los `INTEGER` que no son importes (números de documento, de cheque, cantidades,
+  timbrados, plazos). Falta aplicarlo y sincronizar el Power Architect.
+  *(Registro de la decisión anterior)* **2026-08-17: se mantienen por ahora**,
   pero la recomendación es **migrar a `BIGINT`**. El techo de `INTEGER` es 2.147.483.647, o sea unos
   **2.147 millones de guaraníes**: una factura grande puede acercarse y un acumulado lo supera. Los
   campos afectados son todos los importes (`fact_comp_*`, `cta_pag_monto`/`saldo`, `ord_pag_monto`,
