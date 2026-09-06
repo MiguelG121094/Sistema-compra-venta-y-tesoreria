@@ -101,6 +101,7 @@ CREATE TABLE public.conciliacion_bancaria (
                 conc_bancaria_saldo_final INTEGER NOT NULL,
                 conc_banc_saldo_banco INTEGER NOT NULL,
                 conc_bancaria_estado VARCHAR(20),
+                conc_bancaria_tipo_cambio DOUBLE PRECISION,
                 CONSTRAINT id_conc_bancaria PRIMARY KEY (id_conc_bancaria)
 );
 COMMENT ON TABLE public.conciliacion_bancaria IS 'cuando se guarda una orden de pago viene y guarda tambien en la conciliacion la orden de pago que se hizo en cheque o transferencia y esa conciliacion es de la cuenta de itau y pasa restando el monto que se pagó';

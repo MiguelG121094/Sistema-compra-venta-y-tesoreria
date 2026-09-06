@@ -63,12 +63,17 @@ A `ConciliacionBancaria` se le agregó `estado`, la columna nueva de D1.
 `ConciliacionBancariaDAO` (+ detalle), `ConciliacionBancariaService`, `ConciliacionBancariaServlet`,
 `conciliacionBancaria.jsp`, el registro en `AuthorizationFilter` y el link del menú.
 
-⚠️ **Requiere un ALTER en la BD** — mismo caso que `debitos_estado` / `creditos_estado`:
+⚠️ **Requiere dos ALTER en la BD** — mismo caso que `debitos_estado` / `debitos_tipo_cambio`:
 
 ```sql
 ALTER TABLE public.conciliacion_bancaria ADD COLUMN conc_bancaria_estado VARCHAR(20);
 UPDATE public.conciliacion_bancaria SET conc_bancaria_estado = 'Vigente';
+ALTER TABLE public.conciliacion_bancaria ADD COLUMN conc_bancaria_tipo_cambio DOUBLE PRECISION;
 ```
+
+El tipo de cambio **al cierre** lo pide el prototipo en la cabecera (§13) y es nullable: sólo tiene
+sentido en una cuenta en moneda extranjera. La **moneda** en cambio no necesita columna, sale de la
+cuenta — mismo criterio que en la orden de pago y en Débitos/Créditos.
 
 ---
 
@@ -387,14 +392,30 @@ definió Miguel:
    estados en una sola unidad, y `anularConciliacionCompleta` con la reversa de §9.1 y la validación de
    que sea la última vigente. El saldo inicial se relee y el final se recalcula en el Service (§5.0): no
    se toman de la pantalla, porque son los que encadenan un período con el siguiente.
-3. `ConciliacionBancariaServlet` — Session+Token, calcado de `OrdenPagoServlet`.
-4. `conciliacionBancaria.jsp` — cabecera, grilla con checkbox y filtro por tipo, y recuadro de saldos.
-5. Registro en `AuthorizationFilter` (módulo `tesoreria`) y link en `menuLateral.jsp`.
+3. ✅ `ConciliacionBancariaServlet` — **hecho**. Session+Token. Acciones `Nuevo`, `CargarCuenta`,
+   `CargarMovimientos`, `Grabar`, `CargarConciliacion`, `Anular`, `Cancelar`. Al elegir la cuenta llegan
+   el saldo inicial y la fecha desde encadenados; con la grilla armada la cabecera queda fija.
+4. ✅ `conciliacionBancaria.jsp` — **hecho**, con el formato de la grilla del ejemplo (§13).
+5. ✅ Registro en `AuthorizationFilter` (módulo `tesoreria`) y link en `menuLateral.jsp`.
 6. *(Después, con §H)* el informe de resumen con el formato de `resumen_conciliacion_ejemplo.jpg`.
 
 ---
 
 ## 13. Ejemplos de referencia
 
-`src/main/webapp/Images/conciliacion_ejemplo.jpg` — pantalla de carga de un sistema en uso.
+`src/main/webapp/Images/conciliacion_ejemplo.jpg` — pantalla de carga de un sistema en uso. **Es el que
+manda para el formato de la grilla.**
 `src/main/webapp/Images/resumen_conciliacion_ejemplo.jpg` — el informe que se espera como resultado.
+`src/main/webapp/Images/Conciliacin bancaria.png` — prototipo de la pantalla.
+
+**El prototipo es anterior a las decisiones de §10 y a los ejemplos**, así que en tres puntos no se
+siguió y Miguel lo va a corregir:
+
+| Prototipo | Qué se hizo |
+|---|---|
+| Tipo de carga `OP` / `CR` / `DB` | `Cred` / `Deb` / `Ch`: agrupar las OP borraría la diferencia entre una transferencia (ya ocurrió en el banco) y un cheque, que nace destildado y se arrastra |
+| Sin Buscar ni Anular | Los dos botones están: son el otro lado de la decisión D1 |
+| Sin saldos, y fecha desde libre | Van los cuatro saldos de §5.0, y el desde lo fija el encadenado (D2) |
+
+De lo que el prototipo sí agrega se tomó todo: el tipo de cambio al cierre, la moneda, y el banco y la
+cuenta repetidos en cada fila de la grilla.

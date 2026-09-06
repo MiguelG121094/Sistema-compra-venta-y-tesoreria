@@ -126,6 +126,7 @@ public class ConciliacionBancariaServlet extends HttpServlet {
         try {
             switch (accion) {
                 case "Nuevo":
+                case "CargarCuenta":
                 case "CargarMovimientos":
                 case "Grabar":
                     if (!Boolean.TRUE.equals(puedeInsertar)) {
@@ -147,6 +148,7 @@ public class ConciliacionBancariaServlet extends HttpServlet {
 
             switch (accion) {
                 case "Nuevo":               accionNuevo(request, response, session); break;
+                case "CargarCuenta":        accionCargarCuenta(request, response, session, token); break;
                 case "CargarMovimientos":   accionCargarMovimientos(request, response, session, token); break;
                 case "Grabar":              accionGrabar(request, response, session, token); break;
                 case "CargarConciliacion":  accionCargarConciliacion(request, response, session); break;
@@ -189,6 +191,48 @@ public class ConciliacionBancariaServlet extends HttpServlet {
     }
 
     /**
+     * Carga la cuenta elegida en el combo y con ella el saldo inicial encadenado y la fecha desde
+     * que le corresponde al periodo. Los dos salen de la conciliacion anterior, asi que hasta que
+     * no hay cuenta elegida la pantalla no puede mostrarlos.
+     */
+    private void accionCargarCuenta(HttpServletRequest request, HttpServletResponse response,
+            HttpSession session, String token) throws ServletException, IOException, SQLException {
+
+        ConciliacionState estado = obtenerEstadoORedireccionar(request, response, session, token);
+        if (estado == null) return;
+
+        if (estado.movimientosCargados) {
+            mostrarMensaje(request, "Los movimientos ya están cargados, cancele para cambiar la cuenta",
+                    "alert-warning");
+            volverAVista(request, response, session, estado, token);
+            return;
+        }
+        leerTipoCambio(request, estado);
+
+        Long idCuenta = leerId(request.getParameter("idCuenta"));
+        if (idCuenta == null) {
+            estado.conciliacion.setCuenta(null);
+            estado.conciliacion.setSaldoInicial(null);
+            estado.conciliacion.setFechaDesde(null);
+            volverAVista(request, response, session, estado, token);
+            return;
+        }
+        Cuenta cuenta = cuentaService.getCuenta(idCuenta);
+        if (cuenta == null) {
+            mostrarMensaje(request, "No se pudo cargar la cuenta bancaria", "alert-warning");
+            volverAVista(request, response, session, estado, token);
+            return;
+        }
+
+        estado.conciliacion.setCuenta(cuenta);
+        estado.conciliacion.setSaldoInicial(conciliacionService.obtenerSaldoInicial(idCuenta));
+        // Null en la primera conciliacion de la cuenta: ahi el usuario elige desde cuando.
+        estado.conciliacion.setFechaDesde(conciliacionService.fechaDesdeEsperada(idCuenta));
+
+        volverAVista(request, response, session, estado, token);
+    }
+
+    /**
      * Arma la grilla con los movimientos de la cuenta y el periodo elegidos. A partir de aca la
      * cabecera queda fija: cambiar la cuenta o el periodo cambiaria los movimientos, asi que para
      * eso se cancela y se empieza de nuevo.
@@ -204,51 +248,41 @@ public class ConciliacionBancariaServlet extends HttpServlet {
             volverAVista(request, response, session, estado, token);
             return;
         }
+        leerTipoCambio(request, estado);
 
-        Long idCuenta = leerId(request.getParameter("idCuenta"));
-        if (idCuenta == null) {
+        Cuenta cuenta = estado.conciliacion.getCuenta();
+        if (cuenta == null) {
             mostrarMensaje(request, "Debe seleccionar la cuenta bancaria", "alert-warning");
             volverAVista(request, response, session, estado, token);
             return;
         }
-        Cuenta cuenta = cuentaService.getCuenta(idCuenta);
-        if (cuenta == null) {
-            mostrarMensaje(request, "No se pudo cargar la cuenta bancaria", "alert-warning");
-            volverAVista(request, response, session, estado, token);
-            return;
-        }
+        Long idCuenta = cuenta.getIdCuenta();
 
         Date hasta = leerFecha(request.getParameter("fechaHasta"));
         if (hasta == null) {
             mostrarMensaje(request, "Debe indicar la fecha hasta del período", "alert-warning");
-            estado.conciliacion.setCuenta(cuenta);
             volverAVista(request, response, session, estado, token);
             return;
         }
 
-        // El desde no se elige salvo en la primera conciliacion de la cuenta: despues es el dia
-        // siguiente al cierre de la anterior, porque el saldo se encadena.
-        Date desde = conciliacionService.fechaDesdeEsperada(idCuenta);
+        // El desde lo puso CargarCuenta desde el encadenado; solo se elige en la primera.
+        Date desde = estado.conciliacion.getFechaDesde();
         if (desde == null) {
             desde = leerFecha(request.getParameter("fechaDesde"));
             if (desde == null) {
                 mostrarMensaje(request, "Debe indicar la fecha desde del período", "alert-warning");
-                estado.conciliacion.setCuenta(cuenta);
                 volverAVista(request, response, session, estado, token);
                 return;
             }
         }
         if (desde.after(hasta)) {
             mostrarMensaje(request, "La fecha desde no puede ser posterior a la fecha hasta", "alert-warning");
-            estado.conciliacion.setCuenta(cuenta);
             volverAVista(request, response, session, estado, token);
             return;
         }
 
-        estado.conciliacion.setCuenta(cuenta);
         estado.conciliacion.setFechaDesde(desde);
         estado.conciliacion.setFechaHasta(hasta);
-        estado.conciliacion.setSaldoInicial(conciliacionService.obtenerSaldoInicial(idCuenta));
         estado.listaDetalle = conciliacionService.listarMovimientosAConciliar(idCuenta, hasta);
         if (estado.listaDetalle == null) {
             estado.listaDetalle = new ArrayList<>();
@@ -364,6 +398,9 @@ public class ConciliacionBancariaServlet extends HttpServlet {
      * recorre la lista entera y no los parametros.
      */
     private boolean leerDatosFormulario(HttpServletRequest request, ConciliacionState estado) {
+        if (!leerTipoCambio(request, estado)) {
+            return false;
+        }
         String saldoBancoStr = request.getParameter("saldoBanco");
         if (saldoBancoStr == null || saldoBancoStr.trim().isEmpty()) {
             mostrarMensaje(request, "Debe cargar el saldo del extracto bancario", "alert-warning");
@@ -379,6 +416,31 @@ public class ConciliacionBancariaServlet extends HttpServlet {
             boolean tildado = request.getParameter("conciliado_" + i) != null;
             estado.listaDetalle.get(i).setConciliado(tildado);
         }
+        return true;
+    }
+
+    /**
+     * Tipo de cambio al cierre, opcional: solo tiene sentido en una cuenta en moneda extranjera.
+     * Se lee en cada accion para no perder lo cargado, como en el resto de las pantallas.
+     */
+    private boolean leerTipoCambio(HttpServletRequest request, ConciliacionState estado) {
+        String tipoCambioStr = request.getParameter("tipoCambio");
+        if (tipoCambioStr == null || tipoCambioStr.trim().isEmpty()) {
+            estado.conciliacion.setTipoCambio(null);
+            return true;
+        }
+        Double tipoCambio;
+        try {
+            tipoCambio = Double.valueOf(tipoCambioStr.trim().replace(",", "."));
+        } catch (NumberFormatException e) {
+            mostrarMensaje(request, "El tipo de cambio no es válido", "alert-danger");
+            return false;
+        }
+        if (tipoCambio <= 0) {
+            mostrarMensaje(request, "El tipo de cambio debe ser mayor a cero", "alert-danger");
+            return false;
+        }
+        estado.conciliacion.setTipoCambio(tipoCambio);
         return true;
     }
 
@@ -421,16 +483,6 @@ public class ConciliacionBancariaServlet extends HttpServlet {
         request.setAttribute("listaCuentas", estado.listaCuentas);
         request.setAttribute("listaEntidades", estado.listaEntidades);
         request.setAttribute("listaConciliaciones", estado.listaConciliaciones);
-
-        // El desde lo fija el encadenado salvo en la primera conciliacion de la cuenta.
-        try {
-            if (estado.esNuevo && estado.conciliacion.getCuenta() != null) {
-                request.setAttribute("fechaDesdeFija", conciliacionService.fechaDesdeEsperada(
-                        estado.conciliacion.getCuenta().getIdCuenta()));
-            }
-        } catch (SQLException e) {
-            LOGGER.log(Level.WARNING, "No se pudo calcular la fecha desde esperada", e);
-        }
 
         Long saldoInicial = estado.conciliacion.getSaldoInicial();
         request.setAttribute("saldoLibro", ConciliacionBancariaService.calcularSaldoLibro(

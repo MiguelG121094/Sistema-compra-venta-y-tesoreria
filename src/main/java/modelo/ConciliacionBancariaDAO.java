@@ -38,7 +38,7 @@ public class ConciliacionBancariaDAO {
     private static final String COLUMNAS =
             "id_conc_bancaria, id_cuenta, conc_bancaria_fecha_desde, conc_bancaria_fecha, "
             + "conc_bancaria_fecha_hasta, conc_bancaria_saldo_inicial, conc_bancaria_saldo_final, "
-            + "conc_banc_saldo_banco, conc_bancaria_estado";
+            + "conc_banc_saldo_banco, conc_bancaria_estado, conc_bancaria_tipo_cambio";
 
     /**
      * Un movimiento sigue pendiente mientras no este en el detalle de ninguna conciliacion que no
@@ -72,6 +72,8 @@ public class ConciliacionBancariaDAO {
         conciliacion.setSaldoFinal(rs.getLong("conc_bancaria_saldo_final"));
         conciliacion.setSaldoBanco(rs.getLong("conc_banc_saldo_banco"));
         conciliacion.setEstado(rs.getString("conc_bancaria_estado"));
+        double tipoCambio = rs.getDouble("conc_bancaria_tipo_cambio");
+        conciliacion.setTipoCambio(rs.wasNull() ? null : tipoCambio);
         return conciliacion;
     }
 
@@ -145,8 +147,9 @@ public class ConciliacionBancariaDAO {
     public Long insertarConciliacion(ConciliacionBancaria conciliacion) throws SQLException {
         String sql = "INSERT INTO conciliacion_bancaria (id_cuenta, conc_bancaria_fecha_desde, "
                    + "conc_bancaria_fecha, conc_bancaria_fecha_hasta, conc_bancaria_saldo_inicial, "
-                   + "conc_bancaria_saldo_final, conc_banc_saldo_banco, conc_bancaria_estado) "
-                   + "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+                   + "conc_bancaria_saldo_final, conc_banc_saldo_banco, conc_bancaria_estado, "
+                   + "conc_bancaria_tipo_cambio) "
+                   + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             stmt.setLong(1, conciliacion.getCuenta().getIdCuenta());
             stmt.setDate(2, new java.sql.Date(conciliacion.getFechaDesde().getTime()));
@@ -156,6 +159,12 @@ public class ConciliacionBancariaDAO {
             stmt.setLong(6, conciliacion.getSaldoFinal());
             stmt.setLong(7, conciliacion.getSaldoBanco());
             stmt.setString(8, ESTADO_VIGENTE);
+            // Nullable: solo tiene sentido en una cuenta en moneda extranjera.
+            if (conciliacion.getTipoCambio() != null) {
+                stmt.setDouble(9, conciliacion.getTipoCambio());
+            } else {
+                stmt.setNull(9, Types.DOUBLE);
+            }
 
             int filas = stmt.executeUpdate();
             if (filas == 0) {
