@@ -15,7 +15,7 @@ public class Cuenta implements java.io.Serializable {
     private Long idCuenta;
     private TipoCuenta tipoCuenta;
     private EntidadFinanciera entidadFinanciera;
-    private Long numero;
+    private String numero;
     private Moneda moneda;
 
     public Cuenta() {
@@ -26,7 +26,7 @@ public class Cuenta implements java.io.Serializable {
     }
 
     public Cuenta(Long idCuenta, TipoCuenta tipoCuenta, EntidadFinanciera entidadFinanciera,
-            Long numero, Moneda moneda) {
+            String numero, Moneda moneda) {
         this.idCuenta = idCuenta;
         this.tipoCuenta = tipoCuenta;
         this.entidadFinanciera = entidadFinanciera;
@@ -58,11 +58,11 @@ public class Cuenta implements java.io.Serializable {
         this.entidadFinanciera = entidadFinanciera;
     }
 
-    public Long getNumero() {
+    public String getNumero() {
         return numero;
     }
 
-    public void setNumero(Long numero) {
+    public void setNumero(String numero) {
         this.numero = numero;
     }
 

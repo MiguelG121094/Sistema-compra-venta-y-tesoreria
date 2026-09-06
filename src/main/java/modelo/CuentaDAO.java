@@ -36,7 +36,7 @@ public class CuentaDAO {
                 cuenta.setIdCuenta(rs.getLong("id_cuenta"));
                 cuenta.setTipoCuenta(tipoCuentaDAO.getTipoCuenta(rs.getLong("id_tipo_cuenta")));
                 cuenta.setEntidadFinanciera(entidadDAO.getEntidadFinanciera(rs.getLong("id_enti_finan")));
-                cuenta.setNumero(rs.getLong("cuenta_numero"));
+                cuenta.setNumero(rs.getString("cuenta_numero"));
                 cuenta.setMoneda(monedaDAO.getMoneda(rs.getLong("id_moneda")));
                 lista.add(cuenta);
             }
@@ -63,7 +63,7 @@ public class CuentaDAO {
                     cuenta.setIdCuenta(rs.getLong("id_cuenta"));
                     cuenta.setTipoCuenta(tipoCuentaDAO.getTipoCuenta(rs.getLong("id_tipo_cuenta")));
                     cuenta.setEntidadFinanciera(entidadDAO.getEntidadFinanciera(rs.getLong("id_enti_finan")));
-                    cuenta.setNumero(rs.getLong("cuenta_numero"));
+                    cuenta.setNumero(rs.getString("cuenta_numero"));
                     cuenta.setMoneda(monedaDAO.getMoneda(rs.getLong("id_moneda")));
                     return cuenta;
                 }
@@ -78,7 +78,7 @@ public class CuentaDAO {
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setLong(1, cuenta.getTipoCuenta().getIdTipoCuenta());
             stmt.setLong(2, cuenta.getEntidadFinanciera().getIdEntidadFinanciera());
-            stmt.setLong(3, cuenta.getNumero());
+            stmt.setString(3, cuenta.getNumero());
             stmt.setLong(4, cuenta.getMoneda().getIdMoneda());
             stmt.executeUpdate();
         }
@@ -90,7 +90,7 @@ public class CuentaDAO {
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setLong(1, cuenta.getTipoCuenta().getIdTipoCuenta());
             stmt.setLong(2, cuenta.getEntidadFinanciera().getIdEntidadFinanciera());
-            stmt.setLong(3, cuenta.getNumero());
+            stmt.setString(3, cuenta.getNumero());
             stmt.setLong(4, cuenta.getMoneda().getIdMoneda());
             stmt.setLong(5, cuenta.getIdCuenta());
             stmt.executeUpdate();

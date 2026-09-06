@@ -15,7 +15,7 @@ public class CobroTarjeta implements java.io.Serializable {
     private Long idCobroTarjeta;
     private Cobro cobro;
     private Tarjeta tarjeta;
-    private Long numeroBoletaPost;
+    private String numeroBoletaPost;
 
     public CobroTarjeta() {
     }
@@ -25,7 +25,7 @@ public class CobroTarjeta implements java.io.Serializable {
         this.cobro = cobro;
     }
 
-    public CobroTarjeta(Long idCobroTarjeta, Cobro cobro, Tarjeta tarjeta, Long numeroBoletaPost) {
+    public CobroTarjeta(Long idCobroTarjeta, Cobro cobro, Tarjeta tarjeta, String numeroBoletaPost) {
         this.idCobroTarjeta = idCobroTarjeta;
         this.cobro = cobro;
         this.tarjeta = tarjeta;
@@ -56,11 +56,11 @@ public class CobroTarjeta implements java.io.Serializable {
         this.tarjeta = tarjeta;
     }
 
-    public Long getNumeroBoletaPost() {
+    public String getNumeroBoletaPost() {
         return numeroBoletaPost;
     }
 
-    public void setNumeroBoletaPost(Long numeroBoletaPost) {
+    public void setNumeroBoletaPost(String numeroBoletaPost) {
         this.numeroBoletaPost = numeroBoletaPost;
     }
 }

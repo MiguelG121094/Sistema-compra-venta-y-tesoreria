@@ -170,8 +170,10 @@ public class CuentaServlet extends HttpServlet {
             mostrarMensaje(request, "Complete todos los campos de la cuenta", "alert-warning");
             return null;
         }
-        if (!numeroStr.trim().matches("\\d+")) {
-            mostrarMensaje(request, "El número de cuenta debe ser numérico", "alert-danger");
+        // Va como texto: no se opera con el, puede tener ceros a la izquierda y no entra en un
+        // INTEGER si el banco lo da largo.
+        if (numeroStr.trim().length() > 30) {
+            mostrarMensaje(request, "El número de cuenta no puede superar los 30 caracteres", "alert-danger");
             return null;
         }
 
@@ -179,7 +181,7 @@ public class CuentaServlet extends HttpServlet {
         cuenta.setEntidadFinanciera(new EntidadFinanciera(Long.parseLong(idEntStr)));
         cuenta.setTipoCuenta(new TipoCuenta(Long.parseLong(idTipoStr)));
         cuenta.setMoneda(new Moneda(Long.parseLong(idMonStr)));
-        cuenta.setNumero(Long.parseLong(numeroStr.trim()));
+        cuenta.setNumero(numeroStr.trim());
         return cuenta;
     }
 

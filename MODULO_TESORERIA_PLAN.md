@@ -984,10 +984,20 @@ PDF para los informes que realmente se impriman y archiven.
   `getLong`/`setLong`. Quedan afuera los `INTEGER` que no son importes (números de documento, de
   cheque, cantidades, timbrados, plazos).
 
-  El mismo script pasa **`debitos_nro_comprobante` y `creditos_nro_comprobante` a `VARCHAR(30)`**: el
-  comprobante lo da el banco y puede traer letras, guiones y ceros a la izquierda, así que no es un
-  número sino un identificador. Es el criterio que el sistema ya usa en `fact_comp_numero` y en
-  `forma_pag_referencia`. Eso sí toca Java (POJOs, DAOs y la validación del servlet, ya hecho).
+  El mismo script pasa a **`VARCHAR(30)`** los números que **no genera el sistema**, porque no son
+  números sino identificadores: pueden traer letras, guiones y ceros a la izquierda, y ninguno se
+  opera. Es el criterio que el sistema ya usaba en `fact_comp_numero` y en `forma_pag_referencia`.
+
+  | Columna | Quién lo emite |
+  |---|---|
+  | `debitos_nro_comprobante` / `creditos_nro_comprobante` | el banco |
+  | `ord_pag_nro_recibo` | el proveedor, al cobrar |
+  | `tarjeta_nro_boleta_post` | el POS |
+  | `cuenta_numero` | el banco (además, uno largo no entraba en `INTEGER`) |
+
+  Siguen numéricos los correlativos propios: `ord_pag_numero`, `nro_rendicion`, `chq_numero`,
+  `conc_bancaria_nro_item`. Todo esto sí tocó Java (POJOs, DAOs y validaciones, ya hecho); el `0` que
+  marcaba "orden de pago sin recibo" pasa a ser texto vacío, y el script lo convierte.
 
   Falta aplicar el script y sincronizar el Power Architect.
   *(Registro de la decisión anterior)* **2026-08-17: se mantienen por ahora**,

@@ -213,11 +213,8 @@ public class OrdenPagoServlet extends HttpServlet {
         String tipoPago = request.getParameter("tipoPago");
 
         if (reciboStr != null && !reciboStr.trim().isEmpty()) {
-            try {
-                estado.ordenPago.setNumeroRecibo(Integer.parseInt(reciboStr.trim()));
-            } catch (NumberFormatException e) {
-                LOGGER.log(Level.WARNING, "Nro de recibo no numérico en leerDatosFormulario: {0}", reciboStr);
-            }
+            // El recibo lo emite el proveedor: va como texto, puede traer letras y guiones.
+            estado.ordenPago.setNumeroRecibo(reciboStr.trim());
         }
 
         if (idSucursalStr != null && !idSucursalStr.isEmpty()) {
@@ -851,9 +848,9 @@ public class OrdenPagoServlet extends HttpServlet {
         if (estado.ordenPago.getNumero() == null) {
             estado.ordenPago.setNumero(ordenPagoService.obtenerProximoNumero());
         }
-        // El recibo lo da el proveedor y no siempre existe (compras al contado): 0 = sin recibo.
+        // El recibo lo da el proveedor y no siempre existe (compras al contado): vacío = sin recibo.
         if (estado.ordenPago.getNumeroRecibo() == null) {
-            estado.ordenPago.setNumeroRecibo(0);
+            estado.ordenPago.setNumeroRecibo("");
         }
         // El emisor de cada cheque debe ser el usuario de la sesión (lo exige el Service).
         for (FormaPagoDetalle fp : estado.listaFormasPago) {
@@ -935,14 +932,13 @@ public class OrdenPagoServlet extends HttpServlet {
 
         String entregadoA = request.getParameter("entregadoA");
 
-        // El recibo es opcional: si el proveedor no dio ninguno, queda en 0 (mismo criterio que al generar).
-        Integer numeroRecibo = 0;
+        // El recibo es opcional: si el proveedor no dio ninguno queda vacío (igual que al generar).
+        String numeroRecibo = "";
         String reciboStr = request.getParameter("nroReciboEntrega");
         if (reciboStr != null && !reciboStr.trim().isEmpty()) {
-            try {
-                numeroRecibo = Integer.parseInt(reciboStr.trim().replace(".", ""));
-            } catch (NumberFormatException e) {
-                mostrarMensaje(request, "El número de recibo debe ser numérico", "alert-warning");
+            numeroRecibo = reciboStr.trim();
+            if (numeroRecibo.length() > 30) {
+                mostrarMensaje(request, "El número de recibo no puede superar los 30 caracteres", "alert-warning");
                 volverAVista(request, response, session, estado, token);
                 return;
             }

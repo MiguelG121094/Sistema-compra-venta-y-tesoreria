@@ -44,7 +44,7 @@ public class OrdenPagoDAO {
             rs.getLong("ord_pag_monto"),
             rs.getString("ord_pag_estado"),
             rs.getLong("id_provi_cta_pagar_cabecera"),
-            rs.getInt("ord_pag_nro_recibo"),
+            rs.getString("ord_pag_nro_recibo"),
             sucursalDAO.getSucursal(rs.getLong("id_sucursal")),
             rs.getString("ord_pag_tipo_pago"),
             proveedorDAO.getProveedor(rs.getLong("id_proveedor"))
@@ -100,7 +100,7 @@ public class OrdenPagoDAO {
             stmt.setLong(3, ordenPago.getMonto());
             stmt.setString(4, ordenPago.getEstado());
             stmt.setLong(5, ordenPago.getIdProvisionCtaPagar());
-            stmt.setInt(6, ordenPago.getNumeroRecibo());
+            stmt.setString(6, ordenPago.getNumeroRecibo());
             stmt.setLong(7, ordenPago.getSucursal().getIdSucursal());
             stmt.setString(8, ordenPago.getTipoPago());
             stmt.setLong(9, ordenPago.getProveedor().getIdProveedor());
@@ -149,15 +149,15 @@ public class OrdenPagoDAO {
      * Actualiza el número de recibo que dio el proveedor.
      *
      * <p>El recibo se carga al **entregar** el cheque, no al generar la OP: en ese momento el
-     * proveedor todavía no lo dio. Por eso la cabecera nace con 0 = sin recibo y se completa después.
+     * proveedor todavía no lo dio. Por eso la cabecera nace en blanco y se completa después.
      */
-    public void actualizarNumeroRecibo(Long idOrdenPago, Integer numeroRecibo) throws SQLException {
+    public void actualizarNumeroRecibo(Long idOrdenPago, String numeroRecibo) throws SQLException {
         if (idOrdenPago == null) {
             return;
         }
         String sql = "UPDATE orden_pago_cabecera SET ord_pag_nro_recibo = ? WHERE id_orden_pago = ?";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setInt(1, numeroRecibo != null ? numeroRecibo : 0);
+            stmt.setString(1, numeroRecibo != null ? numeroRecibo : "");
             stmt.setLong(2, idOrdenPago);
             stmt.executeUpdate();
         }

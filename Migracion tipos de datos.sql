@@ -94,4 +94,13 @@ ALTER TABLE public.recaudaciones_depositar_detalle ALTER COLUMN rec_depositar_ef
 ALTER TABLE public.debitos  ALTER COLUMN debitos_nro_comprobante  TYPE VARCHAR(30) USING debitos_nro_comprobante::VARCHAR;
 ALTER TABLE public.creditos ALTER COLUMN creditos_nro_comprobante TYPE VARCHAR(30) USING creditos_nro_comprobante::VARCHAR;
 
+-- Mismo criterio para los otros tres numeros que no genera el sistema:
+--   el recibo lo emite el proveedor, la boleta la emite el POS y el nro de cuenta lo da el banco.
+ALTER TABLE public.orden_pago_cabecera ALTER COLUMN ord_pag_nro_recibo     TYPE VARCHAR(30) USING ord_pag_nro_recibo::VARCHAR;
+ALTER TABLE public.cobro_tarjeta       ALTER COLUMN tarjeta_nro_boleta_post TYPE VARCHAR(30) USING tarjeta_nro_boleta_post::VARCHAR;
+ALTER TABLE public.cuenta              ALTER COLUMN cuenta_numero          TYPE VARCHAR(30) USING cuenta_numero::VARCHAR;
+
+-- El 0 de las ordenes de pago sin recibo era el marcador de "no hay": como texto va vacio.
+UPDATE public.orden_pago_cabecera SET ord_pag_nro_recibo = '' WHERE ord_pag_nro_recibo = '0';
+
 COMMIT;

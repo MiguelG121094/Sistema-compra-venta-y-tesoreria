@@ -322,11 +322,11 @@ public class OrdenPagoService {
      * @param idsCheque     cheques que el proveedor retiró
      * @param fechaEntrega  fecha en que los retiró
      * @param entregadoA    quién los retiró (puede ser null)
-     * @param numeroRecibo  recibo del proveedor (0 = sin recibo)
+     * @param numeroRecibo  recibo del proveedor (vacío = sin recibo)
      * @return cantidad de cheques efectivamente marcados
      */
     public int registrarEntregaCheques(Long idOrdenPago, List<Long> idsCheque,
-            java.util.Date fechaEntrega, String entregadoA, Integer numeroRecibo) throws SQLException {
+            java.util.Date fechaEntrega, String entregadoA, String numeroRecibo) throws SQLException {
 
         if (idOrdenPago == null) {
             throw new SQLException("registrarEntregaCheques: idOrdenPago es nulo");

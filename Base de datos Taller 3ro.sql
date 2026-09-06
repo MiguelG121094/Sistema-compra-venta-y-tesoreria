@@ -80,7 +80,7 @@ CREATE TABLE public.cuenta (
                 id_cuenta INTEGER NOT NULL DEFAULT nextval('public.cuenta_id_cuenta_seq'),
                 id_tipo_cuenta INTEGER NOT NULL,
                 id_enti_finan INTEGER NOT NULL,
-                cuenta_numero INTEGER NOT NULL,
+                cuenta_numero VARCHAR(30) NOT NULL,
                 id_moneda INTEGER NOT NULL,
                 CONSTRAINT id_cuenta PRIMARY KEY (id_cuenta)
 );
@@ -528,7 +528,7 @@ CREATE TABLE public.orden_pago_cabecera (
                 ord_pag_monto BIGINT NOT NULL,
                 ord_pag_estado VARCHAR(100) NOT NULL,
                 id_provi_cta_pagar_cabecera INTEGER NOT NULL,
-                ord_pag_nro_recibo INTEGER NOT NULL,
+                ord_pag_nro_recibo VARCHAR(30) NOT NULL,
                 id_sucursal INTEGER NOT NULL,
                 ord_pag_tipo_pago VARCHAR NOT NULL,
                 id_proveedor INTEGER NOT NULL,
@@ -908,7 +908,7 @@ CREATE TABLE public.cobro_tarjeta (
                 id_cobro_tarjeta INTEGER NOT NULL DEFAULT nextval('public.cobro_tarjeta_id_cobro_tarjeta_seq'),
                 id_cobro INTEGER NOT NULL,
                 id_tarjeta INTEGER NOT NULL,
-                tarjeta_nro_boleta_post INTEGER NOT NULL,
+                tarjeta_nro_boleta_post VARCHAR(30) NOT NULL,
                 CONSTRAINT id_cobro_tarjeta PRIMARY KEY (id_cobro_tarjeta, id_cobro)
 );
 

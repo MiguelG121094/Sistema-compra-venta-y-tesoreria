@@ -576,7 +576,7 @@
                                                     <div class="form-floating">
                                                         <input class="form-control" id="nroReciboEntrega" name="nroReciboEntrega"
                                                                type="number" min="0" placeholder="Recibo Nro"
-                                                               value="${ordenPago.numeroRecibo > 0 ? ordenPago.numeroRecibo : ''}">
+                                                               value="${ordenPago.numeroRecibo}">
                                                         <label for="nroReciboEntrega">Recibo Nro del proveedor</label>
                                                     </div>
                                                 </div>

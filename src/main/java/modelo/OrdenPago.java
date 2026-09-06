@@ -22,7 +22,7 @@ public class OrdenPago implements java.io.Serializable {
     private Long monto;
     private String estado;
     private Long idProvisionCtaPagar;
-    private Integer numeroRecibo;
+    private String numeroRecibo;
     private Sucursal sucursal;
     private String tipoPago;
     private Proveedor proveedor;
@@ -35,7 +35,7 @@ public class OrdenPago implements java.io.Serializable {
     }
 
     public OrdenPago(Long idOrdenPago, Integer numero, Date fechaEmision, Long monto, String estado,
-            Long idProvisionCtaPagar, Integer numeroRecibo, Sucursal sucursal, String tipoPago,
+            Long idProvisionCtaPagar, String numeroRecibo, Sucursal sucursal, String tipoPago,
             Proveedor proveedor) {
         this.idOrdenPago = idOrdenPago;
         this.numero = numero;
@@ -97,11 +97,11 @@ public class OrdenPago implements java.io.Serializable {
         this.idProvisionCtaPagar = idProvisionCtaPagar;
     }
 
-    public Integer getNumeroRecibo() {
+    public String getNumeroRecibo() {
         return numeroRecibo;
     }
 
-    public void setNumeroRecibo(Integer numeroRecibo) {
+    public void setNumeroRecibo(String numeroRecibo) {
         this.numeroRecibo = numeroRecibo;
     }
 

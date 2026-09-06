@@ -100,7 +100,7 @@
 
                                             <div class="mb-3">
                                                 <label class="form-label">N° de Cuenta</label>
-                                                <input type="text" inputmode="numeric" class="form-control" name="numero"
+                                                <input type="text" maxlength="30" class="form-control" name="numero"
                                                        value="${vNumero}" required="true">
                                             </div>
 
