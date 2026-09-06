@@ -65,6 +65,7 @@
                         </div>
 
                         <c:set var="anulada" value="${not empty rendicion.estado and rendicion.estado eq 'Anulado'}" />
+                        <c:set var="provisionada" value="${not empty rendicion.estado and rendicion.estado eq 'Provisionada'}" />
 
                         <!-- Botones principales -->
                         <div class="row mb-3">
@@ -90,9 +91,9 @@
                                 </span>
                             </div>
                             <div class="col-auto">
-                                <c:set var="anularBloqueado" value="${empty idRendicionExistente or anulada or not puedeBorrar}" />
+                                <c:set var="anularBloqueado" value="${empty idRendicionExistente or anulada or provisionada or not puedeBorrar}" />
                                 <span class="d-inline-block" tabindex="0"
-                                      <c:if test="${anularBloqueado}">title="${not puedeBorrar ? 'No tiene permisos' : (anulada ? 'La rendición ya está anulada' : 'Cargue una rendición para anularla')}"</c:if>>
+                                      <c:if test="${anularBloqueado}">title="${not puedeBorrar ? 'No tiene permisos' : (anulada ? 'La rendición ya está anulada' : (provisionada ? 'La rendición ya fue provisionada: anule antes la provisión' : 'Cargue una rendición para anularla'))}"</c:if>>
                                     <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#modalConfirmarAnular"
                                             <c:if test="${anularBloqueado}">disabled style="pointer-events: none;"</c:if>>Anular</button>
                                 </span>

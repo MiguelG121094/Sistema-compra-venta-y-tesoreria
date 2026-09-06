@@ -149,6 +149,16 @@ public class FondoFijoRendicionService {
             if (FondoFijoRendicionDAO.ESTADO_ANULADO.equals(estado)) {
                 throw new SQLException("La rendición ya estaba anulada");
             }
+            /* Solo se anula una rendicion 'Generada'. Si ya se provisiono, anularla dejaria a la
+               provision apuntando a una rendicion anulada y devolveria sus cuentas a pagar como si
+               nunca se hubieran rendido, cuando en realidad ya estan provisionadas o pagadas. El
+               orden correcto para deshacer es: anular la orden de pago, la provision, y recien la
+               rendicion. La fila viene bloqueada con FOR UPDATE, asi que no puede provisionarse
+               entre la validacion y el commit. */
+            if (!FondoFijoRendicionDAO.ESTADO_GENERADA.equals(estado)) {
+                throw new SQLException("La rendición está " + estado.toLowerCase()
+                        + ": primero hay que anular la provisión que la tomó");
+            }
 
             for (FondoFijoRendicionDetalle detalle : rendicionDAO.listarDetallesPorRendicion(idRendicion)) {
                 CuentaPagar cuenta = detalle.getCuentaPagar();
