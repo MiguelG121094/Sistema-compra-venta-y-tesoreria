@@ -36,7 +36,7 @@ public class CreditoDAO {
     private Credito mapear(ResultSet rs) throws SQLException {
         Credito credito = new Credito();
         credito.setIdCredito(rs.getLong("id_creditos"));
-        credito.setNumeroComprobante(rs.getLong("creditos_nro_comprobante"));
+        credito.setNumeroComprobante(rs.getString("creditos_nro_comprobante"));
         credito.setFecha(rs.getDate("creditos_fecha"));
         credito.setDetalle(rs.getString("creditos_detalle"));
         credito.setCuenta(new CuentaDAO(conn).getCuenta(rs.getLong("id_cuenta")));
@@ -98,7 +98,7 @@ public class CreditoDAO {
                    + "id_cuenta, id_cobro, credito_monto, creditos_tipo_cambio, creditos_estado) "
                    + "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-            stmt.setLong(1, credito.getNumeroComprobante());
+            stmt.setString(1, credito.getNumeroComprobante());
             stmt.setDate(2, new java.sql.Date(credito.getFecha().getTime()));
             stmt.setString(3, credito.getDetalle());
             stmt.setLong(4, credito.getCuenta().getIdCuenta());

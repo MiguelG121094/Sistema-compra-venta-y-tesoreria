@@ -1,4 +1,4 @@
--- Migración de los importes de INTEGER a BIGINT.
+-- Migración de tipos: los importes de INTEGER a BIGINT y los nros de comprobante a texto.
 --
 -- Motivo: el techo de INTEGER es 2.147.483.647, o sea unos 2.147 millones de guaraníes. Un saldo
 -- bancario o un acumulado lo pasa sin esfuerzo — se cayó al cargar un crédito el 2026-09-05 con
@@ -87,5 +87,11 @@ ALTER TABLE public.provision_cuenta_pagar_detalle ALTER COLUMN prov_cta_pag_mont
 -- recaudaciones_depositar_detalle
 ALTER TABLE public.recaudaciones_depositar_detalle ALTER COLUMN rec_depositar_cheque TYPE BIGINT;
 ALTER TABLE public.recaudaciones_depositar_detalle ALTER COLUMN rec_depositar_efectivo TYPE BIGINT;
+
+-- Nros de comprobante bancario a texto: los da el banco y pueden traer letras, guiones y ceros a
+-- la izquierda, ademas de no entrar en un INTEGER. Mismo criterio que fact_comp_numero, que ya es
+-- VARCHAR, y que forma_pag_referencia ('Nro cheque, transferencia, etc').
+ALTER TABLE public.debitos  ALTER COLUMN debitos_nro_comprobante  TYPE VARCHAR(30) USING debitos_nro_comprobante::VARCHAR;
+ALTER TABLE public.creditos ALTER COLUMN creditos_nro_comprobante TYPE VARCHAR(30) USING creditos_nro_comprobante::VARCHAR;
 
 COMMIT;

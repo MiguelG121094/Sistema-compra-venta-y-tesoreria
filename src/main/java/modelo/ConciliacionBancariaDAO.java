@@ -532,7 +532,7 @@ public class ConciliacionBancariaDAO {
     private Debito mapearDebitoLiviano(ResultSet rs, long idDebito) throws SQLException {
         Debito debito = new Debito();
         debito.setIdDebito(idDebito);
-        debito.setNumeroComprobante(rs.getLong("debitos_nro_comprobante"));
+        debito.setNumeroComprobante(rs.getString("debitos_nro_comprobante"));
         debito.setFecha(rs.getDate("debitos_fecha"));
         debito.setDetalle(rs.getString("debitos_detalle"));
         debito.setMonto(rs.getLong("debito_monto"));
@@ -542,7 +542,7 @@ public class ConciliacionBancariaDAO {
     private Credito mapearCreditoLiviano(ResultSet rs, long idCredito) throws SQLException {
         Credito credito = new Credito();
         credito.setIdCredito(idCredito);
-        credito.setNumeroComprobante(rs.getLong("creditos_nro_comprobante"));
+        credito.setNumeroComprobante(rs.getString("creditos_nro_comprobante"));
         credito.setFecha(rs.getDate("creditos_fecha"));
         credito.setDetalle(rs.getString("creditos_detalle"));
         credito.setMonto(rs.getLong("credito_monto"));

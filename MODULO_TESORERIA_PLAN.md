@@ -979,10 +979,17 @@ PDF para los informes que realmente se impriman y archiven.
   son correctas.
 - **Montos `INTEGER`** (overflow) — ⚠️ **el riesgo se materializó el 2026-09-05**: al cargar un crédito
   PostgreSQL cortó con *"el entero está fuera de rango"*. Está listo el script
-  [`Migracion montos a BIGINT.sql`](Migracion%20montos%20a%20BIGINT.sql) — 46 columnas, **sin ningún
-  cambio en Java**, porque los importes ya son `Long` en los POJOs y los DAOs usan `getLong`/`setLong`.
-  Quedan afuera los `INTEGER` que no son importes (números de documento, de cheque, cantidades,
-  timbrados, plazos). Falta aplicarlo y sincronizar el Power Architect.
+  [`Migracion tipos de datos.sql`](Migracion%20tipos%20de%20datos.sql) — 46 columnas de importes a
+  `BIGINT`, **sin ningún cambio en Java**, porque ya son `Long` en los POJOs y los DAOs usan
+  `getLong`/`setLong`. Quedan afuera los `INTEGER` que no son importes (números de documento, de
+  cheque, cantidades, timbrados, plazos).
+
+  El mismo script pasa **`debitos_nro_comprobante` y `creditos_nro_comprobante` a `VARCHAR(30)`**: el
+  comprobante lo da el banco y puede traer letras, guiones y ceros a la izquierda, así que no es un
+  número sino un identificador. Es el criterio que el sistema ya usa en `fact_comp_numero` y en
+  `forma_pag_referencia`. Eso sí toca Java (POJOs, DAOs y la validación del servlet, ya hecho).
+
+  Falta aplicar el script y sincronizar el Power Architect.
   *(Registro de la decisión anterior)* **2026-08-17: se mantienen por ahora**,
   pero la recomendación es **migrar a `BIGINT`**. El techo de `INTEGER` es 2.147.483.647, o sea unos
   **2.147 millones de guaraníes**: una factura grande puede acercarse y un acumulado lo supera. Los

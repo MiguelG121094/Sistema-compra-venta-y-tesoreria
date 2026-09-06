@@ -35,7 +35,7 @@ public class DebitoDAO {
     private Debito mapear(ResultSet rs) throws SQLException {
         Debito debito = new Debito();
         debito.setIdDebito(rs.getLong("id_debitos"));
-        debito.setNumeroComprobante(rs.getLong("debitos_nro_comprobante"));
+        debito.setNumeroComprobante(rs.getString("debitos_nro_comprobante"));
         debito.setFecha(rs.getDate("debitos_fecha"));
         debito.setDetalle(rs.getString("debitos_detalle"));
         debito.setCuenta(new CuentaDAO(conn).getCuenta(rs.getLong("id_cuenta")));
@@ -94,7 +94,7 @@ public class DebitoDAO {
                    + "id_cuenta, debito_monto, debitos_tipo_cambio, debitos_estado) "
                    + "VALUES (?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-            stmt.setLong(1, debito.getNumeroComprobante());
+            stmt.setString(1, debito.getNumeroComprobante());
             stmt.setDate(2, new java.sql.Date(debito.getFecha().getTime()));
             stmt.setString(3, debito.getDetalle());
             stmt.setLong(4, debito.getCuenta().getIdCuenta());

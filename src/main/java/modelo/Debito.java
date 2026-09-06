@@ -15,7 +15,7 @@ public class Debito implements MovimientoBancario {
     private static final long serialVersionUID = 1L;
 
     private Long idDebito;
-    private Long numeroComprobante;
+    private String numeroComprobante;
     private Date fecha;
     private String detalle;
     private Cuenta cuenta;
@@ -30,7 +30,7 @@ public class Debito implements MovimientoBancario {
         this.idDebito = idDebito;
     }
 
-    public Debito(Long idDebito, Long numeroComprobante, Date fecha, String detalle,
+    public Debito(Long idDebito, String numeroComprobante, Date fecha, String detalle,
             Cuenta cuenta, Long monto) {
         this.idDebito = idDebito;
         this.numeroComprobante = numeroComprobante;
@@ -54,11 +54,11 @@ public class Debito implements MovimientoBancario {
         this.idDebito = idDebito;
     }
 
-    public Long getNumeroComprobante() {
+    public String getNumeroComprobante() {
         return numeroComprobante;
     }
 
-    public void setNumeroComprobante(Long numeroComprobante) {
+    public void setNumeroComprobante(String numeroComprobante) {
         this.numeroComprobante = numeroComprobante;
     }
 

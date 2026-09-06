@@ -14,7 +14,8 @@ public interface MovimientoBancario extends java.io.Serializable {
 
     Long getId();
 
-    Long getNumeroComprobante();
+    /** Va como texto: es el numero del comprobante del banco, que puede traer letras o guiones. */
+    String getNumeroComprobante();
 
     Date getFecha();
 

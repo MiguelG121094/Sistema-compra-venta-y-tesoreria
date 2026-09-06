@@ -201,8 +201,14 @@ public class MovimientoBancarioServlet extends HttpServlet {
             mostrarMensaje(request, "Complete todos los campos del movimiento", "alert-warning");
             return null;
         }
-        if (!comprobanteStr.trim().matches("\\d+") || !importeStr.trim().matches("\\d+")) {
-            mostrarMensaje(request, "El comprobante y el importe deben ser numéricos", "alert-danger");
+        if (!importeStr.trim().matches("\\d+")) {
+            mostrarMensaje(request, "El importe debe ser numérico", "alert-danger");
+            return null;
+        }
+        // El comprobante es el del banco y va como texto: puede traer letras, guiones y ceros
+        // a la izquierda, igual que el numero de la factura de compra.
+        if (comprobanteStr.trim().length() > 30) {
+            mostrarMensaje(request, "El comprobante no puede superar los 30 caracteres", "alert-danger");
             return null;
         }
         long importe = Long.parseLong(importeStr.trim());
@@ -238,7 +244,7 @@ public class MovimientoBancarioServlet extends HttpServlet {
         }
 
         Cuenta cuenta = new Cuenta(Long.parseLong(idCuentaStr));
-        long comprobante = Long.parseLong(comprobanteStr.trim());
+        String comprobante = comprobanteStr.trim();
 
         if (TIPO_CREDITO.equals(tipo)) {
             Credito credito = new Credito();

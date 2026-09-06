@@ -162,7 +162,7 @@
                                     <div class="row mb-3">
                                         <div class="col-md-3">
                                             <div class="form-floating mb-3 mb-md-0">
-                                                <input class="form-control" id="comprobante" name="comprobante" type="text" inputmode="numeric"
+                                                <input class="form-control" id="comprobante" name="comprobante" type="text" maxlength="30"
                                                        placeholder="Comprobante N°" value="${vComprobante}"
                                                        <c:if test="${not esNuevo}">readonly</c:if> />
                                                 <label for="comprobante">Comprobante N°</label>
