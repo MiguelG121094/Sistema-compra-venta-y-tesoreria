@@ -321,7 +321,9 @@ Sistema-compra-venta-y-tesoreria/
 ├── README.md
 ├── DOCUMENTACION_PROYECTO.md
 ├── ARQUITECTURA_SERVLETS.md
-└── NOTA_CREDITO_DEBITO_PLAN.md                 # Plan de implementación NC/ND de compra
+├── NOTA_CREDITO_DEBITO_PLAN.md                 # Plan de implementación NC/ND de compra
+├── CONCILIACION_BANCARIA_PLAN.md               # Análisis y decisiones de la conciliación
+└── CONCILIACION_BANCARIA_FLUJO.md              # Flujo de la pantalla de conciliación, paso a paso
 ```
 
 ---

@@ -1,5 +1,9 @@
 # Conciliación bancaria — análisis y plan
 
+> 📄 **El flujo de la pantalla paso a paso, campo por campo, está en
+> [`CONCILIACION_BANCARIA_FLUJO.md`](CONCILIACION_BANCARIA_FLUJO.md).** Este documento es el análisis y
+> las decisiones de diseño; aquel es cómo se usa y por qué.
+
 Documento propio del sub-módulo, como `NOTA_CREDITO_DEBITO_PLAN.md`. Cierra el requerimiento **3.10**
 y es el objetivo final del módulo de Tesorería (§F de `MODULO_TESORERIA_PLAN.md`).
 
