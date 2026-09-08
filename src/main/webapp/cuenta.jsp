@@ -19,6 +19,7 @@
 %>
 <!DOCTYPE html>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+<%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <%@ page contentType="text/html;charset=UTF-8" language="java" pageEncoding="UTF-8" %>
 <html>
     <jsp:include page="header.jsp" />
@@ -128,6 +129,9 @@
                                                     <th class="text-bg-dark text-center">Tipo de Cuenta</th>
                                                     <th class="text-bg-dark text-center">N° Cuenta</th>
                                                     <th class="text-bg-dark text-center">Moneda</th>
+                                                    <th class="text-bg-dark text-center">Saldo según libro</th>
+                                                    <th class="text-bg-dark text-center">Cheques en tránsito</th>
+                                                    <th class="text-bg-dark text-center">Saldo en el banco</th>
                                                     <th class="text-bg-dark text-center">Acciones</th>
                                                 </tr>
                                             </thead>
@@ -139,6 +143,10 @@
                                                         <td class="text-center">${cta.getTipoCuenta().getDescripcion()}</td>
                                                         <td class="text-center">${cta.getNumero()}</td>
                                                         <td class="text-center">${cta.getMoneda().getDescripcion()}</td>
+                                                        <c:set var="saldo" value="${saldos[cta.idCuenta]}" />
+                                                        <td class="text-end"><fmt:formatNumber value="${saldo.libro}" pattern="#,##0"/></td>
+                                                        <td class="text-end"><fmt:formatNumber value="${saldo.chequesEnTransito}" pattern="#,##0"/></td>
+                                                        <td class="text-end"><fmt:formatNumber value="${saldo.banco}" pattern="#,##0"/></td>
                                                         <td class="text-center">
                                                             <c:if test="${puedeEditar}">
                                                                 <a href="CuentaServlet?menu=Cuenta&accion=Editar&id=${cta.getIdCuenta()}" class="btn btn-warning">Editar</a>

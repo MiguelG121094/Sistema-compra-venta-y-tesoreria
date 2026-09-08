@@ -19,7 +19,9 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -51,6 +53,7 @@ public class OrdenPagoServlet extends HttpServlet {
     private final FormaPagoCabeceraService formaPagoCabeceraService = new FormaPagoCabeceraService();
     private final ChequeraService chequeraService = new ChequeraService();
     private final TipoChequeService tipoChequeService = new TipoChequeService();
+    private final ConciliacionBancariaService conciliacionService = new ConciliacionBancariaService();
 
     // ==================== CLASE DE ESTADO ====================
 
@@ -157,6 +160,7 @@ public class OrdenPagoServlet extends HttpServlet {
         // Listas para modales y combos
         request.setAttribute("listaSucursales", estado.listaSucursales);
         request.setAttribute("listaCuentas", estado.listaCuentas);
+        request.setAttribute("saldosCuentas", saldosDe(estado.listaCuentas));
         request.setAttribute("listaFormaPago", estado.listaFormaPago);
         request.setAttribute("listaChequeras", estado.listaChequeras);
         request.setAttribute("listaTipoCheque", estado.listaTipoCheque);
@@ -167,6 +171,27 @@ public class OrdenPagoServlet extends HttpServlet {
     private void forward(HttpServletRequest request, HttpServletResponse response, String vista)
             throws ServletException, IOException {
         request.getRequestDispatcher(vista).forward(request, response);
+    }
+
+    /**
+     * Saldo de cada cuenta bancaria, para que el combo de formas de pago muestre con cuánto se
+     * cuenta antes de elegir de dónde pagar. Se calcula, no sale de ninguna columna.
+     */
+    private Map<Long, ConciliacionBancariaService.SaldoCuenta> saldosDe(List<Cuenta> cuentas) {
+        Map<Long, ConciliacionBancariaService.SaldoCuenta> saldos = new LinkedHashMap<>();
+        if (cuentas == null) {
+            return saldos;
+        }
+        Date hoy = new Date();
+        for (Cuenta cuenta : cuentas) {
+            try {
+                saldos.put(cuenta.getIdCuenta(), conciliacionService.obtenerSaldos(cuenta.getIdCuenta(), hoy));
+            } catch (SQLException e) {
+                LOGGER.log(Level.WARNING, "No se pudo calcular el saldo de la cuenta "
+                        + cuenta.getIdCuenta(), e);
+            }
+        }
+        return saldos;
     }
 
     private void mostrarMensaje(HttpServletRequest request, String mensaje, String tipoAlert) {

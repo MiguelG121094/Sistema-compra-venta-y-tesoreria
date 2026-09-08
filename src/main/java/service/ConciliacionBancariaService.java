@@ -147,13 +147,114 @@ public class ConciliacionBancariaService {
         return ConciliacionBancariaDAO.TIPO_CREDITO.equals(detalle.getTipo());
     }
 
-    /** Un item es del periodo si la fecha de su movimiento cae dentro; si no, viene arrastrado. */
+    /**
+     * Un item es del periodo si la fecha de su movimiento cae dentro; si no, viene arrastrado.
+     * Un <code>desde</code> nulo significa sin limite inferior: es el caso de una cuenta que todavia
+     * no tiene ninguna conciliacion, donde el saldo se arma desde el primer movimiento.
+     */
     private static boolean esDelPeriodo(ConciliacionBancariaDetalle detalle, Date desde, Date hasta) {
         Date fecha = ConciliacionBancariaDAO.fechaDelMovimiento(detalle);
-        if (fecha == null || desde == null || hasta == null) {
+        if (fecha == null || hasta == null) {
             return false;
         }
-        return !fecha.before(desde) && !fecha.after(hasta);
+        if (desde != null && fecha.before(desde)) {
+            return false;
+        }
+        return !fecha.after(hasta);
+    }
+
+    // ==================== SALDO DE LA CUENTA ====================
+
+    /**
+     * Los dos saldos de una cuenta bancaria. La cuenta no guarda saldo en ningun lado: esto se
+     * calcula, y por eso no hay forma de que quede desincronizado con los movimientos.
+     */
+    public static class SaldoCuenta implements java.io.Serializable {
+
+        private static final long serialVersionUID = 1L;
+
+        private final long libro;
+        private final long chequesEnTransito;
+
+        SaldoCuenta(long libro, long chequesEnTransito) {
+            this.libro = libro;
+            this.chequesEnTransito = chequesEnTransito;
+        }
+
+        /** Lo que la empresa tiene comprometido: ya descuenta los cheques emitidos sin cobrar. */
+        public long getLibro() {
+            return libro;
+        }
+
+        /** Cheques emitidos que el banco todavia no cobro. La diferencia entre los dos saldos. */
+        public long getChequesEnTransito() {
+            return chequesEnTransito;
+        }
+
+        /** Lo que el banco veria hoy: al libro se le devuelven los cheques que no se presentaron. */
+        public long getBanco() {
+            return libro + chequesEnTransito;
+        }
+    }
+
+    /**
+     * Saldos de la cuenta a una fecha, sobre una conexion propia.
+     *
+     * @see #obtenerSaldos(ConciliacionBancariaDAO, Long, Date)
+     */
+    public SaldoCuenta obtenerSaldos(Long idCuenta, Date fecha) throws SQLException {
+        try (Connection conn = Conexion.getConnection()) {
+            return obtenerSaldos(new ConciliacionBancariaDAO(conn), idCuenta, fecha);
+        }
+    }
+
+    /**
+     * Saldos de la cuenta a una fecha, sobre el DAO que le pasen — para poder llamarlo dentro de la
+     * transaccion de otro Service, como hace la orden de pago antes de dejar pagar.
+     *
+     * <p>Parte del <b>cierre auditado</b> de la ultima conciliacion vigente: ese saldo ya fue
+     * cuadrado contra un extracto, asi que solo hay que sumarle el periodo abierto. Si la cuenta no
+     * tiene ninguna conciliacion, arranca en cero y suma todo lo que haya, que es lo mismo que hace
+     * la primera conciliacion.
+     *
+     * <p>Los movimientos arrastrados —lo que quedo sin conciliar de periodos anteriores— no se
+     * vuelven a sumar: ya estan dentro del saldo final de la conciliacion donde ocurrieron.
+     */
+    public static SaldoCuenta obtenerSaldos(ConciliacionBancariaDAO conciliacionDAO, Long idCuenta,
+            Date fecha) throws SQLException {
+        if (idCuenta == null) {
+            return new SaldoCuenta(0L, 0L);
+        }
+        Date corte = fecha != null ? fecha : new Date();
+
+        ConciliacionBancaria anterior = conciliacionDAO.getUltimaVigente(idCuenta);
+        long saldoCerrado = (anterior == null || anterior.getSaldoFinal() == null)
+                ? 0L : anterior.getSaldoFinal();
+        Date desde = (anterior == null || anterior.getFechaHasta() == null)
+                ? null : diaSiguiente(anterior.getFechaHasta());
+
+        List<ConciliacionBancariaDetalle> pendientes =
+                conciliacionDAO.listarMovimientosAConciliar(idCuenta, corte);
+
+        long libro = calcularSaldoLibro(saldoCerrado, pendientes, desde, corte);
+        return new SaldoCuenta(libro, calcularChequesEnTransito(pendientes));
+    }
+
+    /**
+     * Cheques emitidos que todavia no se cobraron. La lista que llega son los movimientos
+     * pendientes, asi que todos los de tipo cheque que trae siguen sin presentarse al banco.
+     */
+    private static long calcularChequesEnTransito(List<ConciliacionBancariaDetalle> pendientes) {
+        long total = 0;
+        if (pendientes == null) {
+            return total;
+        }
+        for (ConciliacionBancariaDetalle detalle : pendientes) {
+            if (ConciliacionBancariaDAO.TIPO_CHEQUE.equals(detalle.getTipo()) && detalle.getMonto() != null) {
+                total += detalle.getMonto();
+            }
+        }
+        return total;
     }
 
     // ==================== GRABAR ====================

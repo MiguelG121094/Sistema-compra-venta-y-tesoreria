@@ -277,7 +277,8 @@
                                                                             <c:forEach var="cta" items="${listaCuentas}">
                                                                                 <option value="${cta.idCuenta}"
                                                                                         <c:if test="${formaEnEditor.cuenta.idCuenta == cta.idCuenta}">selected</c:if>>
-                                                                                    ${cta.entidadFinanciera.nombre} - ${cta.numero} (${cta.moneda.descripcion})</option>
+                                                                                    ${cta.entidadFinanciera.nombre} - ${cta.numero} (${cta.moneda.descripcion})
+                                                                                    &nbsp;&nbsp;Saldo: <fmt:formatNumber value="${saldosCuentas[cta.idCuenta].libro}" pattern="#,##0"/></option>
                                                                             </c:forEach>
                                                                         </select>
                                                                         <label for="cuentaForma">Cuenta bancaria</label>

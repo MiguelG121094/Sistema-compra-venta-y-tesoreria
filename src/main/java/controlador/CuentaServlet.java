@@ -8,6 +8,10 @@ package controlador;
 
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.Date;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.servlet.ServletException;
@@ -21,6 +25,7 @@ import modelo.EntidadFinanciera;
 import modelo.Moneda;
 import modelo.TipoCuenta;
 import modelo.Usuario;
+import service.ConciliacionBancariaService;
 import service.CuentaService;
 import service.EntidadFinancieraService;
 import service.MonedaService;
@@ -36,6 +41,7 @@ public class CuentaServlet extends HttpServlet {
     private final EntidadFinancieraService entidadFinancieraService = new EntidadFinancieraService();
     private final TipoCuentaService tipoCuentaService = new TipoCuentaService();
     private final MonedaService monedaService = new MonedaService();
+    private final ConciliacionBancariaService conciliacionService = new ConciliacionBancariaService();
 
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
@@ -187,11 +193,34 @@ public class CuentaServlet extends HttpServlet {
 
     private void listar(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException, SQLException {
-        request.setAttribute("listaCuentas", cuentaService.listarCuenta());
+        List<Cuenta> cuentas = cuentaService.listarCuenta();
+        request.setAttribute("listaCuentas", cuentas);
+        request.setAttribute("saldos", saldosDe(cuentas));
         request.setAttribute("listaEntidades", entidadFinancieraService.listarEntidadFinanciera());
         request.setAttribute("listaTiposCuenta", tipoCuentaService.listarTipoCuenta());
         request.setAttribute("listaMonedas", monedaService.listarMoneda());
         request.getRequestDispatcher(JSP_CUENTA).forward(request, response);
+    }
+
+    /**
+     * Saldo de cada cuenta para la grilla. No sale de ninguna columna: se calcula desde el cierre de
+     * la ultima conciliacion mas los movimientos posteriores, asi que no puede quedar desactualizado.
+     */
+    private Map<Long, ConciliacionBancariaService.SaldoCuenta> saldosDe(List<Cuenta> cuentas) {
+        Map<Long, ConciliacionBancariaService.SaldoCuenta> saldos = new LinkedHashMap<>();
+        if (cuentas == null) {
+            return saldos;
+        }
+        Date hoy = new Date();
+        for (Cuenta cuenta : cuentas) {
+            try {
+                saldos.put(cuenta.getIdCuenta(), conciliacionService.obtenerSaldos(cuenta.getIdCuenta(), hoy));
+            } catch (SQLException e) {
+                LOGGER.log(Level.WARNING, "No se pudo calcular el saldo de la cuenta "
+                        + cuenta.getIdCuenta(), e);
+            }
+        }
+        return saldos;
     }
 
     private void sinPermiso(HttpServletRequest request) {
