@@ -4,7 +4,12 @@ import conexion.Conexion;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 import modelo.Cheque;
+import modelo.ConciliacionBancariaDAO;
+import modelo.Cuenta;
+import modelo.CuentaDAO;
 import modelo.CuentaPagarDAO;
 import modelo.FormaPagoDetalle;
 import modelo.FormaPagoDetalleDAO;
@@ -126,7 +131,11 @@ public class OrdenPagoService {
             CuentaPagarDAO cuentaPagarDAO = new CuentaPagarDAO(conn);
             ProvisionCuentaPagarDAO provisionDAO = new ProvisionCuentaPagarDAO(conn);
 
-            // 0. Consumir la provisión (guard anti doble-pago): se bloquea la fila de la provisión
+            // 0. Saldo de las cuentas de las que se va a pagar. Va antes de escribir nada y dentro
+            //    de la transacción, con la fila de cada cuenta bloqueada.
+            validarSaldoDeLasCuentas(conn, orden, formasPago);
+
+            // 0.b Consumir la provisión (guard anti doble-pago): se bloquea la fila de la provisión
             //    (FOR UPDATE) y se exige que esté 'Pendiente'. Si otra OP ya la procesó (o está
             //    anulada), se aborta. Dos OPs concurrentes se serializan por el lock y solo la
             //    primera la ve 'Pendiente'. Ver MODULO_TESORERIA_PLAN.md §C.
@@ -387,6 +396,76 @@ public class OrdenPagoService {
      * y Σ de las formas de pago == monto de la OP. El "sin efectivo" lo garantiza el combo de
      * forma_pago_cabecera (solo cheque/transferencia).
      */
+    /**
+     * No se puede pagar de una cuenta que no tiene con qué. Se compara contra el <b>saldo según
+     * libro</b>, que ya descuenta los cheques emitidos y todavía no cobrados: esa plata está
+     * comprometida aunque el banco no la haya debitado, y darla por disponible es lo que hace que
+     * después rebote un cheque anterior.
+     *
+     * <p>Se valida <b>por cuenta y no por forma de pago</b>: una orden se puede pagar con dos cheques
+     * de un banco y una transferencia de otro, y lo que tiene que alcanzar en cada cuenta es la suma
+     * de lo que sale de ella.
+     *
+     * <p>La fila de cada cuenta se bloquea antes de calcular. Sin eso, dos órdenes de pago
+     * simultáneas sobre la misma cuenta calculan el saldo antes de que la otra grabe y pasan las dos.
+     *
+     * <p>El saldo se mira <b>a la fecha de emisión de la orden</b>, que es la que van a llevar sus
+     * formas de pago, para que la comparación sea contra el mismo saldo que la orden va a mover.
+     *
+     * <p>Los débitos bancarios no pasan por acá, y no deben: son el registro de algo que el banco ya
+     * hizo, y tienen que poder cargarse aunque dejen la cuenta en negativo.
+     *
+     * <p>Las cuentas se recorren ordenadas por id (de ahí el TreeMap): dos órdenes que pagan de las
+     * mismas dos cuentas toman los cerrojos en el mismo orden y no se traban entre sí.
+     */
+    private void validarSaldoDeLasCuentas(Connection conn, OrdenPago orden,
+            List<FormaPagoDetalle> formasPago) throws SQLException {
+
+        Map<Long, Long> aPagarPorCuenta = new TreeMap<>();
+        for (FormaPagoDetalle fp : formasPago) {
+            if (fp.getCuenta() == null || fp.getCuenta().getIdCuenta() == null || fp.getMonto() == null) {
+                continue;
+            }
+            Long idCuenta = fp.getCuenta().getIdCuenta();
+            Long acumulado = aPagarPorCuenta.get(idCuenta);
+            aPagarPorCuenta.put(idCuenta, (acumulado == null ? 0L : acumulado) + fp.getMonto());
+        }
+
+        CuentaDAO cuentaDAO = new CuentaDAO(conn);
+        ConciliacionBancariaDAO conciliacionDAO = new ConciliacionBancariaDAO(conn);
+        java.util.Date fecha = orden.getFechaEmision() != null
+                ? orden.getFechaEmision() : new java.util.Date();
+
+        for (Map.Entry<Long, Long> entrada : aPagarPorCuenta.entrySet()) {
+            Long idCuenta = entrada.getKey();
+            long aPagar = entrada.getValue();
+
+            cuentaDAO.bloquearCuenta(idCuenta);
+            long disponible = ConciliacionBancariaService
+                    .obtenerSaldos(conciliacionDAO, idCuenta, fecha).getLibro();
+
+            if (disponible < aPagar) {
+                Cuenta cuenta = cuentaDAO.getCuenta(idCuenta);
+                throw new SQLException("La cuenta " + describir(cuenta) + " no tiene saldo suficiente: "
+                        + "disponible " + formatear(disponible) + ", se quiere pagar " + formatear(aPagar)
+                        + " (faltan " + formatear(aPagar - disponible) + ")");
+            }
+        }
+    }
+
+    private String describir(Cuenta cuenta) {
+        if (cuenta == null) {
+            return "seleccionada";
+        }
+        String banco = cuenta.getEntidadFinanciera() != null
+                ? cuenta.getEntidadFinanciera().getNombre() + " " : "";
+        return banco + cuenta.getNumero();
+    }
+
+    private String formatear(long monto) {
+        return String.format("%,d", monto).replace(',', '.');
+    }
+
     private void validar(OrdenPago orden, List<OrdenPagoDetalle> detalles,
             List<FormaPagoDetalle> formasPago) throws SQLException {
         if (orden == null) {

@@ -72,6 +72,24 @@ public class CuentaDAO {
         return null;
     }
 
+    /**
+     * Bloquea la fila de la cuenta hasta el fin de la transaccion. No lee nada util: se usa como
+     * cerrojo para que dos pagos simultaneos sobre la misma cuenta no calculen el saldo antes de que
+     * el otro grabe y pasen los dos. La cuenta no guarda saldo, pero su fila sirve igual de candado.
+     */
+    public void bloquearCuenta(Long idCuenta) throws SQLException {
+        if (idCuenta == null) {
+            return;
+        }
+        String sql = "SELECT id_cuenta FROM public.cuenta WHERE id_cuenta = ? FOR UPDATE";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, idCuenta);
+            try (ResultSet rs = stmt.executeQuery()) {
+                rs.next();
+            }
+        }
+    }
+
     public void insertarCuenta(Cuenta cuenta) throws SQLException {
         String sql = "INSERT INTO public.cuenta (id_tipo_cuenta, id_enti_finan, cuenta_numero, id_moneda) "
                    + "VALUES (?, ?, ?, ?)";

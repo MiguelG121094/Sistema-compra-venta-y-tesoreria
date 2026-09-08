@@ -758,6 +758,51 @@ existan OP, débitos y créditos (por eso va al final) — las tres ya están.
 
 ---
 
+### F.1 Saldo de las cuentas bancarias *(implementado el 2026-09-08)*
+
+La tabla `cuenta` **no tiene columna de saldo, y se decidió que no la tenga**: el saldo se calcula.
+
+```
+saldo según libro = saldo_final de la última conciliación vigente de la cuenta
+                  + créditos vigentes         posteriores a su fecha_hasta
+                  − débitos vigentes          posteriores a su fecha_hasta
+                  − formas de pago (OP no anulada) posteriores a su fecha_hasta
+```
+
+**Por qué calculado y no guardado.** Una columna de saldo hay que actualizarla en seis lugares (alta y
+anulación de crédito, de débito y de orden de pago); si un camino falla o se agrega uno nuevo, el saldo
+miente para siempre y no hay forma de detectarlo. Calculado no hay nada que mantener: los movimientos
+**no escriben** el saldo, el saldo **lee** los movimientos. Y contesta "¿cuál era el saldo al 31 de
+agosto?", que una columna no puede.
+
+**Por qué no cuesta.** No se suma toda la historia: la conciliación es un cierre ya cuadrado contra un
+extracto, así que sólo se suma el **período abierto**. Los arrastrados no se vuelven a contar, ya están
+dentro de ese saldo final.
+
+**Se exponen dos saldos**, porque en tesorería son distintos:
+
+| | Qué es | Para qué |
+|---|---|---|
+| **Saldo según libro** | la fórmula de arriba | lo que la empresa tiene comprometido |
+| **Saldo en el banco** | libro **+** cheques emitidos sin cobrar | lo que el banco vería hoy |
+
+`ConciliacionBancariaService.obtenerSaldos(...)` devuelve los dos. Se muestran en la grilla de Cuentas
+Bancarias y en el combo de cuentas de la Orden de Pago.
+
+**Validación de saldo al pagar.** `OrdenPagoService` no deja emitir una orden de pago que deje una cuenta
+en negativo. Se compara contra el **saldo según libro** —que ya descuenta los cheques emitidos sin
+cobrar, porque esa plata está comprometida—, **por cuenta y no por forma de pago**, y con la fila de cada
+cuenta bloqueada (`FOR UPDATE`) para que dos pagos simultáneos no pasen los dos. Los débitos bancarios no
+se validan: son el registro de algo que el banco ya hizo.
+
+> ⚠️ **La validación es tan buena como la carga de movimientos.** Si las comisiones del banco se cargan
+> recién a fin de mes, el saldo del sistema está más alto que el real. Se eligió **bloquear** en vez de
+> sólo advertir, justamente para que cargar los movimientos al día sea obligatorio. Si aparece una cuenta
+> corriente con **giro en descubierto** autorizado, hace falta una columna `cuenta_limite_descubierto` y
+> comparar contra `saldo + límite`; hoy no está.
+
+---
+
 ### G. Gestión de cheques *(parcial — G1 y G2 implementadas; G3 pendiente)*
 
 > Sección agregada el 2026-08-13. §C la venía referenciando como "§G" (ABM de chequera) pero nunca
