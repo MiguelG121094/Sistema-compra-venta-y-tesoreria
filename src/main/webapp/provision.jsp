@@ -122,7 +122,8 @@
                                         </div>
                                         <div class="col-md-3">
                                             <div class="form-floating mb-3 mb-md-0">
-                                                <input class="form-control" id="fondoFijo" type="text" placeholder="Fondo Fijo" readonly value="No" />
+                                                <input class="form-control" id="fondoFijo" type="text" placeholder="Fondo Fijo" readonly
+                                                       value="${esDeRendicion ? 'Sí' : 'No'}" />
                                                 <label for="fondoFijo">Fondo Fijo</label>
                                             </div>
                                         </div>
