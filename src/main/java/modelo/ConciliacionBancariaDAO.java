@@ -30,9 +30,14 @@ public class ConciliacionBancariaDAO {
     public static final String ESTADO_VIGENTE = "Vigente";
     public static final String ESTADO_ANULADO = "Anulado";
 
-    /** Tipos de item, segun el comentario de conc_bancaria_tipo. */
+    /**
+     * Tipos de item. La transferencia y el debito bancario se separan porque no son lo mismo: el
+     * debito lo cobra el banco por su cuenta (comisiones, gastos) y la transferencia sale de una
+     * orden de pago. Los dos restan, pero en la grilla hay que poder distinguirlos.
+     */
     public static final String TIPO_CREDITO = "Cred";
     public static final String TIPO_DEBITO = "Deb";
+    public static final String TIPO_TRANSFERENCIA = "Transf";
     public static final String TIPO_CHEQUE = "Ch";
 
     private static final String COLUMNAS =
@@ -393,7 +398,7 @@ public class ConciliacionBancariaDAO {
                     detalle.setMonto(rs.getLong("forma_pag_monto"));
                     detalle.setDescripcion(rs.getString("prov_razon_social"));
                     boolean esCheque = formaPago.getCheque() != null;
-                    detalle.setTipo(esCheque ? TIPO_CHEQUE : TIPO_DEBITO);
+                    detalle.setTipo(esCheque ? TIPO_CHEQUE : TIPO_TRANSFERENCIA);
                     // El cheque nace destildado: puede tardar un mes en presentarse al banco.
                     detalle.setConciliado(!esCheque);
                     lista.add(detalle);

@@ -82,7 +82,7 @@ conciliacion_bancaria_detalle               -- un ítem por movimiento
     id_orden_pago               NULL      ┘ (acompaña al anterior, para describirlo)
     conc_bancaria_descripcion   NOT NULL
     conc_bancaria_monto         NOT NULL
-    conc_bancaria_tipo          NOT NULL   -- 'Cred' / 'Deb' / 'Ch'
+    conc_bancaria_tipo          NOT NULL   -- 'Cred' / 'Deb' / 'Transf' / 'Ch'
     conc_bancaria_conciliado    BOOLEAN NOT NULL
 ```
 
@@ -197,7 +197,7 @@ pasan a sólo lectura. Para cambiarlos hay que **Cancelar** y empezar de nuevo.
 
 | Origen | Filtro | Tipo |
 |---|---|---|
-| `forma_pago_detalle` | de esta cuenta, con fecha, de una OP **no anulada**, cheque no anulado | `Ch` si tiene cheque, `Deb` si es transferencia |
+| `forma_pago_detalle` | de esta cuenta, con fecha, de una OP **no anulada**, cheque no anulado | `Ch` si tiene cheque, `Transf` si no |
 | `debitos` | de esta cuenta, estado `Vigente` | `Deb` |
 | `creditos` | de esta cuenta, estado `Vigente` | `Cred` |
 
@@ -233,15 +233,20 @@ movimientos es una conciliación válida.
 | **Detalle** | el concepto | OP: razón social del proveedor; débito/crédito: `debitos_detalle` / `creditos_detalle` |
 | **Banco** / **Cuenta** | los de la cabecera | `cuenta` |
 | **Nro. Doc.** | número del papel | cheque: `chq_numero`; transferencia: `forma_pag_referencia`; débito/crédito: su comprobante |
-| **Tipo** | `Deb` / `Cred` / `Ch` | `conc_bancaria_tipo` |
+| **Tipo** | `Ch` / `Transf` / `Deb` / `Cred` | `conc_bancaria_tipo` |
 | **Importe** | el monto | `forma_pag_monto` / `debito_monto` / `credito_monto` |
 
 **Por qué dos fechas.** En un débito o un crédito coinciden. En un cheque no: se emite en un período y se
 cobra en otro. Ver las dos juntas es lo que hace visible el arrastre — un cheque con Emisión de agosto
 apareciendo en la conciliación de setiembre se explica solo.
 
-**El filtro "Mostrar"** (Todos / Débitos / Créditos / Cheques) filtra la grilla sin ir al servidor. Sirve
-sobre todo para revisar los cheques, que son los que se arrastran.
+**Los cuatro tipos.** `Ch` es un cheque emitido, `Transf` una transferencia de una orden de pago, `Deb` un
+débito que cobró el banco por su cuenta (comisión, gasto administrativo) y `Cred` un crédito o depósito.
+La transferencia y el débito **restan igual**, pero se muestran separados porque no son lo mismo: uno
+salió de una orden de pago del sistema y el otro lo hizo el banco solo.
+
+**El filtro "Mostrar"** (Todos / Cheques / Transferencias / Débitos / Créditos) filtra la grilla sin ir al
+servidor. Sirve sobre todo para revisar los cheques, que son los que se arrastran.
 
 **La grilla no tiene paginado, tiene scroll.** Es a propósito: los tildes viajan como campos del
 formulario y el paginado saca del documento las filas que no se ven, así que se perderían los tildes de
@@ -253,7 +258,7 @@ Cada fila nace con un tilde por defecto, y ese default no es cosmético:
 
 | Tipo | Nace | Por qué |
 |---|---|---|
-| `Deb` (transferencia) y `Cred` | **tildado** | se cargan cuando el movimiento **ya ocurrió** en el banco: están conciliados por definición |
+| `Transf`, `Deb` y `Cred` | **tildado** | corresponden a movimientos que **ya ocurrieron** en el banco: están conciliados por definición |
 | `Ch` (cheque) | **destildado** | el cheque se emitió, pero puede no haberse presentado todavía |
 
 El usuario abre el extracto del banco y corrige: **tilda** los cheques que sí figuran, **destilda** lo
@@ -263,19 +268,29 @@ Lo que queda **sin tildar es la explicación de la diferencia** — son las part
 
 ### Paso 9 — Los saldos
 
-Se carga un solo campo, **Saldo según extracto**, y la pantalla recalcula los otros tres en el momento,
-cada vez que se tilda o se destilda algo.
+Se carga un solo campo, **Saldo según extracto**, y la pantalla recalcula los demás en el momento, cada
+vez que se tilda o se destilda algo. El bloque está ordenado como el informe de resumen: **del extracto
+al libro**.
 
 | Campo | Cómo se calcula |
 |---|---|
-| **Saldo inicial** | viene encadenado del período anterior (paso 3) |
+| **Saldo inicial** *(en la cabecera)* | viene encadenado del período anterior (paso 3) |
 | **Saldo según extracto** | lo carga el usuario, copiado del papel del banco |
-| **Extracto ajustado** | `saldo extracto + Σ créditos sin tildar − Σ (débitos + cheques) sin tildar` |
-| **Saldo según libro** | `saldo inicial + Σ créditos del período − Σ (débitos + cheques) del período` |
+| **Menos: no cobrado por el banco** | `Σ cheques + transferencias + débitos sin tildar` |
+| **Más: depósitos no acreditados** | `Σ créditos sin tildar` |
+| **Extracto ajustado** | `extracto − no cobrado + no acreditado` |
+| **Saldo según libro** | `saldo inicial + Σ créditos del período − Σ (débitos + transferencias + cheques) del período` |
 | **Diferencia** | `extracto ajustado − saldo según libro` |
+
+**Las dos partidas se muestran separadas a propósito.** Son las dos mitades del ajuste y las dos líneas
+que el informe de resumen lista como MENOS y MÁS: viéndolas, el extracto ajustado deja de ser un número
+que aparece solo y se puede auditar de dónde salió. No se guardan, se calculan.
 
 **En cero, la conciliación cuadra.** El camino es el del informe de resumen: se parte del saldo del
 extracto, se lo ajusta con las partidas conciliatorias y se tiene que llegar al saldo del libro.
+
+Todos los campos de saldo tienen **tooltip** explicando qué son, porque el vocabulario contable —extracto
+ajustado, partida conciliatoria— no es obvio para quien no concilia todos los meses.
 
 **Dos detalles que importan:**
 
@@ -369,8 +384,8 @@ se deja así. El extracto ajustado le resta ese importe al saldo del banco y la 
 setiembre vuelve a aparecer, arrastrado. Cuando el banco lo cobre, se tilda: el cheque pasa a `Cobrado`,
 deja de arrastrarse y no vuelve nunca más.
 
-**Un depósito que el banco no acreditó.** Se destilda el `Cred`. El ajuste va para el otro lado: se le
-suma al saldo del banco.
+**Un depósito que el banco no acreditó.** Se destilda el `Cred`. El ajuste va para el otro lado: suma en
+**Más: depósitos no acreditados** y se le suma al saldo del banco.
 
 **El banco muestra una comisión que el sistema no tiene.** No se carga desde acá. Se va a **Cargar otros
 débitos**, se registra con fecha dentro del período, y al volver a armar la grilla aparece como un `Deb`

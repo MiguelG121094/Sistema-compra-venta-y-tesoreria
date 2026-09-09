@@ -53,7 +53,7 @@ conciliacion_bancaria_detalle               -- los ítems del período
     id_forma_pago_det           NULL      ┘
     conc_bancaria_descripcion   NOT NULL
     conc_bancaria_monto         NOT NULL
-    conc_bancaria_tipo          NOT NULL   -- 'Cred' / 'Deb' / 'Ch' (§6)
+    conc_bancaria_tipo          NOT NULL   -- 'Cred' / 'Deb' / 'Transf' / 'Ch' (§6)
     conc_bancaria_conciliado    BOOLEAN NOT NULL
 ```
 
@@ -206,14 +206,16 @@ da de alta nada.
 ## 6. Tres tipos, no dos — y el arrastre de los cheques
 
 El comentario de `conc_bancaria_tipo` dice `'Cred'=Crédito, 'Deb'=Débito, **etc**`. Ese "etc" es el
-tercer tipo, que se ve en la columna TIP del ejemplo: **`Ch` = cheque**.
-
-El cheque es un tipo propio y no un débito más porque **se concilia distinto**:
+tercer tipo, que se ve en la columna TIP del ejemplo: **`Ch` = cheque**. Y en la práctica son **cuatro**:
+la transferencia se separó del débito bancario el 2026-09-09, porque no son lo mismo —el débito lo cobra
+el banco por su cuenta y la transferencia sale de una orden de pago— y en la grilla hay que poder
+distinguirlas.
 
 | Tipo | Qué es | Al armar la grilla |
 |---|---|---|
-| `Cr` | Crédito / depósito | **Nace tildado** |
-| `Db` | Débito / transferencia | **Nace tildado** |
+| `Cred` | Crédito / depósito | **Nace tildado** |
+| `Deb` | Débito bancario (comisión, gasto) | **Nace tildado** |
+| `Transf` | Transferencia de una orden de pago | **Nace tildado** |
 | `Ch` | Cheque emitido | **Nace destildado** |
 
 El motivo es de negocio: un débito o un crédito se cargan cuando ya ocurrieron en el banco, así que
@@ -358,7 +360,7 @@ definió Miguel:
 |---|---|---|
 | **D3** | Al tildar un ítem de cheque, ¿el cheque pasa a `'Cobrado'`? | ✅ **Sí.** Es lo que hace que el cheque deje de arrastrarse al mes siguiente, y el único lugar del sistema donde ese estado tiene sentido |
 | **D5** | ¿El extracto se importa o se tilda a mano? | ✅ **A mano.** La pantalla del ejemplo trabaja así, con buscador y filtro por tipo |
-| **D6** | ¿Tres tipos en `conc_bancaria_tipo`? | ✅ **Sí**: `Cred` / `Deb` / `Ch`, con el tildado automático de §6 |
+| **D6** | ¿Tres tipos en `conc_bancaria_tipo`? | ✅ **Cuatro**: `Cred` / `Deb` / `Transf` / `Ch`, con el tildado automático de §6. La transferencia se separó del débito el 2026-09-09 |
 | **D1** | ¿La cabecera necesita un estado para anular o reabrir? | ✅ **Sí.** `conc_bancaria_estado` (`'Vigente'` / `'Anulado'`), agregada al modelo. Anular marca y revierte los estados que el grabado cerró — §9.1 |
 | **D2** | ¿El saldo inicial se encadena desde la conciliación anterior o lo carga el usuario? | ✅ **Se encadena**, y el campo va de sólo lectura. La empresa que ya venía conciliando carga su saldo de arranque como un **crédito** — §5.1 |
 | **D4** | ¿Se puede cargar desde acá un movimiento que el banco muestra y el sistema no? | ✅ **No.** Para eso están Débitos y Créditos; desde la conciliación no se da de alta nada. Un alta duplicado es justo lo que hace que un movimiento aparezca dos veces en la grilla |

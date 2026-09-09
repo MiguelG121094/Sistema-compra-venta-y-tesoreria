@@ -182,6 +182,8 @@
                                         <div class="col-md-3">
                                             <div class="form-floating">
                                                 <input class="form-control text-end" id="saldoInicial" type="text" placeholder="Saldo inicial" readonly
+                                                       data-bs-toggle="tooltip"
+                                                       title="Saldo según libro con el que cerró la conciliación anterior de esta cuenta. Lo trae el sistema."
                                                        value="<fmt:formatNumber value='${conciliacion.saldoInicial}' pattern='#,##0'/>" />
                                                 <label for="saldoInicial">Saldo inicial</label>
                                             </div>
@@ -207,9 +209,10 @@
                                             <div class="form-floating">
                                                 <select class="form-control" id="filtroTipo" onchange="filtrarPorTipo();">
                                                     <option value="">Todos</option>
+                                                    <option value="Ch">Cheques</option>
+                                                    <option value="Transf">Transferencias</option>
                                                     <option value="Deb">Débitos</option>
                                                     <option value="Cred">Créditos</option>
-                                                    <option value="Ch">Cheques</option>
                                                 </select>
                                                 <label for="filtroTipo">Mostrar</label>
                                             </div>
@@ -270,33 +273,61 @@
                             <div class="row mb-3">
                                 <div class="col custom-card">
                                     <div class="section-title">Saldos</div>
-                                    <div class="row">
-                                        <div class="col-md-3">
+                                    <div class="row mb-3">
+                                        <div class="col-md-4">
                                             <div class="form-floating">
                                                 <input class="form-control text-end" id="saldoBanco" name="saldoBanco" type="text"
                                                        inputmode="numeric" placeholder="Saldo según extracto"
                                                        value="${vSaldoBanco}" oninput="recalcularSaldos();"
+                                                       data-bs-toggle="tooltip"
+                                                       title="Saldo que muestra el extracto del banco al cierre del período. Es el único saldo que se carga a mano."
                                                        <c:if test="${not editable or not movimientosCargados}">readonly</c:if> />
                                                 <label for="saldoBanco">Saldo según extracto</label>
                                             </div>
                                         </div>
-                                        <div class="col-md-3">
+                                        <div class="col-md-4">
+                                            <div class="form-floating">
+                                                <input class="form-control text-end" id="noCobrado" type="text" placeholder="Menos: no cobrado por el banco" readonly
+                                                       data-bs-toggle="tooltip"
+                                                       title="Cheques, transferencias y débitos sin tildar: el libro ya los descontó y el banco todavía no. Se le restan al extracto."
+                                                       value="<fmt:formatNumber value='${noCobrado}' pattern='#,##0'/>" />
+                                                <label for="noCobrado">Menos: no cobrado por el banco</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-floating">
+                                                <input class="form-control text-end" id="noAcreditado" type="text" placeholder="Más: depósitos no acreditados" readonly
+                                                       data-bs-toggle="tooltip"
+                                                       title="Depósitos y créditos sin tildar: el libro ya los sumó y el banco todavía no los acreditó. Se le suman al extracto."
+                                                       value="<fmt:formatNumber value='${noAcreditado}' pattern='#,##0'/>" />
+                                                <label for="noAcreditado">Más: depósitos no acreditados</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-4">
                                             <div class="form-floating">
                                                 <input class="form-control text-end" id="saldoAjustado" type="text" placeholder="Extracto ajustado" readonly
+                                                       data-bs-toggle="tooltip"
+                                                       title="Saldo del extracto corregido por las dos partidas de arriba. Si la conciliación cierra, es igual al saldo según libro."
                                                        value="<fmt:formatNumber value='${saldoAjustado}' pattern='#,##0'/>" />
                                                 <label for="saldoAjustado">Extracto ajustado</label>
                                             </div>
                                         </div>
-                                        <div class="col-md-3">
+                                        <div class="col-md-4">
                                             <div class="form-floating">
                                                 <input class="form-control text-end" id="saldoLibro" type="text" placeholder="Saldo según libro" readonly
+                                                       data-bs-toggle="tooltip"
+                                                       title="Saldo inicial más los créditos y menos los débitos, transferencias y cheques del período. Es el saldo que se encadena a la conciliación siguiente."
                                                        value="<fmt:formatNumber value='${saldoLibro}' pattern='#,##0'/>" />
                                                 <label for="saldoLibro">Saldo según libro</label>
                                             </div>
                                         </div>
-                                        <div class="col-md-3">
+                                        <div class="col-md-4">
                                             <div class="form-floating">
                                                 <input class="form-control text-end fw-bold" id="diferencia" type="text" placeholder="Diferencia" readonly
+                                                       data-bs-toggle="tooltip"
+                                                       title="Extracto ajustado menos saldo según libro. En cero la conciliación cuadra; si no, hay un movimiento que el banco tiene y el sistema no."
                                                        value="<fmt:formatNumber value='${diferencia}' pattern='#,##0'/>" />
                                                 <label for="diferencia">Diferencia</label>
                                             </div>
@@ -494,25 +525,39 @@
              */
             function recalcularSaldos() {
                 var crudo = (document.getElementById('saldoBanco').value || '').replace(/[^\d-]/g, '');
-                var ajustado = parseInt(crudo, 10);
-                if (isNaN(ajustado)) {
-                    ajustado = 0;
+                var extracto = parseInt(crudo, 10);
+                if (isNaN(extracto)) {
+                    extracto = 0;
                 }
+                // Las dos partidas conciliatorias: lo sin tildar que el banco todavia no muestra.
+                var noCobrado = 0, noAcreditado = 0;
                 var checks = document.getElementsByClassName('chkConciliado');
                 for (var i = 0; i < checks.length; i++) {
                     if (checks[i].checked) {
                         continue;
                     }
                     var monto = parseInt(checks[i].getAttribute('data-monto'), 10) || 0;
-                    ajustado += (checks[i].getAttribute('data-tipo') === 'Cred') ? monto : -monto;
+                    if (checks[i].getAttribute('data-tipo') === 'Cred') {
+                        noAcreditado += monto;
+                    } else {
+                        noCobrado += monto;
+                    }
                 }
+                var ajustado = extracto - noCobrado + noAcreditado;
                 var libro = parseInt(document.getElementById('saldoLibroRaw').value, 10) || 0;
+                document.getElementById('noCobrado').value = formatearMonto(noCobrado);
+                document.getElementById('noAcreditado').value = formatearMonto(noAcreditado);
                 document.getElementById('saldoAjustado').value = formatearMonto(ajustado);
                 document.getElementById('diferencia').value = formatearMonto(ajustado - libro);
             }
 
             $(document).ready(function () {
                 filtrarCuentas();
+                // Tooltips de Bootstrap
+                var tips = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+                tips.forEach(function (el) {
+                    new bootstrap.Tooltip(el);
+                });
                 /*
                  * Sin paginado a propósito: los tildes viajan como checkbox del formulario y
                  * DataTables saca del DOM las filas de las páginas que no se ven, así que

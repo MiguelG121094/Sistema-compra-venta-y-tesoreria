@@ -491,6 +491,11 @@ public class ConciliacionBancariaServlet extends HttpServlet {
         request.setAttribute("saldoAjustado", ConciliacionBancariaService.calcularSaldoAjustado(
                 estado.conciliacion.getSaldoBanco() == null ? 0L : estado.conciliacion.getSaldoBanco(),
                 estado.listaDetalle));
+        // Las dos partidas conciliatorias por separado, que es como las muestra el informe de resumen.
+        request.setAttribute("noCobrado",
+                ConciliacionBancariaService.calcularNoCobrado(estado.listaDetalle));
+        request.setAttribute("noAcreditado",
+                ConciliacionBancariaService.calcularNoAcreditado(estado.listaDetalle));
         request.setAttribute("diferencia", ConciliacionBancariaService.calcularDiferencia(
                 estado.conciliacion, estado.listaDetalle));
 

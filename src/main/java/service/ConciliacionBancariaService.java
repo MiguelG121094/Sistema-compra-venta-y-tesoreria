@@ -110,23 +110,43 @@ public class ConciliacionBancariaService {
     }
 
     /**
-     * El saldo del extracto ajustado por las partidas conciliatorias, que son los items que
-     * quedaron sin tildar: se le restan los cheques y debitos que el banco todavia no muestra y se
-     * le suman los depositos que todavia no acredito. Si la conciliacion cierra, da lo mismo que
-     * {@link #calcularSaldoLibro}.
+     * El saldo del extracto ajustado por las partidas conciliatorias, que son los items que quedaron
+     * sin tildar. Si la conciliacion cierra, da lo mismo que {@link #calcularSaldoLibro}.
      */
     public static long calcularSaldoAjustado(long saldoBanco, List<ConciliacionBancariaDetalle> detalles) {
-        long saldo = saldoBanco;
+        return saldoBanco - calcularNoCobrado(detalles) + calcularNoAcreditado(detalles);
+    }
+
+    /**
+     * Lo que el libro ya descontó y el banco todavia no muestra: cheques emitidos sin cobrar,
+     * transferencias y debitos sin tildar. Se le <b>resta</b> al saldo del extracto.
+     */
+    public static long calcularNoCobrado(List<ConciliacionBancariaDetalle> detalles) {
+        return sumarSinTildar(detalles, false);
+    }
+
+    /**
+     * Lo que el libro ya sumó y el banco todavia no acredito: los depositos sin tildar. Se le
+     * <b>suma</b> al saldo del extracto.
+     */
+    public static long calcularNoAcreditado(List<ConciliacionBancariaDetalle> detalles) {
+        return sumarSinTildar(detalles, true);
+    }
+
+    private static long sumarSinTildar(List<ConciliacionBancariaDetalle> detalles, boolean creditos) {
+        long total = 0;
         if (detalles == null) {
-            return saldo;
+            return total;
         }
         for (ConciliacionBancariaDetalle detalle : detalles) {
-            if (Boolean.TRUE.equals(detalle.getConciliado())) {
+            if (Boolean.TRUE.equals(detalle.getConciliado()) || detalle.getMonto() == null) {
                 continue;
             }
-            saldo += esCredito(detalle) ? detalle.getMonto() : -detalle.getMonto();
+            if (esCredito(detalle) == creditos) {
+                total += detalle.getMonto();
+            }
         }
-        return saldo;
+        return total;
     }
 
     /**

@@ -877,7 +877,7 @@ CREATE TABLE public.conciliacion_bancaria_detalle (
                 id_forma_pago_det INTEGER,
                 CONSTRAINT id_conc_bancaria_det PRIMARY KEY (id_conc_bancaria, conc_bancaria_nro_item)
 );
-COMMENT ON COLUMN public.conciliacion_bancaria_detalle.conc_bancaria_tipo IS '''Cred''=Crédito, ''Deb''=Débito, ''Ch''=Cheque';
+COMMENT ON COLUMN public.conciliacion_bancaria_detalle.conc_bancaria_tipo IS '''Cred''=Crédito, ''Deb''=Débito bancario, ''Transf''=Transferencia, ''Ch''=Cheque';
 
 
 CREATE SEQUENCE public.arqueo_caja_id_arqueo_caja_seq;
