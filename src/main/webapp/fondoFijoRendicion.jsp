@@ -215,12 +215,8 @@
                                         <div class="col-auto">
                                             <a href="FondoFijoRendicionServlet?menu=RendicionFondoFijo&accion=Cancelar&token=${token}" class="btn btn-danger">Cancelar</a>
                                         </div>
-                                        <div class="col-md-4 ms-auto">
-                                            <div class="form-floating">
-                                                <input class="form-control text-end" id="totalRendicion" type="text" placeholder="Total Rendición" readonly
-                                                       value="<fmt:formatNumber value='${totalRendicion}' pattern='#,##0'/>" />
-                                                <label for="totalRendicion">Total Rendición</label>
-                                            </div>
+                                        <div class="col text-end">
+                                            <h5>Total Rendición: <fmt:formatNumber value="${totalRendicion}" pattern="#,##0"/></h5>
                                         </div>
                                     </div>
                                 </div>

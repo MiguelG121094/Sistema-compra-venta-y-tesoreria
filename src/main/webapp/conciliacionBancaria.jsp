@@ -276,7 +276,7 @@
                                     <div class="row mb-3">
                                         <div class="col-md-4">
                                             <div class="form-floating">
-                                                <input class="form-control text-end" id="saldoBanco" name="saldoBanco" type="text"
+                                                <input class="form-control text-end mask-miles" id="saldoBanco" name="saldoBanco" type="text"
                                                        inputmode="numeric" placeholder="Saldo según extracto"
                                                        value="${vSaldoBanco}" oninput="recalcularSaldos();"
                                                        data-bs-toggle="tooltip"
@@ -454,7 +454,16 @@
                 document.getElementById('accionPrincipal').value = a;
             }
             function enviar() {
-                document.getElementById('formPrincipal').submit();
+                var form = document.getElementById('formPrincipal');
+                limpiarMascaras(form);
+                form.submit();
+            }
+            /* El saldo se muestra con puntos de miles, pero al servidor tiene que llegar el número
+               pelado. Se limpia en enviar(), que es por donde pasan todas las acciones. */
+            function limpiarMascaras(form) {
+                $(form).find('.mask-miles').each(function () {
+                    $(this).val($(this).cleanVal());
+                });
             }
             function cargarCuenta() {
                 setAccion('CargarCuenta');
@@ -552,6 +561,7 @@
             }
 
             $(document).ready(function () {
+                $('.mask-miles').mask('#.##0', {reverse: true});
                 filtrarCuentas();
                 // Tooltips de Bootstrap
                 var tips = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
