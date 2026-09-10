@@ -986,7 +986,7 @@ PDF para los informes que realmente se impriman y archiven.
 - [x] ✅ Implementado el segundo camino de carga de la provisión y el cierre del circuito (2026-09-04, §E.1.4)
 
 **F. Conciliación** *(cierra 3.10)*
-- [ ] `ConciliacionBancariaDAO` (+detalle), Service, Servlet, JSP
+- [x] ✅ `ConciliacionBancariaDAO` (+detalle), Service, Servlet, JSP — hecho 2026-09-05/09, probado por Miguel el 2026-09-09
 
 **G. Gestión de cheques** *(cierra 3.3 y completa 3.4)*
 - [x] ✅ **ABM de chequeras** (G1) — `ChequeraServlet` + `chequera.jsp` (2026-08-31), con control de solapamiento, de rango contra lo emitido y del consumo de la chequera
@@ -1000,7 +1000,7 @@ PDF para los informes que realmente se impriman y archiven.
 - [ ] Implementar
 
 **Transversal**
-- [ ] Actualizar los links restantes de "Módulo Tesorería" en `menuLateral.jsp` (los de Cuentas Bancarias, Provisión y Orden de Pago ya apuntan a sus servlets; el resto sigue en `.html` placeholders)
+- [ ] Actualizar los links restantes de "Módulo Tesorería" en `menuLateral.jsp` (ya apuntan a su servlet Cuentas Bancarias, Chequeras, Provisión, Orden de Pago, Débitos, Créditos, Fondo Fijo, Rendición y Conciliación; quedan 6 `.html` placeholder del tema)
 - [ ] Permisos del módulo `tesoreria` en cada servlet nuevo
 
 ---
