@@ -80,7 +80,7 @@ CREATE TABLE public.cuenta (
                 id_cuenta INTEGER NOT NULL DEFAULT nextval('public.cuenta_id_cuenta_seq'),
                 id_tipo_cuenta INTEGER NOT NULL,
                 id_enti_finan INTEGER NOT NULL,
-                cuenta_numero VARCHAR(30) NOT NULL,
+                cuenta_numero INTEGER NOT NULL,
                 id_moneda INTEGER NOT NULL,
                 CONSTRAINT id_cuenta PRIMARY KEY (id_cuenta)
 );
@@ -97,10 +97,10 @@ CREATE TABLE public.conciliacion_bancaria (
                 conc_bancaria_fecha_desde DATE NOT NULL,
                 conc_bancaria_fecha DATE NOT NULL,
                 conc_bancaria_fecha_hasta DATE NOT NULL,
-                conc_bancaria_saldo_inicial BIGINT NOT NULL,
-                conc_bancaria_saldo_final BIGINT NOT NULL,
-                conc_banc_saldo_banco BIGINT NOT NULL,
-                conc_bancaria_estado VARCHAR(20),
+                conc_bancaria_saldo_inicial INTEGER NOT NULL,
+                conc_bancaria_saldo_final INTEGER NOT NULL,
+                conc_banc_saldo_banco INTEGER NOT NULL,
+                conc_bancaria_estado VARCHAR,
                 conc_bancaria_tipo_cambio DOUBLE PRECISION,
                 CONSTRAINT id_conc_bancaria PRIMARY KEY (id_conc_bancaria)
 );
@@ -113,11 +113,11 @@ CREATE SEQUENCE public.debitos_id_debitos_seq;
 
 CREATE TABLE public.debitos (
                 id_debitos INTEGER NOT NULL DEFAULT nextval('public.debitos_id_debitos_seq'),
-                debitos_nro_comprobante VARCHAR(30) NOT NULL,
+                debitos_nro_comprobante VARCHAR,
                 debitos_fecha DATE NOT NULL,
                 debitos_detalle VARCHAR(255) NOT NULL,
                 id_cuenta INTEGER NOT NULL,
-                debito_monto BIGINT NOT NULL,
+                debito_monto INTEGER NOT NULL,
                 debitos_estado VARCHAR,
                 debitos_tipo_cambio DOUBLE PRECISION,
                 CONSTRAINT id_debitos PRIMARY KEY (id_debitos)
@@ -390,8 +390,8 @@ CREATE TABLE public.articulo (
                 id_impuesto INTEGER NOT NULL,
                 id_presentacion INTEGER,
                 art_descripcion VARCHAR(100) NOT NULL,
-                art_precio_compra BIGINT,
-                art_precio_venta BIGINT NOT NULL,
+                art_precio_compra INTEGER,
+                art_precio_venta INTEGER NOT NULL,
                 art_estado VARCHAR(20) NOT NULL,
                 art_codigo VARCHAR,
                 CONSTRAINT id_articulo PRIMARY KEY (id_articulo)
@@ -503,50 +503,12 @@ CREATE TABLE public.proveedor (
 
 ALTER SEQUENCE public.proveedor_id_proveedor_seq OWNED BY public.proveedor.id_proveedor;
 
-CREATE SEQUENCE public.provision_cuenta_pagar_id_provi_cta_pagar_cabecera_seq;
-
-CREATE TABLE public.provision_cuenta_pagar (
-                id_provi_cta_pagar_cabecera INTEGER NOT NULL DEFAULT nextval('public.provision_cuenta_pagar_id_provi_cta_pagar_cabecera_seq'),
-                prov_cta_pag_estado VARCHAR NOT NULL,
-                prov_cta_pag_fecha DATE NOT NULL,
-                id_proveedor INTEGER NOT NULL,
-                id_fondofijo_rendicion INTEGER,
-                CONSTRAINT id_provi_cta_pagar PRIMARY KEY (id_provi_cta_pagar_cabecera)
-);
-COMMENT ON TABLE public.provision_cuenta_pagar IS 'la provision es por proveedor, primero se selcciona el proveedor y en base a este se traen sus cuentas a pagar (sus facturas con saldo pendiente)';
-COMMENT ON COLUMN public.provision_cuenta_pagar.id_fondofijo_rendicion IS 'rendicion de fondo fijo que origino la provision; nulo en las provisiones normales por proveedor';
-
-
-ALTER SEQUENCE public.provision_cuenta_pagar_id_provi_cta_pagar_cabecera_seq OWNED BY public.provision_cuenta_pagar.id_provi_cta_pagar_cabecera;
-
-CREATE SEQUENCE public.orden_pago_cabecera_id_orden_pago_cabecera_seq;
-
-CREATE TABLE public.orden_pago_cabecera (
-                id_orden_pago INTEGER NOT NULL DEFAULT nextval('public.orden_pago_cabecera_id_orden_pago_cabecera_seq'),
-                ord_pag_numero INTEGER NOT NULL,
-                ord_pag_fecha_emision DATE NOT NULL,
-                ord_pag_monto BIGINT NOT NULL,
-                ord_pag_estado VARCHAR(100) NOT NULL,
-                id_provi_cta_pagar_cabecera INTEGER NOT NULL,
-                ord_pag_nro_recibo VARCHAR(30) NOT NULL,
-                id_sucursal INTEGER NOT NULL,
-                ord_pag_tipo_pago VARCHAR NOT NULL,
-                id_proveedor INTEGER NOT NULL,
-                CONSTRAINT id_orden_pago PRIMARY KEY (id_orden_pago)
-);
-COMMENT ON TABLE public.orden_pago_cabecera IS 'No se puede generar una OP sin antes haber hecho una provision de cta a pag';
-COMMENT ON COLUMN public.orden_pago_cabecera.ord_pag_nro_recibo IS 'numero de recibo que da el proveedor en caso de que la compra sea a credito';
-COMMENT ON COLUMN public.orden_pago_cabecera.ord_pag_tipo_pago IS 'detalle de si el pago es para reposicion de fondo fijo u otro gasto(Aqui se debe seleccionar la opcion de si es reposicion de FF u otros gastos) (aqui debe traer la info de la factura compra fact_comp_tipo_factura)';
-
-
-ALTER SEQUENCE public.orden_pago_cabecera_id_orden_pago_cabecera_seq OWNED BY public.orden_pago_cabecera.id_orden_pago;
-
 CREATE SEQUENCE public.fondo_fijo_id_fondo_fijo_seq;
 
 CREATE TABLE public.fondo_fijo (
                 id_fondo_fijo INTEGER NOT NULL DEFAULT nextval('public.fondo_fijo_id_fondo_fijo_seq'),
                 fondo_fijo_responsable VARCHAR(50) NOT NULL,
-                fondo_fijo_monto_asignado BIGINT NOT NULL,
+                fondo_fijo_monto_asignado INTEGER NOT NULL,
                 fondo_fijo_fecha_asig DATE NOT NULL,
                 id_proveedor INTEGER NOT NULL,
                 CONSTRAINT id_fondo_fijo PRIMARY KEY (id_fondo_fijo)
@@ -572,6 +534,43 @@ COMMENT ON COLUMN public.fondo_fijo_rendicion.nro_rendicion IS 'Numero con el cu
 
 
 ALTER SEQUENCE public.fondo_fijo_rendicion_id_fondofijo_rendicion_seq OWNED BY public.fondo_fijo_rendicion.id_fondofijo_rendicion;
+
+CREATE SEQUENCE public.provision_cuenta_pagar_id_provi_cta_pagar_cabecera_seq;
+
+CREATE TABLE public.provision_cuenta_pagar (
+                id_provi_cta_pagar_cabecera INTEGER NOT NULL DEFAULT nextval('public.provision_cuenta_pagar_id_provi_cta_pagar_cabecera_seq'),
+                prov_cta_pag_estado VARCHAR NOT NULL,
+                prov_cta_pag_fecha DATE NOT NULL,
+                id_proveedor INTEGER NOT NULL,
+                id_fondofijo_rendicion INTEGER,
+                CONSTRAINT id_provi_cta_pagar PRIMARY KEY (id_provi_cta_pagar_cabecera)
+);
+COMMENT ON TABLE public.provision_cuenta_pagar IS 'la provision es por proveedor, primero se selcciona el proveedor y en base a este se traen sus cuentas a pagar (sus facturas con saldo pendiente)';
+
+
+ALTER SEQUENCE public.provision_cuenta_pagar_id_provi_cta_pagar_cabecera_seq OWNED BY public.provision_cuenta_pagar.id_provi_cta_pagar_cabecera;
+
+CREATE SEQUENCE public.orden_pago_cabecera_id_orden_pago_cabecera_seq;
+
+CREATE TABLE public.orden_pago_cabecera (
+                id_orden_pago INTEGER NOT NULL DEFAULT nextval('public.orden_pago_cabecera_id_orden_pago_cabecera_seq'),
+                ord_pag_numero INTEGER NOT NULL,
+                ord_pag_fecha_emision DATE NOT NULL,
+                ord_pag_monto INTEGER NOT NULL,
+                ord_pag_estado VARCHAR(100) NOT NULL,
+                id_provi_cta_pagar_cabecera INTEGER NOT NULL,
+                ord_pag_nro_recibo INTEGER,
+                id_sucursal INTEGER NOT NULL,
+                ord_pag_tipo_pago VARCHAR NOT NULL,
+                id_proveedor INTEGER NOT NULL,
+                CONSTRAINT id_orden_pago PRIMARY KEY (id_orden_pago)
+);
+COMMENT ON TABLE public.orden_pago_cabecera IS 'No se puede generar una OP sin antes haber hecho una provision de cta a pag';
+COMMENT ON COLUMN public.orden_pago_cabecera.ord_pag_nro_recibo IS 'numero de recibo que da el proveedor en caso de que la compra sea a credito';
+COMMENT ON COLUMN public.orden_pago_cabecera.ord_pag_tipo_pago IS 'detalle de si el pago es para reposicion de fondo fijo u otro gasto(Aqui se debe seleccionar la opcion de si es reposicion de FF u otros gastos) (aqui debe traer la info de la factura compra fact_comp_tipo_factura)';
+
+
+ALTER SEQUENCE public.orden_pago_cabecera_id_orden_pago_cabecera_seq OWNED BY public.orden_pago_cabecera.id_orden_pago;
 
 CREATE SEQUENCE public.usuario_id_usuario_seq;
 
@@ -618,7 +617,7 @@ CREATE TABLE public.forma_pago_detalle (
                 id_forma_pago_det INTEGER NOT NULL DEFAULT nextval('public.forma_pago_detalle_id_forma_pago_det_seq'),
                 id_forma_pago_cab INTEGER NOT NULL,
                 id_orden_pago INTEGER NOT NULL,
-                forma_pag_monto BIGINT NOT NULL,
+                forma_pag_monto INTEGER NOT NULL,
                 forma_pag_estado VARCHAR(100),
                 forma_pag_referencia VARCHAR,
                 id_cuenta INTEGER NOT NULL,
@@ -699,12 +698,12 @@ CREATE SEQUENCE public.apertura_cierre_caja_id_aper_cier_caja_seq;
 CREATE TABLE public.apertura_cierre_caja (
                 id_aper_cier_caja INTEGER NOT NULL DEFAULT nextval('public.apertura_cierre_caja_id_aper_cier_caja_seq'),
                 aper_cier_fecha_apertura TIMESTAMP NOT NULL,
-                aper_cier_monto_inicial BIGINT NOT NULL,
+                aper_cier_monto_inicial INTEGER NOT NULL,
                 aper_cier_fecha_cierre TIMESTAMP NOT NULL,
-                aper_cier_efectivo BIGINT NOT NULL,
-                aper_cier_cheque BIGINT NOT NULL,
-                aper_cier_tarjeta BIGINT NOT NULL,
-                aper_cier_monto_cierre BIGINT NOT NULL,
+                aper_cier_efectivo INTEGER NOT NULL,
+                aper_cier_cheque INTEGER NOT NULL,
+                aper_cier_tarjeta INTEGER NOT NULL,
+                aper_cier_monto_cierre INTEGER NOT NULL,
                 aper_cier_estado VARCHAR(20) NOT NULL,
                 id_caja INTEGER NOT NULL,
                 id_sucursal INTEGER NOT NULL,
@@ -718,8 +717,8 @@ ALTER SEQUENCE public.apertura_cierre_caja_id_aper_cier_caja_seq OWNED BY public
 CREATE TABLE public.recaudaciones_depositar_detalle (
                 id_rec_depositar INTEGER NOT NULL,
                 id_aper_cier_caja INTEGER NOT NULL,
-                rec_depositar_efectivo BIGINT,
-                rec_depositar_cheque BIGINT,
+                rec_depositar_efectivo INTEGER,
+                rec_depositar_cheque INTEGER,
                 CONSTRAINT id_rec_depositar_det PRIMARY KEY (id_rec_depositar, id_aper_cier_caja)
 );
 
@@ -753,9 +752,9 @@ CREATE SEQUENCE public.cuenta_cobrar_id_cta_cobrar_seq;
 CREATE TABLE public.cuenta_cobrar (
                 id_cta_cobrar INTEGER NOT NULL DEFAULT nextval('public.cuenta_cobrar_id_cta_cobrar_seq'),
                 id_fact_venta_cab INTEGER NOT NULL,
-                cta_cob_monto BIGINT NOT NULL,
+                cta_cob_monto INTEGER NOT NULL,
                 cta_cob_fecha DATE NOT NULL,
-                cta_cob_saldo BIGINT NOT NULL,
+                cta_cob_saldo INTEGER NOT NULL,
                 cta_cob_fecha_venci DATE NOT NULL,
                 cta_cob_estado VARCHAR(20) NOT NULL,
                 cta_cob_cantidad_cuota INTEGER NOT NULL,
@@ -769,7 +768,7 @@ CREATE TABLE public.nota_debito_venta_detalle (
                 id_nota_debi_vent_cab INTEGER NOT NULL,
                 id_articulo INTEGER NOT NULL,
                 id_fact_venta_cab INTEGER NOT NULL,
-                nota_debi_vent_monto BIGINT NOT NULL,
+                nota_debi_vent_monto INTEGER NOT NULL,
                 CONSTRAINT id_nota_debi_vent_det PRIMARY KEY (id_nota_debi_vent_cab, id_articulo, id_fact_venta_cab)
 );
 
@@ -798,7 +797,7 @@ CREATE TABLE public.factura_venta_detalle (
                 id_articulo INTEGER NOT NULL,
                 id_deposito INTEGER NOT NULL,
                 fact_venta_cantidad INTEGER NOT NULL,
-                fact_venta_precio_venta BIGINT NOT NULL,
+                fact_venta_precio_venta INTEGER NOT NULL,
                 CONSTRAINT id_fact_venta_det PRIMARY KEY (id_fact_venta_cab, id_articulo, id_deposito)
 );
 
@@ -836,7 +835,7 @@ CREATE TABLE public.cobro (
                 cob_estado VARCHAR(20) NOT NULL,
                 id_aper_cier_caja INTEGER NOT NULL,
                 id_usuario INTEGER NOT NULL,
-                cob_det_monto BIGINT NOT NULL,
+                cob_det_monto INTEGER NOT NULL,
                 CONSTRAINT id_cobro PRIMARY KEY (id_cobro)
 );
 
@@ -847,12 +846,12 @@ CREATE SEQUENCE public.creditos_id_creditos_seq;
 
 CREATE TABLE public.creditos (
                 id_creditos INTEGER NOT NULL DEFAULT nextval('public.creditos_id_creditos_seq'),
-                creditos_nro_comprobante VARCHAR(30) NOT NULL,
+                creditos_nro_comprobante VARCHAR,
                 creditos_fecha DATE NOT NULL,
                 creditos_detalle VARCHAR(255) NOT NULL,
                 id_cuenta INTEGER NOT NULL,
                 id_cobro INTEGER,
-                credito_monto BIGINT NOT NULL,
+                credito_monto INTEGER NOT NULL,
                 creditos_estado VARCHAR,
                 creditos_tipo_cambio DOUBLE PRECISION,
                 CONSTRAINT id_creditos PRIMARY KEY (id_creditos)
@@ -871,13 +870,13 @@ CREATE TABLE public.conciliacion_bancaria_detalle (
                 id_debitos INTEGER,
                 id_orden_pago INTEGER,
                 conc_bancaria_descripcion VARCHAR NOT NULL,
-                conc_bancaria_monto BIGINT NOT NULL,
+                conc_bancaria_monto INTEGER NOT NULL,
                 conc_bancaria_tipo VARCHAR NOT NULL,
                 conc_bancaria_conciliado BOOLEAN NOT NULL,
                 id_forma_pago_det INTEGER,
                 CONSTRAINT id_conc_bancaria_det PRIMARY KEY (id_conc_bancaria, conc_bancaria_nro_item)
 );
-COMMENT ON COLUMN public.conciliacion_bancaria_detalle.conc_bancaria_tipo IS '''Cred''=Crédito, ''Deb''=Débito bancario, ''Transf''=Transferencia, ''Ch''=Cheque';
+COMMENT ON COLUMN public.conciliacion_bancaria_detalle.conc_bancaria_tipo IS '''Cred''=Crédito, ''Deb''=Débito, etc';
 
 
 CREATE SEQUENCE public.arqueo_caja_id_arqueo_caja_seq;
@@ -888,9 +887,9 @@ CREATE TABLE public.arqueo_caja (
                 id_cobro INTEGER NOT NULL,
                 id_aper_cier_caja INTEGER NOT NULL,
                 arque_caja_fecha DATE NOT NULL,
-                arque_caja_efectivo BIGINT NOT NULL,
-                arque_caja_cheque BIGINT NOT NULL,
-                arque_caja_tarjeta BIGINT NOT NULL,
+                arque_caja_efectivo INTEGER NOT NULL,
+                arque_caja_cheque INTEGER NOT NULL,
+                arque_caja_tarjeta INTEGER NOT NULL,
                 arque_caja_factura_inicial INTEGER NOT NULL,
                 arque_caja_factura_final INTEGER NOT NULL,
                 arque_caja_observacion VARCHAR(255) NOT NULL,
@@ -908,7 +907,7 @@ CREATE TABLE public.cobro_tarjeta (
                 id_cobro_tarjeta INTEGER NOT NULL DEFAULT nextval('public.cobro_tarjeta_id_cobro_tarjeta_seq'),
                 id_cobro INTEGER NOT NULL,
                 id_tarjeta INTEGER NOT NULL,
-                tarjeta_nro_boleta_post VARCHAR(30) NOT NULL,
+                tarjeta_nro_boleta_post INTEGER NOT NULL,
                 CONSTRAINT id_cobro_tarjeta PRIMARY KEY (id_cobro_tarjeta, id_cobro)
 );
 
@@ -930,10 +929,10 @@ ALTER SEQUENCE public.cobro_cheque_id_cob_cheque_seq OWNED BY public.cobro_chequ
 CREATE TABLE public.forma_cobro_detalle (
                 id_forma_cobro INTEGER NOT NULL,
                 id_cobro INTEGER NOT NULL,
-                forma_cob_efectivo BIGINT NOT NULL,
-                forma_cob_cheque BIGINT NOT NULL,
-                forma_cob_tarjeta BIGINT NOT NULL,
-                forma_cob_total BIGINT NOT NULL,
+                forma_cob_efectivo INTEGER NOT NULL,
+                forma_cob_cheque INTEGER NOT NULL,
+                forma_cob_tarjeta INTEGER NOT NULL,
+                forma_cob_total INTEGER NOT NULL,
                 CONSTRAINT id_forma_cob_det PRIMARY KEY (id_forma_cobro, id_cobro)
 );
 
@@ -1076,7 +1075,7 @@ CREATE TABLE public.factura_compra_detalle (
                 id_impuesto INTEGER,
                 id_deposito INTEGER,
                 fact_comp_cantidad INTEGER,
-                fact_comp_precio_compra BIGINT,
+                fact_comp_precio_compra INTEGER,
                 fact_det_descripcion VARCHAR,
                 CONSTRAINT id_fact_comp_detalle PRIMARY KEY (id_fact_comp_det)
 );
@@ -1093,10 +1092,10 @@ CREATE SEQUENCE public.cuenta_pagar_id_cta_pagar_seq;
 CREATE TABLE public.cuenta_pagar (
                 id_cta_pagar INTEGER NOT NULL DEFAULT nextval('public.cuenta_pagar_id_cta_pagar_seq'),
                 id_fact_comp_cab INTEGER NOT NULL,
-                cta_pag_monto BIGINT NOT NULL,
+                cta_pag_monto INTEGER NOT NULL,
                 cta_pag_estado VARCHAR(100) NOT NULL,
                 cta_pag_fecha_venci DATE NOT NULL,
-                cta_pag_saldo BIGINT NOT NULL,
+                cta_pag_saldo INTEGER NOT NULL,
                 cta_pag_plazo INTEGER,
                 CONSTRAINT id_cta_pagar PRIMARY KEY (id_cta_pagar, id_fact_comp_cab)
 );
@@ -1113,7 +1112,7 @@ CREATE TABLE public.provision_cuenta_pagar_detalle (
                 id_provi_cta_pagar_cabecera INTEGER NOT NULL,
                 id_cta_pagar INTEGER NOT NULL,
                 id_fact_comp_cab INTEGER NOT NULL,
-                prov_cta_pag_monto BIGINT NOT NULL,
+                prov_cta_pag_monto INTEGER NOT NULL,
                 CONSTRAINT id_provision_cta_pag PRIMARY KEY (id_provi_cta_pagar_detalle)
 );
 COMMENT ON TABLE public.provision_cuenta_pagar_detalle IS 'Facturas incluidas en la provision por proveedor';
@@ -1128,7 +1127,7 @@ CREATE TABLE public.fondo_fijo_rendicion_detalle (
                 id_fondofijo_rendicion INTEGER NOT NULL,
                 id_cta_pagar INTEGER NOT NULL,
                 id_fact_comp_cab INTEGER NOT NULL,
-                monto_rendido BIGINT,
+                monto_rendido INTEGER,
                 CONSTRAINT fondo_fijo_rendicion_detalle_pk PRIMARY KEY (id_ff_rendicion_detalle)
 );
 
@@ -1139,7 +1138,7 @@ CREATE SEQUENCE public.orden_pago_detalle_id_orden_pago_det_seq;
 
 CREATE TABLE public.orden_pago_detalle (
                 id_orden_pago_det INTEGER NOT NULL DEFAULT nextval('public.orden_pago_detalle_id_orden_pago_det_seq'),
-                orden_pag_det_monto BIGINT NOT NULL,
+                orden_pag_det_monto INTEGER NOT NULL,
                 id_cta_pagar INTEGER NOT NULL,
                 id_fact_comp_cab INTEGER NOT NULL,
                 id_orden_pago INTEGER NOT NULL,
@@ -1176,7 +1175,7 @@ CREATE TABLE public.nota_debito_compra_detalle (
                 id_nota_debito_det INTEGER NOT NULL DEFAULT nextval('public.nota_debito_compra_detalle_id_nota_debito_det_seq'),
                 id_articulo INTEGER,
                 nota_debi_comp_cantidad INTEGER NOT NULL,
-                nota_debi_monto BIGINT NOT NULL,
+                nota_debi_monto INTEGER NOT NULL,
                 id_impuesto INTEGER,
                 nota_debito_descripcion VARCHAR,
                 id_nota_debi_comp_cab INTEGER NOT NULL,
@@ -1215,12 +1214,12 @@ CREATE TABLE public.libro_iva_compra (
                 id_nota_cred_comp_cab INTEGER,
                 id_nota_debi_comp_cab INTEGER,
                 libro_iva_comp_fecha DATE,
-                libro_iva_comp_5 BIGINT,
-                libro_iva_comp_10 BIGINT,
-                libro_iva_comp_gravada_10 BIGINT,
-                libro_iva_comp_gravada_5 BIGINT,
-                libro_iva_comp_exenta BIGINT,
-                libro_iva_comp_total BIGINT,
+                libro_iva_comp_5 INTEGER,
+                libro_iva_comp_10 INTEGER,
+                libro_iva_comp_gravada_10 INTEGER,
+                libro_iva_comp_gravada_5 INTEGER,
+                libro_iva_comp_exenta INTEGER,
+                libro_iva_comp_total INTEGER,
                 libro_iva_comp_estado VARCHAR,
                 libro_iva_comp_origen VARCHAR,
                 CONSTRAINT id_libro_iva_compra PRIMARY KEY (id_libro_iva_compra)
@@ -1243,7 +1242,7 @@ CREATE TABLE public.nota_credito_compra_detalle (
                 id_articulo INTEGER,
                 id_deposito INTEGER,
                 nota_cred_comp_cantidad INTEGER NOT NULL,
-                nota_cred_monto BIGINT,
+                nota_cred_monto INTEGER,
                 id_impuesto INTEGER,
                 nota_credito_descripcion VARCHAR,
                 id_nota_cred_comp_cab INTEGER NOT NULL,
@@ -1258,7 +1257,7 @@ CREATE TABLE public.orden_compra_detalle (
                 id_orden_compra_cab INTEGER NOT NULL,
                 id_articulo INTEGER NOT NULL,
                 ord_comp_det_cantidad INTEGER NOT NULL,
-                orden_compr_det_precio_compra BIGINT NOT NULL,
+                orden_compr_det_precio_compra INTEGER NOT NULL,
                 CONSTRAINT id_orden_compra_det PRIMARY KEY (id_orden_compra_cab, id_articulo)
 );
 
@@ -1267,7 +1266,7 @@ CREATE TABLE public.presupuesto_detalle (
                 id_presupuesto_cab INTEGER NOT NULL,
                 id_articulo INTEGER NOT NULL,
                 presu_det_cantidad INTEGER NOT NULL,
-                presu_det_precio_compra BIGINT NOT NULL,
+                presu_det_precio_compra INTEGER NOT NULL,
                 presu_det_descuento INTEGER,
                 CONSTRAINT id_presupuesto_det PRIMARY KEY (id_presupuesto_cab, id_articulo)
 );
@@ -1912,16 +1911,30 @@ ON DELETE NO ACTION
 ON UPDATE NO ACTION
 NOT DEFERRABLE;
 
-ALTER TABLE public.provision_cuenta_pagar ADD CONSTRAINT fondo_fijo_rendicion_provision_cuenta_pagar_fk
+ALTER TABLE public.orden_pago_cabecera ADD CONSTRAINT proveedor_orden_pagoorden_pago_cabecera_fk
+FOREIGN KEY (id_proveedor)
+REFERENCES public.proveedor (id_proveedor)
+ON DELETE NO ACTION
+ON UPDATE NO ACTION
+NOT DEFERRABLE;
+
+ALTER TABLE public.fondo_fijo_rendicion ADD CONSTRAINT fondo_fijo_fondo_fijo_rendicion_fk
+FOREIGN KEY (id_fondo_fijo)
+REFERENCES public.fondo_fijo (id_fondo_fijo)
+ON DELETE NO ACTION
+ON UPDATE NO ACTION
+NOT DEFERRABLE;
+
+ALTER TABLE public.fondo_fijo_rendicion_detalle ADD CONSTRAINT fondo_fijo_rendicion_fondo_fijo_rendicion_detalle_fk
 FOREIGN KEY (id_fondofijo_rendicion)
 REFERENCES public.fondo_fijo_rendicion (id_fondofijo_rendicion)
 ON DELETE NO ACTION
 ON UPDATE NO ACTION
 NOT DEFERRABLE;
 
-ALTER TABLE public.orden_pago_cabecera ADD CONSTRAINT proveedor_orden_pagoorden_pago_cabecera_fk
-FOREIGN KEY (id_proveedor)
-REFERENCES public.proveedor (id_proveedor)
+ALTER TABLE public.provision_cuenta_pagar ADD CONSTRAINT fondo_fijo_rendicion_provision_cuenta_pagar_fk
+FOREIGN KEY (id_fondofijo_rendicion)
+REFERENCES public.fondo_fijo_rendicion (id_fondofijo_rendicion)
 ON DELETE NO ACTION
 ON UPDATE NO ACTION
 NOT DEFERRABLE;
@@ -1957,20 +1970,6 @@ NOT DEFERRABLE;
 ALTER TABLE public.orden_pago_detalle ADD CONSTRAINT orden_pago_cabecera_orden_pago_detalle_fk
 FOREIGN KEY (id_orden_pago)
 REFERENCES public.orden_pago_cabecera (id_orden_pago)
-ON DELETE NO ACTION
-ON UPDATE NO ACTION
-NOT DEFERRABLE;
-
-ALTER TABLE public.fondo_fijo_rendicion ADD CONSTRAINT fondo_fijo_fondo_fijo_rendicion_fk
-FOREIGN KEY (id_fondo_fijo)
-REFERENCES public.fondo_fijo (id_fondo_fijo)
-ON DELETE NO ACTION
-ON UPDATE NO ACTION
-NOT DEFERRABLE;
-
-ALTER TABLE public.fondo_fijo_rendicion_detalle ADD CONSTRAINT fondo_fijo_rendicion_fondo_fijo_rendicion_detalle_fk
-FOREIGN KEY (id_fondofijo_rendicion)
-REFERENCES public.fondo_fijo_rendicion (id_fondofijo_rendicion)
 ON DELETE NO ACTION
 ON UPDATE NO ACTION
 NOT DEFERRABLE;
