@@ -390,6 +390,9 @@ public class CuentaPagarDAO {
                    // Las rendidas se provisionan desde la rendicion, a nombre del responsable: si
                    // tambien aparecieran aca se podrian pagar dos veces, una a cada uno.
                    + "AND cp.cta_pag_estado NOT IN ('En provision', 'Anulado', 'Rendida') "
+                   // Las de fondo fijo se le reponen al responsable y entran a la provision por la
+                   // rendicion, nunca por el proveedor: al comercio ya le pago el responsable.
+                   + "AND f.fact_comp_tipo_factura <> 'fondoFijo' "
                    + "ORDER BY cp.id_cta_pagar";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setLong(1, idProveedor);

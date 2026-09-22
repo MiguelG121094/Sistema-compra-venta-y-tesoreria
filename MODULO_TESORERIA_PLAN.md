@@ -699,6 +699,7 @@ Las anulaciones revierten hacia atrás, cada una un solo paso:
   fecha de reposición.
 - [x] ✅ Modal *Buscar Rendición de Fondo Fijo* en `provision.jsp` + acción `CargarRendicion` (2026-09-04)
 - [x] ✅ `'Rendida'` excluida de `listarCuentasPagarPorProveedor()` (2026-09-04): sin eso la factura se podía pagar dos veces, una al comercio y otra al responsable
+- [x] ✅ Las facturas `'fondoFijo'` excluidas de `listarCuentasPagarPorProveedor()` (2026-09-22): antes de rendirse la cuenta está `'Pendiente'`, así que aparecían en la provisión del comercio —que ya cobró del responsable— y podían pagarse por ahí. Al fondo fijo se entra sólo por la rendición
 - [x] ✅ La rendición pasa a `'Provisionada'` al guardar y vuelve a `'Generada'` al anular (2026-09-04)
 - [x] ✅ `revertirProvision` devuelve a `'Rendida'` las cuentas que vienen de una rendición (2026-09-04)
 - [x] ✅ `ff_rendicion_fecha_reposicion` se completa al generar la OP y se borra si esa OP se anula (2026-09-04)
