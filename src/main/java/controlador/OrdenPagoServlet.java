@@ -44,6 +44,8 @@ public class OrdenPagoServlet extends HttpServlet {
     // Estado con el que nace una OP generada: pendiente de conciliación bancaria.
     private static final String ESTADO_OP_PENDIENTE = "Pendiente";
     private static final String ESTADO_PROV_PENDIENTE = "Pendiente";
+    private static final String TIPO_PAGO_REPOSICION_FF = "reposicionFF";
+    private static final String TIPO_PAGO_OTROS_GASTOS = "otrosGastos";
 
     // Services (stateless, pueden ser de instancia)
     private final OrdenPagoService ordenPagoService = new OrdenPagoService();
@@ -476,6 +478,11 @@ public class OrdenPagoServlet extends HttpServlet {
         estado.ordenPago.setIdProvisionCtaPagar(idProvision);
         estado.ordenPago.setProveedor(provision.getProveedor());
         estado.ordenPago.setMonto(calcularTotalDetalle(estado.listaDetalle));
+
+        // El tipo de pago lo define la provision: si vino de una rendicion es una reposicion de
+        // fondo fijo, si no es un pago normal de facturas provisionadas.
+        estado.ordenPago.setTipoPago(provision.getFondoFijoRendicion() != null
+                ? TIPO_PAGO_REPOSICION_FF : TIPO_PAGO_OTROS_GASTOS);
 
         mostrarMensaje(request, "Provisión cargada correctamente", "alert-success");
         volverAVista(request, response, session, estado, token);

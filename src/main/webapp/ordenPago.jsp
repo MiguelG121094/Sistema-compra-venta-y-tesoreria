@@ -644,6 +644,7 @@
                                                     <th class="text-bg-dark text-center">Proveedor</th>
                                                     <th class="text-bg-dark text-center">Fecha</th>
                                                     <th class="text-bg-dark text-center">Estado</th>
+                                                    <th class="text-bg-dark text-center">Fondo Fijo</th>
                                                     <th class="text-bg-dark text-center no-search">Acción</th>
                                                 </tr></thead>
                                             <tbody>
@@ -653,6 +654,7 @@
                                                         <td>${p.proveedor.razonSocial}</td>
                                                         <td class="text-center"><fmt:formatDate value="${p.fecha}" pattern="dd/MM/yyyy"/></td>
                                                         <td class="text-center">${p.estado}</td>
+                                                        <td class="text-center">${empty p.fondoFijoRendicion ? 'No' : 'Sí'}</td>
                                                         <td class="text-center">
                                                             <a href="OrdenPagoServlet?menu=OrdenPago&accion=CargarProvision&idProvision=${p.idProvisionCuentaPagar}&token=${token}"
                                                                class="btn btn-primary btn-sm">Seleccionar</a>

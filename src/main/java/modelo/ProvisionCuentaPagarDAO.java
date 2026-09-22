@@ -71,19 +71,34 @@ public class ProvisionCuentaPagarDAO {
         }
     }
 
+    /**
+     * Arma la provisión de los listados (modales de búsqueda). Trae la rendición de fondo fijo
+     * cuando la cabecera la tiene cargada, para que la vista pueda mostrar si es de fondo fijo.
+     */
+    private ProvisionCuentaPagar armarProvisionDeLista(ResultSet rs, ProveedorDAO proveedorDAO)
+            throws SQLException {
+        ProvisionCuentaPagar provision = new ProvisionCuentaPagar(
+            rs.getLong("id_provi_cta_pagar_cabecera"),
+            rs.getString("prov_cta_pag_estado"),
+            rs.getDate("prov_cta_pag_fecha"),
+            proveedorDAO.getProveedor(rs.getLong("id_proveedor")));
+        long idRendicion = rs.getLong("id_fondofijo_rendicion");
+        if (!rs.wasNull()) {
+            provision.setFondoFijoRendicion(new FondoFijoRendicion(idRendicion));
+        }
+        return provision;
+    }
+
     public List<ProvisionCuentaPagar> listarProvisiones() throws SQLException {
         List<ProvisionCuentaPagar> lista = new ArrayList<>();
-        String sql = "SELECT id_provi_cta_pagar_cabecera, prov_cta_pag_estado, prov_cta_pag_fecha, id_proveedor "
+        String sql = "SELECT id_provi_cta_pagar_cabecera, prov_cta_pag_estado, prov_cta_pag_fecha, id_proveedor, "
+                   + "id_fondofijo_rendicion "
                    + "FROM provision_cuenta_pagar ORDER BY id_provi_cta_pagar_cabecera DESC";
         ProveedorDAO proveedorDAO = new ProveedorDAO(conn);
         try (PreparedStatement stmt = conn.prepareStatement(sql);
              ResultSet rs = stmt.executeQuery()) {
             while (rs.next()) {
-                lista.add(new ProvisionCuentaPagar(
-                    rs.getLong("id_provi_cta_pagar_cabecera"),
-                    rs.getString("prov_cta_pag_estado"),
-                    rs.getDate("prov_cta_pag_fecha"),
-                    proveedorDAO.getProveedor(rs.getLong("id_proveedor"))));
+                lista.add(armarProvisionDeLista(rs, proveedorDAO));
             }
         }
         return lista;
@@ -95,7 +110,8 @@ public class ProvisionCuentaPagarDAO {
      */
     public List<ProvisionCuentaPagar> listarProvisionesPorEstado(String estado) throws SQLException {
         List<ProvisionCuentaPagar> lista = new ArrayList<>();
-        String sql = "SELECT id_provi_cta_pagar_cabecera, prov_cta_pag_estado, prov_cta_pag_fecha, id_proveedor "
+        String sql = "SELECT id_provi_cta_pagar_cabecera, prov_cta_pag_estado, prov_cta_pag_fecha, id_proveedor, "
+                   + "id_fondofijo_rendicion "
                    + "FROM provision_cuenta_pagar WHERE prov_cta_pag_estado = ? "
                    + "ORDER BY id_provi_cta_pagar_cabecera DESC";
         ProveedorDAO proveedorDAO = new ProveedorDAO(conn);
@@ -103,11 +119,7 @@ public class ProvisionCuentaPagarDAO {
             stmt.setString(1, estado);
             try (ResultSet rs = stmt.executeQuery()) {
                 while (rs.next()) {
-                    lista.add(new ProvisionCuentaPagar(
-                        rs.getLong("id_provi_cta_pagar_cabecera"),
-                        rs.getString("prov_cta_pag_estado"),
-                        rs.getDate("prov_cta_pag_fecha"),
-                        proveedorDAO.getProveedor(rs.getLong("id_proveedor"))));
+                    lista.add(armarProvisionDeLista(rs, proveedorDAO));
                 }
             }
         }
