@@ -109,30 +109,61 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                         <nav class="sb-sidenav-menu-nested nav flex-column p-2">
                                             <a class="nav-link text-white py-1" href="ProvisionCuentaPagarServlet?menu=ProvisionCuentaPagar&accion=ListarModal">Provisión de Cta. a Pagar</a>
                                             <a class="nav-link text-white py-1" href="OrdenPagoServlet?menu=OrdenPago&accion=ListarModal">Orden de Pago</a>
-                                            <a class="nav-link text-white py-1" href="password.html">Conciliación Bancaria</a>
+                                            <a class="nav-link text-white py-1" href="DebitoServlet?menu=MovimientoBancario&accion=Listar">Cargar otros débitos</a>
+                                            <a class="nav-link text-white py-1" href="CreditoServlet?menu=MovimientoBancario&accion=Listar">Cargar otros créditos</a>
+                                            <a class="nav-link text-white py-1" href="FondoFijoRendicionServlet?menu=RendicionFondoFijo&accion=ListarModal">Rendición de Fondo Fijo</a>
+                                            <a class="nav-link text-white py-1" href="ConciliacionBancariaServlet?menu=ConciliacionBancaria&accion=ListarModal">Conciliación Bancaria</a>
+                                            <a class="nav-link text-white py-1" href="CuentaServlet?menu=Cuenta&accion=Listar">Cuentas Bancarias</a>
+                                            <a class="nav-link text-white py-1" href="ChequeraServlet?menu=Chequera&accion=Listar">Chequeras</a>
+                                            <a class="nav-link text-white py-1" href="FondoFijoServlet?menu=FondoFijo&accion=Listar">Fondo Fijo</a>
                                         </nav>
                                     </div>
                                 </div>
                             </div>
                             <div class="col-xl-3 col-md-6">
-                                <div class="card bg-success text-white mb-4">
+                                <div class="card bg-success text-white mb-4" style="position: relative;">
                                     <div class="card-body"><h1 style="margin-left: 10px;margin-top: 5px">
                                     <strong>Venta <span style="float: right;font-size: 64px;opacity: 0.8" >
                                             <i class="fa-solid fa-money-bill"></i></span></strong></h1></div>
-                                    <div class="card-footer d-flex align-items-center justify-content-between">
-                                        <a class="small text-white stretched-link" href="#">View Details</a>
+                                    <div class="card-footer d-flex align-items-center justify-content-between"
+                                         data-bs-toggle="collapse" data-bs-target="#VentaPagesCollapse"
+                                         style="cursor: pointer;">
+                                        <a class="small text-white stretched-link" href="#">Ver detalle </a>
                                         <div class="small text-white"><i class="fas fa-angle-right"></i></div>
+                                    </div>
+                                    <div class="collapse" id="VentaPagesCollapse"
+                                         style="position: absolute; top: 100%; left: 0; right: 0; z-index: 1000; background-color: #198754; border-radius: 0 0 0.375rem 0.375rem;">
+                                        <nav class="sb-sidenav-menu-nested nav flex-column p-2">
+                                            <a class="nav-link text-white py-1" href="#">Pedido de venta</a>
+                                            <a class="nav-link text-white py-1" href="#">Factura de venta</a>
+                                            <a class="nav-link text-white py-1" href="#">Nota de Crédito - Débito</a>
+                                            <a class="nav-link text-white py-1" href="#">Nota de Remisión</a>
+                                            <a class="nav-link text-white py-1" href="#">Apertura y cierre de caja</a>
+                                            <a class="nav-link text-white py-1" href="#">Cobros</a>
+                                            <a class="nav-link text-white py-1" href="#">Arqueo de caja</a>
+                                            <a class="nav-link text-white py-1" href="#">Recaudaciones a depositar</a>
+                                        </nav>
                                     </div>
                                 </div>
                             </div>
                             <div class="col-xl-3 col-md-6">
-                                <div class="card bg-danger text-white mb-4">
+                                <div class="card bg-danger text-white mb-4" style="position: relative;">
                                     <div class="card-body"><h1 style="margin-left: 10px;margin-top: 5px">
                                     <strong>Stock <span style="float: right;font-size: 64px;opacity: 0.8" >
                                             <i class="fa-solid fa-boxes-stacked"></i></span></strong></h1></div>
-                                    <div class="card-footer d-flex align-items-center justify-content-between">
-                                        <a class="small text-white stretched-link" href="#">View Details</a>
+                                    <div class="card-footer d-flex align-items-center justify-content-between"
+                                         data-bs-toggle="collapse" data-bs-target="#StockPagesCollapse"
+                                         style="cursor: pointer;">
+                                        <a class="small text-white stretched-link" href="#">Ver detalle </a>
                                         <div class="small text-white"><i class="fas fa-angle-right"></i></div>
+                                    </div>
+                                    <div class="collapse" id="StockPagesCollapse"
+                                         style="position: absolute; top: 100%; left: 0; right: 0; z-index: 1000; background-color: #dc3545; border-radius: 0 0 0.375rem 0.375rem;">
+                                        <nav class="sb-sidenav-menu-nested nav flex-column p-2">
+                                            <a class="nav-link text-white py-1" href="TipoArticuloServlet?menu=TipoArticulo&accion=Listar">Tipo de artículo</a>
+                                            <a class="nav-link text-white py-1" href="articulo.jsp">Artículos</a>
+                                            <a class="nav-link text-white py-1" href="#">Ajuste de Stock</a>
+                                        </nav>
                                     </div>
                                 </div>
                             </div>
