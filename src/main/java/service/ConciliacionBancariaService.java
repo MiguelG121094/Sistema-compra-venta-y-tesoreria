@@ -30,30 +30,24 @@ public class ConciliacionBancariaService {
 
     // ==================== CONSULTAS ====================
 
+    // Las consultas dejan salir el SQLException: el servlet lo atrapa y lo muestra como error de
+    // base de datos. Devolver null lo disfrazaba de "no hay movimientos" y escondia la falla.
+
     public List<ConciliacionBancaria> listarConciliaciones() throws SQLException {
         try (Connection conn = Conexion.getConnection()) {
             return new ConciliacionBancariaDAO(conn).listarConciliaciones();
-        } catch (SQLException e) {
-            System.out.println("Error en ConciliacionBancariaService: " + e);
-            return null;
         }
     }
 
     public ConciliacionBancaria getConciliacion(Long idConciliacion) throws SQLException {
         try (Connection conn = Conexion.getConnection()) {
             return new ConciliacionBancariaDAO(conn).getConciliacion(idConciliacion);
-        } catch (SQLException e) {
-            System.out.println("Error en ConciliacionBancariaService: " + e);
-            return null;
         }
     }
 
     public List<ConciliacionBancariaDetalle> listarDetalles(Long idConciliacion) throws SQLException {
         try (Connection conn = Conexion.getConnection()) {
             return new ConciliacionBancariaDAO(conn).listarDetallesPorConciliacion(idConciliacion);
-        } catch (SQLException e) {
-            System.out.println("Error en ConciliacionBancariaService: " + e);
-            return null;
         }
     }
 
@@ -61,9 +55,6 @@ public class ConciliacionBancariaService {
     public ConciliacionBancaria getUltimaVigente(Long idCuenta) throws SQLException {
         try (Connection conn = Conexion.getConnection()) {
             return new ConciliacionBancariaDAO(conn).getUltimaVigente(idCuenta);
-        } catch (SQLException e) {
-            System.out.println("Error en ConciliacionBancariaService: " + e);
-            return null;
         }
     }
 
@@ -79,9 +70,6 @@ public class ConciliacionBancariaService {
             throws SQLException {
         try (Connection conn = Conexion.getConnection()) {
             return new ConciliacionBancariaDAO(conn).listarMovimientosAConciliar(idCuenta, fechaHasta);
-        } catch (SQLException e) {
-            System.out.println("Error en ConciliacionBancariaService: " + e);
-            return null;
         }
     }
 
