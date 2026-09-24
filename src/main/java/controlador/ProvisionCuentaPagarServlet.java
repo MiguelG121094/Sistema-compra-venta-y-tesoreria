@@ -32,7 +32,6 @@ import modelo.Usuario;
 import service.CuentaPagarService;
 import service.FondoFijoRendicionService;
 import service.FondoFijoService;
-import service.OrdenPagoService;
 import service.ProveedorService;
 import service.ProvisionCuentaPagarService;
 
@@ -46,7 +45,6 @@ public class ProvisionCuentaPagarServlet extends HttpServlet {
     private final ProvisionCuentaPagarService provisionService = new ProvisionCuentaPagarService();
     private final CuentaPagarService cuentaPagarService = new CuentaPagarService();
     private final ProveedorService proveedorService = new ProveedorService();
-    private final OrdenPagoService ordenPagoService = new OrdenPagoService();   // guard de anulación
     private final FondoFijoRendicionService rendicionService = new FondoFijoRendicionService();
     private final FondoFijoService fondoFijoService = new FondoFijoService();
 
@@ -602,20 +600,21 @@ public class ProvisionCuentaPagarServlet extends HttpServlet {
             forward(request, response, JSP_PROVISION);
             return;
         }
-        /* Una provisión consumida por una orden de pago NO se puede anular: hay que anular
-           primero la OP. Si no, la OP queda apuntando a una provisión anulada y —peor— al
-           anular esa OP se reactiva la provisión a 'Pendiente' (paso 5 de la reversa), o sea
-           que una provisión anulada volvería a ser pagable. Mismo criterio que "anulá las notas
-           antes que la factura" en FacturaCompraServlet. */
-        if (ordenPagoService.tieneOrdenPagoActivaPorProvision(estado.idProvisionExistente)) {
-            mostrarMensaje(request, "La provisión ya tiene una orden de pago asociada. "
-                    + "Anule primero la orden de pago.", "alert-warning");
+        /* La provisión consumida por una orden de pago vigente la rechaza el Service, con la
+           fila bloqueada y dentro de la transacción: acá no se puede garantizar que entre la
+           validación y el UPDATE no se genere una OP sobre esta misma provisión. */
+        try {
+            provisionService.anularProvisionCompleta(estado.idProvisionExistente);
+        } catch (SQLException e) {
+            // El mensaje va a la vista; el detalle al log, que aca entra tanto el rechazo de la
+            // validacion como un error real de la base.
+            LOGGER.log(Level.WARNING, "No se pudo anular la provisión "
+                    + estado.idProvisionExistente, e);
+            mostrarMensaje(request, e.getMessage(), "alert-warning");
             cargarDatosParaVista(request, estado, token);
             forward(request, response, JSP_PROVISION);
             return;
         }
-
-        provisionService.anularProvisionCompleta(estado.idProvisionExistente);
         limpiarEstado(session, token);
         mostrarMensaje(request, "Provisión anulada correctamente", "alert-success");
         accionListarModal(request, response);

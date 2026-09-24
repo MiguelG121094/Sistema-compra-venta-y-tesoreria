@@ -6,6 +6,7 @@ import java.sql.SQLException;
 import java.util.List;
 import modelo.CuentaPagarDAO;
 import modelo.FondoFijoRendicionDAO;
+import modelo.OrdenPagoDAO;
 import modelo.ProvisionCuentaPagar;
 import modelo.ProvisionCuentaPagarDAO;
 import modelo.ProvisionCuentaPagarDetalle;
@@ -18,6 +19,8 @@ import modelo.ProvisionCuentaPagarDetalle;
  * @author Miguel
  */
 public class ProvisionCuentaPagarService {
+
+    private static final String ESTADO_ANULADO = "Anulado";
 
     public List<ProvisionCuentaPagar> listarProvisiones() throws SQLException {
         try (Connection conn = Conexion.getConnection()) {
@@ -125,6 +128,24 @@ public class ProvisionCuentaPagarService {
 
             ProvisionCuentaPagarDAO dao = new ProvisionCuentaPagarDAO(conn);
             CuentaPagarDAO cuentaPagarDAO = new CuentaPagarDAO(conn);
+
+            // La fila se bloquea (FOR UPDATE) antes de mirar nada: sin esto una OP que se esta
+            // generando sobre esta misma provision puede grabar entre la validacion y el UPDATE.
+            String estadoActual = dao.getEstadoBloqueado(idProvision);
+            if (estadoActual == null) {
+                throw new SQLException("La provisión no existe");
+            }
+            if (ESTADO_ANULADO.equals(estadoActual)) {
+                throw new SQLException("La provisión ya está anulada");
+            }
+            // Una provision consumida por una orden de pago vigente NO se puede anular: primero se
+            // anula la OP. Si no, la OP queda apuntando a una provision anulada y al anular esa OP
+            // la reversa la devuelve a 'Pendiente', o sea que una provision anulada vuelve a ser
+            // pagable. Para deshacer se va al reves del circuito: OP, provision, rendicion.
+            if (new OrdenPagoDAO(conn).tieneOrdenPagoActivaPorProvision(idProvision)) {
+                throw new SQLException("La provisión ya tiene una orden de pago asociada. "
+                        + "Anule primero la orden de pago.");
+            }
 
             ProvisionCuentaPagar provision = dao.getProvision(idProvision);
             Long idRendicion = idRendicionDe(provision);
