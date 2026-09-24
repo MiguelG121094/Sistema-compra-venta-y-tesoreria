@@ -72,6 +72,7 @@ usuario inicio sesion, se debe agregar esta validacon en cada una de las vistas 
                             <a class="nav-link" href="NotaCreditoDebitoServlet?menu=NotaCreditoDebito&accion=ListarModal">Nota de Crédito - Débito</a>
                             <a class="nav-link" href="notaRemision.jsp">Nota de Remisión</a>
                             <a class="nav-link" href="layout-sidenav-light.html">Ajuste de Stock</a>
+                            <a class="nav-link" href="LibroIvaCompraServlet?menu=LibroIvaCompra">Libro de Compras</a>
                         </nav>
                     </div>
 

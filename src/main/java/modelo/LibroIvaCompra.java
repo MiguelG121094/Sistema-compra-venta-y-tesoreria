@@ -25,6 +25,14 @@ public class LibroIvaCompra implements java.io.Serializable {
     private Long total;
     private String estado;
 
+    // Datos del comprobante que origino la fila, para el informe de Libro de Compras. La fila solo
+    // guarda las FKs: el numero, el timbrado y el proveedor viven en la cabecera de la factura o de
+    // la nota, por eso se hidratan al listar y no se persisten aca.
+    private String origen;
+    private String numeroComprobante;
+    private Long timbrado;
+    private Proveedor proveedor;
+
     public LibroIvaCompra() {
     }
 
@@ -116,6 +124,38 @@ public class LibroIvaCompra implements java.io.Serializable {
 
     public void setTotal(Long total) {
         this.total = total;
+    }
+
+    public String getOrigen() {
+        return origen;
+    }
+
+    public void setOrigen(String origen) {
+        this.origen = origen;
+    }
+
+    public String getNumeroComprobante() {
+        return numeroComprobante;
+    }
+
+    public void setNumeroComprobante(String numeroComprobante) {
+        this.numeroComprobante = numeroComprobante;
+    }
+
+    public Long getTimbrado() {
+        return timbrado;
+    }
+
+    public void setTimbrado(Long timbrado) {
+        this.timbrado = timbrado;
+    }
+
+    public Proveedor getProveedor() {
+        return proveedor;
+    }
+
+    public void setProveedor(Proveedor proveedor) {
+        this.proveedor = proveedor;
     }
 
     public String getEstado() {

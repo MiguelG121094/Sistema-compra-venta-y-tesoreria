@@ -88,6 +88,7 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                             <a class="nav-link text-white py-1" href="FacturaCompraServlet?menu=FacturaCompra&accion=ListarModal">Factura compra</a>
                                             <a class="nav-link text-white py-1" href="NotaCreditoDebitoServlet?menu=NotaCreditoDebito&accion=ListarModal">Nota de Crédito - Débito</a>
                                             <a class="nav-link text-white py-1" href="notaRemision.jsp">Nota de Remisión</a>
+                                            <a class="nav-link text-white py-1" href="LibroIvaCompraServlet?menu=LibroIvaCompra">Libro de Compras</a>
                                             <!--<a class="nav-link text-white py-1" href="password.html">Forgot Password</a>-->
                                         </nav>
                                     </div>
