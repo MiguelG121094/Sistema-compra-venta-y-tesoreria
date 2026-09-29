@@ -6,6 +6,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Types;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -153,6 +155,105 @@ public class ChequeDAO {
             }
             stmt.setLong(3, idCheque);
             return stmt.executeUpdate() > 0;
+        }
+    }
+
+
+    // ==================== GESTION DE CHEQUES ====================
+
+    /**
+     * Todos los cheques con lo que hace falta para gestionarlos: la cuenta y el banco de la
+     * chequera, y la orden de pago que los emitio con su monto y su proveedor.
+     *
+     * <p>El monto no esta en la tabla cheque: vive en la forma de pago que lo referencia. El LEFT
+     * JOIN es a proposito, para que un cheque sin forma de pago igual se liste.
+     */
+    public List<Cheque> listarParaGestion() throws SQLException {
+        List<Cheque> cheques = new ArrayList<>();
+        String sql = "SELECT c.id_cheque, c.chq_numero, c.chq_fecha_emision, c.chq_estado, "
+                   + "c.chq_a_la_orden, c.chq_observacion, c.chq_fecha_pago, c.chq_fecha_venci, "
+                   + "c.chq_fecha_entrega, c.chq_entregado_a, "
+                   + "c.id_tipo_cheque, tc.tipo_cheque_descripcion, "
+                   + "ch.id_chequera, ch.chequera_serie, "
+                   + "cta.id_cuenta, cta.cuenta_numero, ef.enti_finan_nombre, "
+                   + "fp.forma_pag_monto, op.id_orden_pago, op.ord_pag_numero, op.ord_pag_estado, "
+                   + "pr.prov_razon_social "
+                   + "FROM cheque c "
+                   + "JOIN tipo_cheque tc ON c.id_tipo_cheque = tc.id_tipo_cheque "
+                   + "JOIN chequera ch ON c.id_chequera = ch.id_chequera "
+                   + "JOIN cuenta cta ON ch.id_cuenta = cta.id_cuenta "
+                   + "JOIN entidad_financiera ef ON cta.id_enti_finan = ef.id_enti_finan "
+                   + "LEFT JOIN forma_pago_detalle fp ON fp.id_cheque = c.id_cheque "
+                   + "LEFT JOIN orden_pago_cabecera op ON fp.id_orden_pago = op.id_orden_pago "
+                   + "LEFT JOIN proveedor pr ON op.id_proveedor = pr.id_proveedor "
+                   + "ORDER BY c.id_cheque DESC";
+        try (PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+            while (rs.next()) {
+                cheques.add(mapearParaGestion(rs));
+            }
+        }
+        return cheques;
+    }
+
+    private Cheque mapearParaGestion(ResultSet rs) throws SQLException {
+        Cheque cheque = new Cheque(rs.getLong("id_cheque"));
+        cheque.setNumero(rs.getLong("chq_numero"));
+        cheque.setFechaEmision(rs.getDate("chq_fecha_emision"));
+        cheque.setEstado(rs.getString("chq_estado"));
+        cheque.setaLaOrden(rs.getString("chq_a_la_orden"));
+        cheque.setObservacion(rs.getString("chq_observacion"));
+        cheque.setFechaPago(rs.getDate("chq_fecha_pago"));
+        cheque.setFechaVencimiento(rs.getDate("chq_fecha_venci"));
+        cheque.setFechaEntrega(rs.getDate("chq_fecha_entrega"));
+        cheque.setEntregadoA(rs.getString("chq_entregado_a"));
+        cheque.setTipoCheque(new TipoCheque(rs.getLong("id_tipo_cheque"),
+                rs.getString("tipo_cheque_descripcion")));
+
+        EntidadFinanciera banco = new EntidadFinanciera();
+        banco.setNombre(rs.getString("enti_finan_nombre"));
+        Cuenta cuenta = new Cuenta();
+        cuenta.setIdCuenta(rs.getLong("id_cuenta"));
+        cuenta.setNumero(rs.getString("cuenta_numero"));
+        cuenta.setEntidadFinanciera(banco);
+        Chequera chequera = new Chequera();
+        chequera.setIdChequera(rs.getLong("id_chequera"));
+        chequera.setSerie(rs.getLong("chequera_serie"));
+        chequera.setCuenta(cuenta);
+        cheque.setChequera(chequera);
+
+        long monto = rs.getLong("forma_pag_monto");
+        if (!rs.wasNull()) {
+            cheque.setMonto(monto);
+        }
+        long idOrden = rs.getLong("id_orden_pago");
+        if (!rs.wasNull()) {
+            OrdenPago orden = new OrdenPago();
+            orden.setIdOrdenPago(idOrden);
+            orden.setNumero(rs.getInt("ord_pag_numero"));
+            orden.setEstado(rs.getString("ord_pag_estado"));
+            cheque.setOrdenPago(orden);
+            cheque.setProveedor(rs.getString("prov_razon_social"));
+        }
+        return cheque;
+    }
+
+    /**
+     * Lee el estado del cheque bloqueando la fila hasta el commit (FOR UPDATE). Se usa antes de
+     * anularlo o de entregarlo, para que dos pantallas no decidan sobre el mismo cheque a la vez.
+     *
+     * @return el estado actual, o null si el cheque no existe
+     */
+    public String getEstadoBloqueado(Long idCheque) throws SQLException {
+        if (idCheque == null) {
+            return null;
+        }
+        String sql = "SELECT chq_estado FROM cheque WHERE id_cheque = ? FOR UPDATE";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, idCheque);
+            try (ResultSet rs = stmt.executeQuery()) {
+                return rs.next() ? rs.getString("chq_estado") : null;
+            }
         }
     }
 }

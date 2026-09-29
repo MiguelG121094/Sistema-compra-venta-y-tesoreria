@@ -33,6 +33,12 @@ public class Cheque implements java.io.Serializable {
     private Date fechaEntrega;
     private String entregadoA;
 
+    // Datos de la orden de pago que lo emitio, para la pantalla de gestion de cheques. El monto vive
+    // en forma_pago_detalle y la OP en su cabecera: se hidratan al listar, no se persisten aca.
+    private Long monto;
+    private OrdenPago ordenPago;
+    private String proveedor;
+
     public Cheque() {
     }
 
@@ -142,6 +148,30 @@ public class Cheque implements java.io.Serializable {
 
     public void setUsuario(Usuario usuario) {
         this.usuario = usuario;
+    }
+
+    public Long getMonto() {
+        return monto;
+    }
+
+    public void setMonto(Long monto) {
+        this.monto = monto;
+    }
+
+    public OrdenPago getOrdenPago() {
+        return ordenPago;
+    }
+
+    public void setOrdenPago(OrdenPago ordenPago) {
+        this.ordenPago = ordenPago;
+    }
+
+    public String getProveedor() {
+        return proveedor;
+    }
+
+    public void setProveedor(String proveedor) {
+        this.proveedor = proveedor;
     }
 
     public Date getFechaEntrega() {

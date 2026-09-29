@@ -103,4 +103,35 @@ public class FormaPagoDetalleDAO {
         }
         return lista;
     }
+
+    /**
+     * Orden de pago que uso este cheque como forma de pago, o null si ningun pago lo referencia.
+     * Es el camino inverso del listado: la gestion de cheques parte del cheque, no de la OP.
+     */
+    public Long getIdOrdenPagoPorCheque(Long idCheque) throws SQLException {
+        if (idCheque == null) {
+            return null;
+        }
+        String sql = "SELECT id_orden_pago FROM forma_pago_detalle WHERE id_cheque = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, idCheque);
+            try (ResultSet rs = stmt.executeQuery()) {
+                return rs.next() ? rs.getLong("id_orden_pago") : null;
+            }
+        }
+    }
+
+    /** Cuantas formas de pago tiene la orden: con mas de una, el cheque no se puede anular solo. */
+    public int contarPorOrden(Long idOrdenPago) throws SQLException {
+        if (idOrdenPago == null) {
+            return 0;
+        }
+        String sql = "SELECT COUNT(*) FROM forma_pago_detalle WHERE id_orden_pago = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, idOrdenPago);
+            try (ResultSet rs = stmt.executeQuery()) {
+                return rs.next() ? rs.getInt(1) : 0;
+            }
+        }
+    }
 }

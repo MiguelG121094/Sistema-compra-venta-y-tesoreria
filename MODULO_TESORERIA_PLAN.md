@@ -868,7 +868,26 @@ Cómo quedó:
 - La acción exige permiso de **edición** (`puedeEditar`), no de alta: registrar la entrega modifica una
   OP ya generada.
 
-**G3. Anulación de un cheque individual (mitad de 3.4).** Hoy los cheques sólo se anulan **en
+**G3. Anulación de un cheque individual (mitad de 3.4).** ✅ **Implementado el 2026-09-29.**
+`ChequeServlet` + `cheque.jsp` + `ChequeService`, registrados en `AuthorizationFilter` bajo `tesoreria`
+y enlazados desde los dos menús. La pantalla es de consulta: los cheques se siguen emitiendo desde la
+Orden de Pago. Dos acciones por fila, **Entrega** y **Anular**, ambas sólo sobre cheques que no estén
+`'Anulado'` ni `'Cobrado'`.
+
+**Lo que se decidió (2026-09-29), distinto de lo que proponía el párrafo original:** se anula **sin
+emitir reemplazo**, y la anulación **sólo se habilita cuando el cheque es la única forma de pago de su
+OP**. El motivo es que anular devuelve el saldo de las facturas, y con dos o más formas de pago nada dice
+qué factura pagó ese cheque: el detalle de la OP es por factura y el de las formas de pago es por medio.
+Con una sola forma de pago el monto coincide con el total y no hay ambigüedad; con varias, la pantalla
+lo rechaza y hay que anular la OP. Por eso la reversa **reusa `anularOrdenPagoCompleta`**, que ya devuelve
+el saldo de cada factura, anula el cheque, anula la cabecera y reactiva la provisión — o sea que anular el
+cheque anula también su OP. La plata vuelve al saldo de la cuenta y el movimiento desaparece de la
+conciliación solos, porque los dos se calculan excluyendo los cheques anulados.
+
+La entrega individual hace lo mismo que el botón de la OP pero de a un cheque, y es re-ejecutable para
+corregir fecha o receptor. El **N° de recibo se sigue cargando desde la OP**: es de la orden, no del cheque.
+
+> Texto original del pendiente: Hoy los cheques sólo se anulan **en
 cascada**, cuando se anula la OP entera (`anularOrdenPagoCompleta`, paso 3). El caso real —cheque
 mal impreso, extraviado o rechazado, **sin** querer deshacer el pago— no tiene camino. Requiere
 decidir qué pasa con la forma de pago que lo referencia: lo natural es anular ese cheque y emitir
@@ -992,8 +1011,8 @@ PDF para los informes que realmente se impriman y archiven.
 **G. Gestión de cheques** *(cierra 3.3 y completa 3.4)*
 - [x] ✅ **ABM de chequeras** (G1) — `ChequeraServlet` + `chequera.jsp` (2026-08-31), con control de solapamiento, de rango contra lo emitido y del consumo de la chequera
 - [x] ✅ **Registrar entrega al proveedor** (G2) — implementado el 2026-08-17 con estado `'Entregado'` + `chq_fecha_entrega` / `chq_entregado_a`; se registra desde la OP y arrastra el N° de recibo
-- [ ] **Anular un cheque individual** (G3) — hoy sólo se anulan en cascada al anular la OP
-- [ ] `ChequeServlet` + `cheque.jsp` + `ChequeService`
+- [x] ✅ **Anular un cheque individual** (G3) — implementado el 2026-09-29, sin reemplazo y sólo cuando el cheque es la única forma de pago de su OP (reusa la reversa de la OP)
+- [x] ✅ `ChequeServlet` + `cheque.jsp` + `ChequeService` (2026-09-29), con la entrega individual además de la anulación
 
 **H. Informes** *(cierra 3.11)*
 - [ ] Definir **qué informes** y **en qué formato** (JSP imprimible / CSV / PDF) — ver §H

@@ -117,6 +117,7 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                             <a class="nav-link text-white py-1" href="CuentaServlet?menu=Cuenta&accion=Listar">Cuentas Bancarias</a>
                                             <a class="nav-link text-white py-1" href="ChequeraServlet?menu=Chequera&accion=Listar">Chequeras</a>
                                             <a class="nav-link text-white py-1" href="FondoFijoServlet?menu=FondoFijo&accion=Listar">Fondo Fijo</a>
+                                            <a class="nav-link text-white py-1" href="ChequeServlet?menu=Cheque&accion=Listar">Cheques</a>
                                         </nav>
                                     </div>
                                 </div>

@@ -123,6 +123,7 @@ usuario inicio sesion, se debe agregar esta validacon en cada una de las vistas 
                             <a class="nav-link ${menuActivo eq 'movimientoCredito' ? 'active' : ''}" href="CreditoServlet?menu=MovimientoBancario&accion=Listar">Cargar otros créditos</a>
                             <a class="nav-link" href="FondoFijoRendicionServlet?menu=RendicionFondoFijo&accion=ListarModal">Rendición de Fondo Fijo</a>
                             <a class="nav-link" href="ConciliacionBancariaServlet?menu=ConciliacionBancaria&accion=ListarModal">Conciliación Bancaria</a>
+                            <a class="nav-link" href="ChequeServlet?menu=Cheque&accion=Listar">Cheques</a>
                         </nav>
                     </div>
 
