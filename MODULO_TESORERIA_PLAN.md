@@ -467,7 +467,8 @@ Decisiones tomadas al implementarlo:
 - **Al agregar** una forma se bloquea que Σ **supere** el total (el Service exige igualdad exacta al
   generar; así el error aparece antes y no al final).
 - **`ord_pag_nro_recibo`** es `NOT NULL` pero el recibo lo da el proveedor y no siempre existe
-  (compras al contado) → **0 = sin recibo**.
+  (compras al contado) → **0 = sin recibo**. Desde la migración a `VARCHAR` el marcador es la cadena
+  vacía, y desde el 2026-09-29 se carga con su propio botón al final del formulario de la OP.
 - **`forma_pag_estado`** nace en `'Pendiente'` = pendiente de conciliación bancaria (§F la cierra).
 - Cambiar de provisión o generar/anular **invalida el documento en sesión** (se limpia el token).
 
@@ -488,7 +489,7 @@ Decisiones tomadas al implementarlo:
 > calcados de Cuentas Bancarias, con control de solapamiento de rangos y del consumo de la chequera.
 >
 > _Historial:_ **Entrega de cheques (3.3) COMPLETA** (2026-08-17) — columnas `chq_fecha_entrega` y
-> `chq_entregado_a`, estado `'Entregado'`, modal en la OP y el N° de recibo cargado en ese momento;
+> `chq_entregado_a`, estado `'Entregado'` y modal en la OP (el N° de recibo se separó el 2026-09-29);
 > el detalle está en §G2. La UI del modal de formas de pago se pulió el 2026-08-27/28 (confirmación
 > para eliminar una línea y campos con etiqueta flotante).
 >
@@ -860,9 +861,11 @@ Cómo quedó:
 - `OrdenPagoService.registrarEntregaCheques` corre todo en una transacción y rechaza la entrega sobre
   una OP anulada. Es **re-ejecutable**: volver a guardar corrige una entrega mal cargada en vez de
   fallar.
-- El **N° de recibo se carga recién acá**. Lo emite el proveedor al cobrar, así que al generar la OP
-  todavía no existe (`ord_pag_nro_recibo` nace en 0 y el campo de la pantalla queda readonly). Entrega
-  y recibo son el mismo acto administrativo, por eso se guardan en la misma transacción.
+- El **N° de recibo ya no se carga acá** (cambiado el 2026-09-29). Se cargaba en este modal porque lo
+  emite el proveedor al cobrar, pero eso dejaba afuera a las OP pagadas por transferencia: el proveedor
+  también da recibo y no hay ninguna entrega donde anotarlo. Hoy es un campo de texto editable al final
+  del formulario de la OP, con su propio botón (acción `GuardarRecibo` →
+  `OrdenPagoService.actualizarNumeroRecibo`), que se carga sobre una orden ya generada.
 - El modal recibe **los cheques que se marcan**, no asume que sean todos: una OP puede tener varios y
   los diferidos se retiran en otro momento.
 - La acción exige permiso de **edición** (`puedeEditar`), no de alta: registrar la entrega modifica una
@@ -903,7 +906,22 @@ que es el comportamiento bancario correcto.
 
 ---
 
-### H. Informes *(pendiente — sin planificar)*
+### H. Informes *(en curso — el Libro de Compras fijó el molde)*
+
+> **Actualización 2026-09-24/29.** Se implementó el primero, el **Libro de Compras** (Ley 125/91,
+> `LibroIvaCompraServlet` + `libroIvaCompra.jsp`), tomado de los ejemplos `Images/Pre-Libro-compra.jpg`
+> y `Images/Libro-compra-informe.jpg`. Con eso quedaron resueltos los tres puntos de abajo:
+>
+> - **Formato:** camino (a) + (b), sin librería nueva. Una JSP con la grilla en DataTables y los botones
+>   de exportar que ya usa el resto del sistema (copiar, Excel, PDF, imprimir). Nada de JasperReports.
+> - **Permisos:** cada informe cuelga del módulo al que pertenece, no hay módulo "informes". El Libro de
+>   Compras va bajo `compra`.
+> - **Estructura:** servlet de sólo lectura sin Session+Token, filtros arriba, grilla abajo y los totales
+>   calculados en el Service. Ese es el molde para los que faltan.
+>
+> **Faltan:** el **Libro de Ventas** (ejemplos `Images/Pre-Libro-Venta.jpg` y `Images/Libro-venta-informe.jpg`,
+> depende de que exista el módulo de Ventas) y el **resumen de conciliación**
+> (`Images/resumen_conciliacion_ejemplo.jpg`). Los demás candidatos de la lista siguen sin definirse.
 
 > Sección agregada el 2026-08-13. El requerimiento **3.11 (generar informes)** no figuraba en
 > ningún documento del proyecto.
@@ -1010,14 +1028,16 @@ PDF para los informes que realmente se impriman y archiven.
 
 **G. Gestión de cheques** *(cierra 3.3 y completa 3.4)*
 - [x] ✅ **ABM de chequeras** (G1) — `ChequeraServlet` + `chequera.jsp` (2026-08-31), con control de solapamiento, de rango contra lo emitido y del consumo de la chequera
-- [x] ✅ **Registrar entrega al proveedor** (G2) — implementado el 2026-08-17 con estado `'Entregado'` + `chq_fecha_entrega` / `chq_entregado_a`; se registra desde la OP y arrastra el N° de recibo
+- [x] ✅ **Registrar entrega al proveedor** (G2) — implementado el 2026-08-17 con estado `'Entregado'` + `chq_fecha_entrega` / `chq_entregado_a`; se registra desde la OP, y desde el 2026-09-29 también de a un cheque desde la pantalla de Cheques
 - [x] ✅ **Anular un cheque individual** (G3) — implementado el 2026-09-29, sin reemplazo y sólo cuando el cheque es la única forma de pago de su OP (reusa la reversa de la OP)
 - [x] ✅ `ChequeServlet` + `cheque.jsp` + `ChequeService` (2026-09-29), con la entrega individual además de la anulación
 
 **H. Informes** *(cierra 3.11)*
-- [ ] Definir **qué informes** y **en qué formato** (JSP imprimible / CSV / PDF) — ver §H
-- [ ] Decidir si son un módulo propio de permisos o cuelgan de `compra`/`tesoreria`
-- [ ] Implementar
+- [x] ✅ Definido **el formato**: JSP + grilla de DataTables con sus botones de exportar, sin librería de reportes (2026-09-24)
+- [x] ✅ Decidido: **cuelgan del módulo al que pertenecen**, no hay módulo de permisos propio
+- [x] ✅ **Libro de Compras** implementado (2026-09-24/29)
+- [ ] **Resumen de conciliación** con el formato de `Images/resumen_conciliacion_ejemplo.jpg`
+- [ ] **Libro de Ventas** (depende del módulo de Ventas)
 
 **Transversal**
 - [ ] Actualizar los links restantes de "Módulo Tesorería" en `menuLateral.jsp` (ya apuntan a su servlet Cuentas Bancarias, Chequeras, Provisión, Orden de Pago, Débitos, Créditos, Fondo Fijo, Rendición y Conciliación; quedan 6 `.html` placeholder del tema)

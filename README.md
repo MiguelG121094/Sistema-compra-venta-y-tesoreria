@@ -233,8 +233,9 @@ El sistema **no implementa contabilidad** (asientos, plan de cuentas, balances).
            │ Se emite el cheque y el proveedor lo retira
            ▼
 ┌─────────────────────┐
-│ ENTREGA DEL CHEQUE  │  ← Fecha, quién retiró y N° de recibo
-│    (Entregado)      │     Los diferidos se retiran después
+│ ENTREGA DEL CHEQUE  │  ← Fecha y quién retiró (el N° de recibo se carga
+│    (Entregado)      │     aparte, en la OP: también lo dan por transferencia)
+│                     │     Los diferidos se retiran después
 └──────────┬──────────┘
            │ Se ejecuta el pago
            ▼
@@ -368,12 +369,13 @@ Sistema-compra-venta-y-tesoreria/
 | Débitos / Créditos bancarios | ✅ | ✅ | ✅ | ✅ **Completo** — `MovimientoBancarioServlet` + `movimientoBancario.jsp`, una vista por tipo; se anulan, no se borran |
 | Depósitos bancarios (boletas) | ✅ | ✅ | ✅ | ✅ **Completo** — se cargan como un crédito, con la boleta en el comprobante; `id_cobro` queda vacío hasta que exista Ventas |
 | Chequeras (ABM) | ✅ | ✅ | ✅ | ✅ **Completo** — `ChequeraServlet` + `chequera.jsp`; valida solapamiento de rangos y avisa el consumo de la chequera |
-| Anulación individual de cheques | ✅ | ⚠️ | ❌ | Pendiente — hoy sólo se anulan en cascada al anular la orden de pago (ver `MODULO_TESORERIA_PLAN.md` §G3) |
-| Informes | — | — | — | Pendiente — sin planificar (ver `MODULO_TESORERIA_PLAN.md` §H) |
+| Gestión de cheques (anulación individual y entrega) | ✅ | ✅ | ✅ | ✅ **Completo** — `ChequeServlet` + `cheque.jsp`; se anula sin reemplazo y sólo si el cheque es la única forma de pago de su OP, reusando la reversa de la orden (ver `MODULO_TESORERIA_PLAN.md` §G3) |
+| Informes | ⚠️ | ⚠️ | ⚠️ | En curso — hecho el **Libro de Compras** (`LibroIvaCompraServlet`); faltan el Libro de Ventas y el resumen de conciliación (ver `MODULO_TESORERIA_PLAN.md` §H) |
 | Fondo Fijo + Rendición | ✅ | ✅ | ✅ | ✅ **Completo** — ABM en `FondoFijoServlet` y rendición en `FondoFijoRendicionServlet`; la rendición marca las cuentas y no toca el saldo |
-| Conciliación Bancaria | ✅ | ❌ | ❌ | Pendiente (objetivo final del módulo) |
+| Conciliación Bancaria | ✅ | ✅ | ✅ | ✅ **Completo** — `ConciliacionBancariaServlet` + `conciliacionBancaria.jsp`; se concilia la forma de pago y lo no cobrado se arrastra. Probada end-to-end (2026-09-09) |
+| Saldo de cuentas bancarias | ✅ | ✅ | ✅ | ✅ **Completo** — no se guarda, se calcula desde la última conciliación; la OP bloquea el pago si la cuenta queda en negativo |
 | Timbrado | ✅ | ✅ | ✅ | Backend listo |
-| Libro IVA Compra | ✅ | ✅ | ✅ | Backend listo (integrado en Factura Compra) |
+| Libro IVA Compra | ✅ | ✅ | ✅ | ✅ **Completo** — backend integrado en Factura Compra, más el informe `LibroIvaCompraServlet` + `libroIvaCompra.jsp` (Ley 125/91, con exportación) |
 
 ### Módulo de Seguridad
 

@@ -222,8 +222,7 @@ Faltan crear los DAOs para las siguientes entidades:
 [x] OrdenPagoDetalleDAO ✅ (N facturas por OP, FK compuesta a cuenta_pagar, 2026-07)
 [ ] TipoTarjetaDAO
 [ ] TarjetaDAO
-[ ] ConciliacionBancariaDAO
-[ ] ConciliacionBancariaDetalleDAO
+[x] ConciliacionBancariaDAO ✅ (cabecera + detalle en el mismo DAO, con el arrastre de lo no conciliado, 2026-09-05)
 [x] DebitoDAO ✅ (2026-08-31)
 [x] CreditoDAO ✅ (2026-08-31)
 [ ] RecaudacionDepositarDAO
@@ -251,10 +250,11 @@ Faltan crear los servicios REST para las nuevas entidades:
 [x] CuentaService ✅ (2026-07)
 [x] TipoCuentaService · FormaPagoCabeceraService · TipoChequeService · ChequeraService ✅ (combos de tesorería, 2026-07)
 [x] ProvisionCuentaPagarService · OrdenPagoService ✅ (transaccionales, 2026-07)
-[ ] ChequeService (hoy `ChequeDAO` se usa dentro de la transacción de la OP; no hace falta un Service propio hasta que haya un ABM de cheques)
+[x] ChequeService ✅ (2026-09-29 — anulación individual y entrega; la emisión sigue dentro de la transacción de la OP)
 [ ] AjusteStockService
-[ ] ConciliacionBancariaService
-[ ] FondoFijoService
+[x] ConciliacionBancariaService ✅ (grabar, anular y los saldos de la cuenta, 2026-09-05/08)
+[x] FondoFijoService · FondoFijoRendicionService ✅ (2026-09-01/03)
+[x] LibroIvaCompraService ✅ (informe del Libro de Compras, 2026-09-24)
 [ ] ArqueoCajaService
 ... (y demás servicios)
 ```
@@ -266,12 +266,13 @@ Faltan crear los controladores para las nuevas funcionalidades:
 [x] CuentaServlet ✅ (cuentas bancarias, 2026-07 — reemplaza el "CuentaBancariaServlet" planeado)
 [x] ProvisionCuentaPagarServlet ✅ (2026-07)
 [x] OrdenPagoServlet ✅ (2026-07 — Session+Token, pendiente de prueba end-to-end)
-[ ] ChequeServlet (ABM de cheques/chequeras; hoy los cheques se emiten desde la Orden de Pago)
+[x] ChequeServlet ✅ (2026-09-29 — gestión de cheques emitidos: anulación individual y entrega. Los cheques se siguen emitiendo desde la Orden de Pago)
 [ ] DebitoCreditoServlet (movimientos bancarios)
 [ ] StockServlet
 [ ] AjusteStockServlet
-[ ] ConciliacionBancariaServlet
-[ ] FondoFijoServlet
+[x] ConciliacionBancariaServlet ✅ (Session+Token, 2026-09-05)
+[x] FondoFijoServlet · FondoFijoRendicionServlet ✅ (2026-09-01/03)
+[x] LibroIvaCompraServlet ✅ (informe Libro de Compras, 2026-09-24)
 [ ] ArqueoCajaServlet
 ... (y demás servlets)
 ```
@@ -285,13 +286,14 @@ Faltan crear las vistas para las nuevas funcionalidades:
 [x] cuenta.jsp              ✅ (cuentas bancarias, 2026-07 — reemplaza el "cuentaBancaria.jsp" planeado)
 [x] provision.jsp           ✅ (provisión de cuenta a pagar, 2026-07)
 [x] ordenPago.jsp           ✅ (orden de pago con carrito de formas de pago, 2026-07)
-[ ] cheque.jsp
+[x] cheque.jsp              ✅ (grilla de cheques con Entrega y Anular, 2026-09-29)
 [ ] stock.jsp
 [ ] ajusteStock.jsp
-[ ] conciliacionBancaria.jsp
-[ ] fondoFijo.jsp
+[x] conciliacionBancaria.jsp ✅ (2026-09-05, con el formato de `Images/conciliacion_ejemplo.jpg`)
+[x] fondoFijo.jsp · fondoFijoRendicion.jsp ✅ (2026-09-01/03)
 [ ] arqueoCaja.jsp
-[ ] libroIva.jsp
+[x] libroIvaCompra.jsp ✅ (informe del Libro de Compras, 2026-09-24)
+[ ] libroIvaVenta.jsp
 ... (y demás vistas)
 ```
 
@@ -311,11 +313,14 @@ Faltan crear las vistas para las nuevas funcionalidades:
 - [x] Provisión de Cuenta a Pagar ✅ (2026-07 — reserva las cuentas y netea el saldo a favor de las NC; ver plan §B)
 - [x] Orden de Pago ✅ (2026-07 — N formas de pago mixtas transferencia/cheque multi-cuenta, descuenta `cta_pag_saldo`, consume la provisión y anula con reversa total; ver plan §C). **Probada end-to-end el 2026-08-17.**
 - [x] Emisión de Cheques ✅ (2026-07 — se emiten desde la Orden de Pago, con N° tomado del rango de la chequera)
-- [x] Entrega de cheques al proveedor ✅ (2026-08-17 — se registra desde la Orden de Pago: estado `'Entregado'`, `chq_fecha_entrega`, `chq_entregado_a` y el N° de recibo, todo en una transacción; ver plan §G2)
+- [x] Entrega de cheques al proveedor ✅ (2026-08-17 — se registra desde la Orden de Pago: estado `'Entregado'`, `chq_fecha_entrega` y `chq_entregado_a`, en una transacción; ver plan §G2). Desde el 2026-09-29 también se registra de a un cheque desde la pantalla de Cheques
+- [x] Gestión de cheques ✅ (2026-09-29 — `ChequeServlet` + `cheque.jsp` + `ChequeService`: **anulación individual** y entrega. Se anula sin reemplazo y sólo si el cheque es la única forma de pago de su OP; la reversa reusa `anularOrdenPagoCompleta`, así que anular el cheque anula su orden. Ver plan §G3)
 - [x] Débitos / Créditos bancarios ✅ (2026-08-31 — `MovimientoBancarioServlet` + `movimientoBancario.jsp`, una vista parametrizada por tipo; cierra también el registro de depósitos, porque la boleta es una fila de `creditos`; ver plan §D)
 - [x] Gestión de Chequeras ✅ (2026-08-31 — `ChequeraServlet` + `chequera.jsp`, calcados de Cuentas Bancarias; validan solapamiento de rangos y muestran el consumo de la chequera; ver plan §G1)
 - [x] Gestión de Fondo Fijo + Rendición ✅ (2026-09-01/03 — `FondoFijoServlet` + `fondoFijo.jsp` para el ABM y `FondoFijoRendicionServlet` + `fondoFijoRendicion.jsp` para la rendición; cierra 3.5 y 3.6, ver plan §E)
-- [ ] Conciliación Bancaria (plan §F — el objetivo final)
+- [x] Conciliación Bancaria ✅ (2026-09-05, probada end-to-end el 2026-09-09 — `ConciliacionBancariaServlet` + `conciliacionBancaria.jsp`; se concilia la forma de pago, no la OP, y lo no cobrado se arrastra al período siguiente. Ver plan §F y `CONCILIACION_BANCARIA_PLAN.md`)
+- [x] Saldo de cuentas bancarias ✅ (2026-09-08 — no se guarda, se calcula desde la última conciliación; la OP bloquea el pago si la cuenta queda en negativo. Ver plan §F.1)
+- [x] Fondo Fijo y su rendición ✅ (2026-09-01/04 — incluye el circuito completo hasta la reposición, plan §E.1)
 - [ ] Recepción de Cheques, Arqueo de Caja, Recaudaciones a Depositar *(lado cobros — requiere Ventas; plan §9)*
 - [ ] UI de Cuenta a Pagar (backend ya integrado con Factura Compra)
 
@@ -328,7 +333,8 @@ Faltan crear las vistas para las nuevas funcionalidades:
 #### Soporte Fiscal (no hay módulo de contabilidad)
 - [x] Libro IVA Compras (backend integrado en Factura Compra) ✅
 - [ ] Libro IVA Ventas
-- [ ] UI consulta Libro IVA
+- [x] UI consulta Libro IVA Compra ✅ (2026-09-24/29 — `LibroIvaCompraServlet` + `libroIvaCompra.jsp`: informe con período, filtro por comprobante, grilla con el formato del Libro de Compras Ley 125/91 y exportación de DataTables)
+- [ ] UI consulta Libro IVA Venta
 - _Fuera de alcance: asientos contables, plan de cuentas, balances y estados financieros._
 
 #### Seguridad
@@ -388,6 +394,64 @@ Todas las entidades siguen el patrón POJO:
 ---
 
 ## Historial de Cambios
+
+### 2026-09-22 al 29 — Libro de Compras, gestión de cheques y arreglos de fondo fijo
+
+**Informe de Libro de Compras (primer informe del §H).** `LibroIvaCompraServlet` (sólo lectura, sin
+Session+Token) + `libroIvaCompra.jsp`: período, filtro por comprobante (Factura / NC / ND / Todos), grilla
+con el formato del ejemplo `Images/Libro-compra-informe.jpg` y los botones de exportar de DataTables. Sin
+agrupar y con la razón social y el RUC en duro en la JSP, porque no hay tabla de empresa. El número, el
+timbrado y el proveedor no están en `libro_iva_compra`: se traen con LEFT JOIN a las tres cabeceras y Java
+elige cuál corresponde según el origen, porque una nota lleva su propio número y no el de la factura que
+corrige. De paso se corrigió que `insertarLibroIvaCompra` no grababa `libro_iva_comp_origen` (las notas sí):
+las filas viejas quedaron en null y se backfillearon a `'FACTURA'`.
+
+**Gestión de cheques (§G3, cierra §G entera).** `ChequeServlet` + `cheque.jsp` + `ChequeService`. Se anula
+**sin reemplazo** y **sólo si el cheque es la única forma de pago de su OP**: con varias formas nada dice
+qué factura pagó ese cheque, porque el detalle de la OP es por factura y el de las formas de pago es por
+medio. La reversa reusa `anularOrdenPagoCompleta`, así que anular el cheque anula también su orden; la
+plata vuelve al saldo de la cuenta y el movimiento sale de la conciliación solos, porque los dos excluyen
+los anulados. La entrega individual hace lo mismo que el botón de la OP pero de a un cheque.
+
+**El N° de recibo se separó de la entrega.** Salió del modal de entrega y del encabezado de la OP, y quedó
+al final del formulario como campo de texto editable (`maxlength="30"`) con su botón Guardar recibo
+(acción `GuardarRecibo`). El motivo: el proveedor también da recibo cuando el pago fue por transferencia,
+y ahí no hay ninguna entrega donde cargarlo.
+
+**Arreglos.** Las facturas `'fondoFijo'` dejaron de aparecer en la provisión por proveedor: antes de
+rendirse la cuenta está `'Pendiente'`, así que se podían pagar al comercio que ya había cobrado del
+responsable. La guarda `tieneOrdenPagoActivaPorProvision` se movió del servlet al Service, dentro de la
+transacción y con la fila bloqueada. Las consultas de `ConciliacionBancariaService` dejaron de tragarse el
+`SQLException` devolviendo null, que hacía que un error de base se viera como "no hay movimientos".
+
+**Menú principal.** Las cuatro tarjetas de `MenuPrincipal.jsp` despliegan sus páginas; las de Venta y Stock
+quedaron con enlaces `#` hasta que existan las pantallas.
+
+### 2026-09-04 al 09 — Conciliación bancaria y saldo de cuentas
+
+Cierra §F del plan de tesorería y con él el requerimiento 3.10, el objetivo final del módulo. El análisis
+y las decisiones están en `CONCILIACION_BANCARIA_PLAN.md` y el paso a paso de la pantalla en
+`CONCILIACION_BANCARIA_FLUJO.md`.
+
+Lo esencial: **se concilia la forma de pago, no la orden de pago**, porque una OP puede pagarse con una
+transferencia de un banco y cheques de otro. Hay cuatro tipos de movimiento —`Cred`, `Deb`, `Transf` y
+`Ch`—; los tres primeros nacen tildados y el cheque nace destildado y **se arrastra** a los períodos
+siguientes hasta que el banco lo cobra. Lo pendiente se detecta con un `NOT EXISTS` contra el detalle de
+las conciliaciones no anuladas, no por el estado de la forma de pago, así el arrastre no depende de que un
+UPDATE haya salido bien. El saldo inicial se **encadena** del saldo final anterior y se permite grabar con
+diferencia contra el extracto.
+
+**Saldo de cuentas bancarias (§F.1).** La cuenta no guarda saldo: se calcula como el saldo final de la
+última conciliación vigente más los movimientos posteriores. `obtenerSaldos` devuelve el saldo según libro
+y el saldo en el banco (libro más los cheques en tránsito). Con eso, `OrdenPagoService` **bloquea el pago
+si la cuenta queda en negativo**, validando por cuenta y con la fila bloqueada dentro de la transacción.
+
+⚠️ Requirió dos ALTER en `conciliacion_bancaria`: `conc_bancaria_estado` y `conc_bancaria_tipo_cambio`.
+
+**Fondo fijo: circuito completo (§E.1).** La factura se carga con el comercio real y la reposición se le
+paga al responsable; el puente es una provisión cuya cabecera apunta al responsable y cuyo detalle a las
+facturas de los comercios. Se agregó `provision_cuenta_pagar.id_fondofijo_rendicion` y el modal "Buscar
+Rendición de Fondo Fijo" en la provisión.
 
 ### 2026-09-01 al 03 — Fondo fijo: ABM y rendición
 
@@ -488,6 +552,11 @@ se retiran en otro momento) y que aparece cuando alguna forma de pago tiene cheq
 El **N° de recibo se movió a este momento**: lo emite el proveedor al cobrar, así que al generar la OP
 todavía no existe. La cabecera nace en 0, el campo queda readonly y se completa al registrar la entrega,
 en la misma transacción, porque entrega y recibo son el mismo acto administrativo.
+
+> ⚠️ **Revertido el 2026-09-29.** El recibo dejó de cargarse en la entrega: también lo dan cuando el pago
+> fue por transferencia, y ahí no hay ninguna entrega donde cargarlo. Hoy es un campo de texto editable al
+> final del formulario de la OP, que se guarda con su propio botón sobre una orden ya generada (acción
+> `GuardarRecibo`). Ver la entrada del 2026-09-29.
 
 - `ChequeDAO.registrarEntrega` excluye los anulados en el `WHERE` en vez de pisarles el estado, para que
   `'Anulado'` gane si la OP se anula después de la entrega.
@@ -860,12 +929,12 @@ Gestión financiera completa: cuentas bancarias, cheques, cobros, pagos, caja, f
     fecha no movieron stock.
 11. ~~**Subir el esquema con `creditos.id_cobro` nullable.**~~ ✅ Subido el 2026-08-17; ya se puede
     registrar un depósito bancario sin módulo de Cobros. Ver `MODULO_TESORERIA_PLAN.md` §D.
-12. **Anular un cheque individual** (`ChequeServlet` + `cheque.jsp`): hoy sólo se anulan en cascada al
-    anular la orden de pago, y el caso real —cheque mal impreso, extraviado o rechazado, sin deshacer
-    el pago— no tiene camino. Es lo único que queda de §G: la **entrega al proveedor** se implementó el
-    2026-08-17 y el **ABM de chequeras** el 2026-08-31. Ver `MODULO_TESORERIA_PLAN.md` §G3.
-13. **Informes.** No hay nada implementado ni planificado: sin código, sin librería en el `pom.xml` y
-    sin definición de qué informes ni en qué formato. Ver `MODULO_TESORERIA_PLAN.md` §H.
+12. ~~**Anular un cheque individual**~~ ✅ Implementado el 2026-09-29 (`ChequeServlet` + `cheque.jsp` +
+    `ChequeService`). Con esto §G queda cerrada entera. Ver `MODULO_TESORERIA_PLAN.md` §G3.
+13. **Informes.** Arrancaron el 2026-09-24 con el **Libro de Compras**, que fijó el molde: servlet de sólo
+    lectura, filtros, grilla y exportación de DataTables, sin librería de reportes en el `pom.xml`. Quedan
+    el **Libro de Ventas** (ejemplos en `Images/Pre-Libro-Venta.jpg` y `Libro-venta-informe.jpg`) y el
+    **resumen de conciliación** (`Images/resumen_conciliacion_ejemplo.jpg`). Ver `MODULO_TESORERIA_PLAN.md` §H.
 14. ~~**Probar la Orden de Pago de punta a punta.**~~ ✅ Probada el 2026-08-17: el circuito corre y la
     provisión pasa a `'Procesada'`. También se confirmó el nombre `forma_pag_tipo_cambio` contra
     Power Architect.
