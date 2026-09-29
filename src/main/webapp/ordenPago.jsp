@@ -197,14 +197,14 @@
                                     </div>
                                     <!-- Fila 2 -->
                                     <div class="row mb-3">
-                                        <div class="col-md-3">
+                                        <div class="col-md-2">
                                             <div class="form-floating mb-3 mb-md-0">
                                                 <input class="form-control" id="provisionNro" type="text" placeholder="Provisión Nro" readonly
                                                        value="${ordenPago.idProvisionCtaPagar}" />
                                                 <label for="provisionNro">Provisión Nro</label>
                                             </div>
                                         </div>
-                                        <div class="col-md-4">
+                                        <div class="col-md-3">
                                             <div class="form-floating mb-3 mb-md-0">
                                                 <select class="form-control" id="tipoPago" name="tipoPago" onchange="cambiarTipoPago();"
                                                         <c:if test="${empty token or not esNuevo}">disabled</c:if>>
@@ -219,12 +219,29 @@
                                                 </label>
                                             </div>
                                         </div>
-                                        <div class="col-md-5">
+                                        <div class="col-md-4">
                                             <div class="form-floating mb-3 mb-md-0">
                                                 <input class="form-control" id="razonSocial" type="text" placeholder="Razón Social" readonly
                                                        value="${ordenPago.proveedor.razonSocial}" />
                                                 <label for="razonSocial">Razón Social</label>
                                             </div>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <div class="form-floating mb-3 mb-md-0">
+                                                <input class="form-control" id="recibo" name="recibo" type="text" maxlength="30"
+                                                       placeholder="Recibo Nro" value="${ordenPago.numeroRecibo}"
+                                                       <c:if test="${empty token or esNuevo or ordenPago.estado eq 'Anulado'}">readonly</c:if> />
+                                                <label for="recibo">
+                                                    Recibo Nro
+                                                    <span class="info-icon" tabindex="0" data-bs-toggle="tooltip" data-bs-placement="top"
+                                                          title="Nro del recibo que emite el proveedor al cobrar. Se carga cuando lo entrega, sobre una orden ya generada.">&#9432;</span>
+                                                </label>
+                                            </div>
+                                        </div>
+                                                <div class="col-md-1 d-flex align-items-center">
+                                            <c:if test="${not empty token and not esNuevo and ordenPago.estado ne 'Anulado' and puedeEditar}">
+                                                <button type="button" class="btn btn-primary" onclick="guardarRecibo();">Guardar recibo</button>
+                                            </c:if>
                                         </div>
                                     </div>
                                     <!-- FORMAS DE PAGO (botón -> modal) -->
@@ -469,28 +486,6 @@
                                         <div class="col-md-6 text-end">
                                             <h5>Importe Total a Pagar: <fmt:formatNumber value="${totalOrden}" pattern="#,##0"/></h5>
                                             <small>Suma de formas: <fmt:formatNumber value="${sumaFormas}" pattern="#,##0"/></small>
-                                        </div>
-                                    </div>
-
-                                    <%-- Recibo del proveedor: va al final y se carga sobre una OP ya generada,
-                                         buscandola desde la pantalla. Es texto porque lo emite un tercero. --%>
-                                    <div class="row mb-3">
-                                        <div class="col-md-3">
-                                            <div class="form-floating mb-3 mb-md-0">
-                                                <input class="form-control" id="recibo" name="recibo" type="text" maxlength="30"
-                                                       placeholder="Recibo Nro" value="${ordenPago.numeroRecibo}"
-                                                       <c:if test="${empty token or esNuevo or ordenPago.estado eq 'Anulado'}">readonly</c:if> />
-                                                <label for="recibo">
-                                                    Recibo Nro
-                                                    <span class="info-icon" tabindex="0" data-bs-toggle="tooltip" data-bs-placement="top"
-                                                          title="Nro del recibo que emite el proveedor al cobrar. Se carga cuando lo entrega, sobre una orden ya generada.">&#9432;</span>
-                                                </label>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-3 d-flex align-items-center">
-                                            <c:if test="${not empty token and not esNuevo and ordenPago.estado ne 'Anulado' and puedeEditar}">
-                                                <button type="button" class="btn btn-primary" onclick="guardarRecibo();">Guardar recibo</button>
-                                            </c:if>
                                         </div>
                                     </div>
                                 </div>
