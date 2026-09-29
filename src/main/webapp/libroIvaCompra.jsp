@@ -36,19 +36,19 @@
                         <!-- Título -->
                         <div style="text-align: center; background-color: #dadada; border-radius: 10px; border: 2px solid black; margin-top: 20px;">
                             <span style="height: 100%; width: 100%; background-color: yellow">
-                                <h1 style="text-align: center"><strong>LIBRO DE COMPRAS LEY 125/91</strong></h1></span>
+                                <h1 style="text-align: center"><strong>LIBRO DE COMPRAS</strong></h1></span>
                         </div>
                         <div style="border-bottom: 1px solid black; width: 100%; margin: 20px 0;"></div>
 
-                        <!-- Datos de la empresa: van en duro hasta que exista una tabla de empresa -->
-                        <div class="d-flex justify-content-between mb-3">
-                            <div><strong>INVERSIONES ALCAR S.A.</strong></div>
-                            <div><strong>RUC:</strong> 80104885-0</div>
+                        <!-- Datos de la empresa: analizar si se agrega tabla empresa para obtener los datos de ahi -->
+<!--                        <div class="d-flex justify-content-between mb-3">
+                            <div><strong>DESPENSA GYG</strong></div>
+                            <div><strong>RUC:</strong> 123456-0</div>
                             <div>
                                 <strong>DESDE:</strong> <fmt:formatDate value="${desdeFecha}" pattern="dd/MM/yyyy"/>
                                 <strong>HASTA:</strong> <fmt:formatDate value="${hastaFecha}" pattern="dd/MM/yyyy"/>
                             </div>
-                        </div>
+                        </div>-->
 
                         <!-- Filtros -->
                         <div class="card mb-4">
@@ -134,7 +134,7 @@
                                     </tbody>
                                     <tfoot>
                                         <tr>
-                                            <th colspan="6" class="text-end">T O T A L   G E N E R A L</th>
+                                            <th colspan="6" class="text-end">TOTAL   GENERAL</th>
                                             <th class="text-end"><fmt:formatNumber value="${totales.gravada10}" pattern="#,##0"/></th>
                                             <th class="text-end"><fmt:formatNumber value="${totales.iva10}" pattern="#,##0"/></th>
                                             <th class="text-end"><fmt:formatNumber value="${totales.gravada5}" pattern="#,##0"/></th>
