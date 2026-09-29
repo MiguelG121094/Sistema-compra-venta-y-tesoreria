@@ -167,20 +167,9 @@
                                                 <label for="nroOP">Nro de OP</label>
                                             </div>
                                         </div>
-                                        <%-- Recibo SIEMPRE readonly: lo emite el proveedor cuando cobra, asi que
-                                             al generar la OP todavia no existe (nace en 0). Se carga desde el modal
-                                             de "Registrar entrega de cheques". --%>
                                         <div class="col-md-2">
                                             <div class="form-floating mb-3 mb-md-0">
-                                                <input class="form-control" id="recibo" name="recibo" type="number" min="0" placeholder="Recibo Nro"
-                                                       title="Lo carga el proveedor al retirar el cheque"
-                                                       value="${ordenPago.numeroRecibo}" readonly />
-                                                       <label for="recibo">Recibo Nro</label>
-                                                </div>
-                                            </div>
-                                            <div class="col-md-2">
-                                                <div class="form-floating mb-3 mb-md-0">
-                                                    <input class="form-control" id="fecha" type="text" placeholder="Fecha" readonly
+                                                <input class="form-control" id="fecha" type="text" placeholder="Fecha" readonly
                                                            value="<fmt:formatDate value='${ordenPago.fechaEmision}' pattern='dd/MM/yyyy'/>" />
                                                 <label for="fecha">Fecha</label>
                                             </div>
@@ -482,6 +471,28 @@
                                             <small>Suma de formas: <fmt:formatNumber value="${sumaFormas}" pattern="#,##0"/></small>
                                         </div>
                                     </div>
+
+                                    <%-- Recibo del proveedor: va al final y se carga sobre una OP ya generada,
+                                         buscandola desde la pantalla. Es texto porque lo emite un tercero. --%>
+                                    <div class="row mb-3">
+                                        <div class="col-md-3">
+                                            <div class="form-floating mb-3 mb-md-0">
+                                                <input class="form-control" id="recibo" name="recibo" type="text" maxlength="30"
+                                                       placeholder="Recibo Nro" value="${ordenPago.numeroRecibo}"
+                                                       <c:if test="${empty token or esNuevo or ordenPago.estado eq 'Anulado'}">readonly</c:if> />
+                                                <label for="recibo">
+                                                    Recibo Nro
+                                                    <span class="info-icon" tabindex="0" data-bs-toggle="tooltip" data-bs-placement="top"
+                                                          title="Nro del recibo que emite el proveedor al cobrar. Se carga cuando lo entrega, sobre una orden ya generada.">&#9432;</span>
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3 d-flex align-items-center">
+                                            <c:if test="${not empty token and not esNuevo and ordenPago.estado ne 'Anulado' and puedeEditar}">
+                                                <button type="button" class="btn btn-primary" onclick="guardarRecibo();">Guardar recibo</button>
+                                            </c:if>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </form>
@@ -490,7 +501,8 @@
                              Modal: entrega de cheques al proveedor.
                              Va FUERA de formPrincipal a proposito: tiene su propio <form> y los forms
                              anidados son HTML invalido. Registra en una sola accion la entrega de los
-                             cheques seleccionados y el Nro de recibo que da el proveedor al cobrar.
+                             cheques seleccionados. El Nro de recibo NO va aca: el proveedor tambien lo da
+                             cuando el pago fue por transferencia, y ahi no hay entrega que registrar.
                              ============================================================================ --%>
                         <%-- Fecha de hoy, para proponerla como fecha de entrega por defecto --%>
                         <jsp:useBean id="hoy" class="java.util.Date" scope="page" />
@@ -558,7 +570,7 @@
                                             </table>
 
                                             <div class="row mt-3">
-                                                <div class="col-md-4">
+                                                <div class="col-md-6">
                                                     <div class="form-floating">
                                                         <input class="form-control" id="fechaEntrega" name="fechaEntrega"
                                                                type="date" required
@@ -566,19 +578,11 @@
                                                         <label for="fechaEntrega">Fecha de entrega</label>
                                                     </div>
                                                 </div>
-                                                <div class="col-md-4">
+                                                <div class="col-md-6">
                                                     <div class="form-floating">
                                                         <input required="true" class="form-control" id="entregadoA" name="entregadoA"
                                                                type="text" maxlength="80" placeholder="Quién retiró">
                                                         <label for="entregadoA">Retirado por</label>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-4">
-                                                    <div class="form-floating">
-                                                        <input class="form-control" id="nroReciboEntrega" name="nroReciboEntrega"
-                                                               type="number" min="0" placeholder="Recibo Nro"
-                                                               value="${ordenPago.numeroRecibo}">
-                                                        <label for="nroReciboEntrega">Recibo Nro del proveedor</label>
                                                     </div>
                                                 </div>
                                             </div>
@@ -748,6 +752,11 @@
                 setAccion('Generar');
                 document.getElementById('formPrincipal').submit();
             }
+            function guardarRecibo() {
+                setAccion('GuardarRecibo');
+                document.getElementById('formPrincipal').submit();
+            }
+
             function anularOrdenPago() {
                 setAccion('Anular');
                 document.getElementById('formPrincipal').submit();

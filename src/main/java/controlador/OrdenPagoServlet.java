@@ -303,7 +303,8 @@ public class OrdenPagoServlet extends HttpServlet {
                         return;
                     }
                     break;
-                // Registrar la entrega modifica una OP ya generada: es edición, no alta.
+                // Registrar la entrega y cargar el recibo modifican una OP ya generada: es edición.
+                case "GuardarRecibo":
                 case "RegistrarEntrega":
                     if (puedeEditar == null || !puedeEditar) {
                         mostrarMensaje(request, "No tiene permisos para realizar esta acción", "alert-danger");
@@ -347,6 +348,9 @@ public class OrdenPagoServlet extends HttpServlet {
                     break;
                 case "RegistrarEntrega":
                     accionRegistrarEntrega(request, response, session, token);
+                    break;
+                case "GuardarRecibo":
+                    accionGuardarRecibo(request, response, session, token);
                     break;
                 case "Anular":
                     accionAnular(request, response, session, token);
@@ -964,20 +968,8 @@ public class OrdenPagoServlet extends HttpServlet {
 
         String entregadoA = request.getParameter("entregadoA");
 
-        // El recibo es opcional: si el proveedor no dio ninguno queda vacío (igual que al generar).
-        String numeroRecibo = "";
-        String reciboStr = request.getParameter("nroReciboEntrega");
-        if (reciboStr != null && !reciboStr.trim().isEmpty()) {
-            numeroRecibo = reciboStr.trim();
-            if (numeroRecibo.length() > 30) {
-                mostrarMensaje(request, "El número de recibo no puede superar los 30 caracteres", "alert-warning");
-                volverAVista(request, response, session, estado, token);
-                return;
-            }
-        }
-
         int marcados = ordenPagoService.registrarEntregaCheques(
-                estado.idOrdenPagoExistente, idsCheque, fechaEntrega, entregadoA, numeroRecibo);
+                estado.idOrdenPagoExistente, idsCheque, fechaEntrega, entregadoA);
 
         /* Releer desde la BD: el estado en sesión tiene los cheques como estaban antes y la vista
            debe mostrarlos ya como 'Entregado', con su fecha y el recibo cargado. */
@@ -990,6 +982,52 @@ public class OrdenPagoServlet extends HttpServlet {
 
         mostrarMensaje(request, "Entrega registrada: " + marcados
                 + (marcados == 1 ? " cheque" : " cheques"), "alert-success");
+        volverAVista(request, response, session, estado, token);
+    }
+
+
+    /**
+     * Guarda el Nro de recibo que el proveedor da al cobrar, sobre una OP ya generada que se buscó
+     * desde la pantalla.
+     *
+     * <p>Antes se cargaba en el modal de entrega de cheques, y ahí quedaban afuera las órdenes
+     * pagadas por transferencia: no hay entrega que registrar, pero el recibo existe igual.
+     */
+    private void accionGuardarRecibo(HttpServletRequest request, HttpServletResponse response,
+            HttpSession session, String token) throws ServletException, IOException, SQLException {
+
+        OrdenPagoState estado = obtenerEstadoORedireccionar(request, response, session, token);
+        if (estado == null) return;
+
+        if (estado.idOrdenPagoExistente == null) {
+            mostrarMensaje(request, "Busque una orden de pago para cargarle el recibo", "alert-warning");
+            volverAVista(request, response, session, estado, token);
+            return;
+        }
+
+        // Opcional: vaciarlo es válido, sirve para borrar un recibo cargado por error.
+        String numeroRecibo = request.getParameter("recibo");
+        numeroRecibo = numeroRecibo == null ? "" : numeroRecibo.trim();
+        if (numeroRecibo.length() > 30) {
+            mostrarMensaje(request, "El número de recibo no puede superar los 30 caracteres", "alert-warning");
+            volverAVista(request, response, session, estado, token);
+            return;
+        }
+
+        try {
+            ordenPagoService.actualizarNumeroRecibo(estado.idOrdenPagoExistente, numeroRecibo);
+        } catch (SQLException e) {
+            LOGGER.log(Level.WARNING, "No se pudo guardar el recibo de la OP "
+                    + estado.idOrdenPagoExistente, e);
+            mostrarMensaje(request, e.getMessage(), "alert-warning");
+            volverAVista(request, response, session, estado, token);
+            return;
+        }
+
+        estado.ordenPago.setNumeroRecibo(numeroRecibo);
+        guardarEstado(session, token, estado);
+
+        mostrarMensaje(request, "Recibo guardado correctamente", "alert-success");
         volverAVista(request, response, session, estado, token);
     }
 

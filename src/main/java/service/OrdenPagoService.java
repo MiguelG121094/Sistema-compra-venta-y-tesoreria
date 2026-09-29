@@ -321,7 +321,7 @@ public class OrdenPagoService {
      * @return cantidad de cheques efectivamente marcados
      */
     public int registrarEntregaCheques(Long idOrdenPago, List<Long> idsCheque,
-            java.util.Date fechaEntrega, String entregadoA, String numeroRecibo) throws SQLException {
+            java.util.Date fechaEntrega, String entregadoA) throws SQLException {
 
         if (idOrdenPago == null) {
             throw new SQLException("registrarEntregaCheques: idOrdenPago es nulo");
@@ -358,8 +358,6 @@ public class OrdenPagoService {
                 }
             }
 
-            ordenDAO.actualizarNumeroRecibo(idOrdenPago, numeroRecibo);
-
             conn.commit();
         } catch (SQLException e) {
             if (conn != null) {
@@ -374,6 +372,49 @@ public class OrdenPagoService {
             }
         }
         return marcados;
+    }
+
+
+    /**
+     * Guarda el Nro de recibo que da el proveedor al cobrar.
+     *
+     * <p>Va aparte de la entrega de cheques: el recibo tambien lo dan cuando el pago fue por
+     * transferencia, y ahi no hay ninguna entrega donde cargarlo. Se carga sobre una OP ya generada,
+     * buscandola desde la pantalla.
+     */
+    public void actualizarNumeroRecibo(Long idOrdenPago, String numeroRecibo) throws SQLException {
+        if (idOrdenPago == null) {
+            throw new SQLException("No se indicó la orden de pago");
+        }
+        Connection conn = null;
+        try {
+            conn = Conexion.getConnection();
+            conn.setAutoCommit(false);
+
+            OrdenPagoDAO ordenDAO = new OrdenPagoDAO(conn);
+            OrdenPago orden = ordenDAO.getOrdenPago(idOrdenPago);
+            if (orden == null) {
+                throw new SQLException("La orden de pago " + idOrdenPago + " no existe");
+            }
+            if (ESTADO_OP_ANULADO.equals(orden.getEstado())) {
+                throw new SQLException("La orden de pago está anulada: no se puede cargar el recibo");
+            }
+
+            ordenDAO.actualizarNumeroRecibo(idOrdenPago, numeroRecibo);
+
+            conn.commit();
+        } catch (SQLException e) {
+            if (conn != null) {
+                conn.rollback();
+            }
+            System.out.println("Error en actualizarNumeroRecibo - rollback ejecutado: " + e);
+            throw e;
+        } finally {
+            if (conn != null) {
+                conn.setAutoCommit(true);
+                conn.close();
+            }
+        }
     }
 
     /**
