@@ -139,8 +139,8 @@ usuario inicio sesion, se debe agregar esta validacon en cada una de las vistas 
                 </div>
             </div>
             <div class="sb-sidenav-footer align-content-center" style="text-align: center">
-                <div class="small">Logueado como: </div>
-                <strong><%= usuario.getUsername().toUpperCase()%></strong>
+                <div class="small">Usuario: <strong><%= usuario.getUsername().toUpperCase()%></strong></div>
+                <div class="small">Sucursal: <strong><%= usuario.getSucursal().getDescripcion()%></strong></div>
             </div>
         </nav>
     </div>
