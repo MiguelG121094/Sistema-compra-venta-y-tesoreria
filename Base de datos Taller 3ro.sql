@@ -278,6 +278,7 @@ CREATE TABLE public.sucursal (
                 suc_descripcion VARCHAR(50) NOT NULL,
                 suc_direccion VARCHAR(200),
                 suc_estado VARCHAR(20) NOT NULL,
+                suc_establecimiento VARCHAR(3),
                 CONSTRAINT id_sucursal PRIMARY KEY (id_sucursal)
 );
 
@@ -581,6 +582,7 @@ CREATE TABLE public.usuario (
                 usu_pass VARCHAR(50) NOT NULL,
                 usu_estado VARCHAR(20) NOT NULL,
                 id_grupo INTEGER NOT NULL,
+                id_sucursal INTEGER,
                 CONSTRAINT id_usuario PRIMARY KEY (id_usuario)
 );
 

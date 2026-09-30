@@ -16,6 +16,10 @@ public class Sucursal implements java.io.Serializable {
     private String descripcion;
     private String direccion;
     private String estado;
+    // Primer tramo del numero de comprobante paraguayo (001-002-0000123): identifica a la sucursal.
+    // El segundo tramo es el punto de expedicion, que es de la caja (caja.caja_nro_expedicion).
+    // Va como texto porque son 3 digitos con ceros a la izquierda.
+    private String establecimiento;
 
     public Sucursal() {
     }
@@ -53,6 +57,14 @@ public class Sucursal implements java.io.Serializable {
 
     public void setDireccion(String direccion) {
         this.direccion = direccion;
+    }
+
+    public String getEstablecimiento() {
+        return establecimiento;
+    }
+
+    public void setEstablecimiento(String establecimiento) {
+        this.establecimiento = establecimiento;
     }
 
     public String getEstado() {

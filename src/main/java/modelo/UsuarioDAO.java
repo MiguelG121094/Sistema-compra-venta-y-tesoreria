@@ -61,6 +61,8 @@ public class UsuarioDAO {
                     usuario = new Usuario(rs.getLong("id_usuario"), new Persona(rs.getLong("id_persona")),
                             rs.getString("usu_user"), hashGuardado,
                             rs.getString("usu_estado"), new Grupo(rs.getLong("id_grupo")));
+                    // La sucursal viaja en la sesion: de ahi la toman las pantallas en vez de pedirla.
+                    usuario.setSucursal(leerSucursal(rs));
                 }
             }
         }
@@ -80,8 +82,10 @@ public class UsuarioDAO {
             try (ResultSet rs = stmt.executeQuery()){
                 if (rs.next()) {
                     persona = personaDAO.getPersona(rs.getLong("id_persona"));
-                    return usuario = new Usuario(rs.getLong("id_usuario"), persona, rs.getString("usu_user"),
+                    usuario = new Usuario(rs.getLong("id_usuario"), persona, rs.getString("usu_user"),
                             null, rs.getString("usu_estado"), new Grupo(rs.getLong("id_grupo")));
+                    usuario.setSucursal(leerSucursal(rs));
+                    return usuario;
                 }
             }
         }
@@ -105,6 +109,7 @@ public class UsuarioDAO {
                         rs.getString("usu_estado"),
                         new Grupo(rs.getLong("id_grupo"))
                     );
+                    usuario.setSucursal(leerSucursal(rs));
                     usuarios.add(usuario);
                 }
             }
@@ -118,7 +123,8 @@ public class UsuarioDAO {
             return;
         }
 
-        String sql = "INSERT INTO usuario (id_persona, usu_user, usu_pass, usu_estado, id_grupo) VALUES (?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO usuario (id_persona, usu_user, usu_pass, usu_estado, id_grupo, id_sucursal) "
+                   + "VALUES (?, ?, ?, ?, ?, ?)";
 
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setLong(1, usuario.getPersona().getIdPersona());
@@ -128,6 +134,11 @@ public class UsuarioDAO {
             stmt.setString(3, hashedPassword);
             stmt.setString(4, usuario.getEstado());
             stmt.setLong(5, usuario.getGrupo().getIdGrupo());
+            if (usuario.getSucursal() != null && usuario.getSucursal().getIdSucursal() != null) {
+                stmt.setLong(6, usuario.getSucursal().getIdSucursal());
+            } else {
+                stmt.setNull(6, java.sql.Types.INTEGER);
+            }
 
             stmt.executeUpdate();
             ResultSet generatedKeys = stmt.getGeneratedKeys();
@@ -135,6 +146,20 @@ public class UsuarioDAO {
                 usuario.setIdUsuario(generatedKeys.getLong(1));
             }
         }
+    }
+
+
+    /**
+     * Sucursal del usuario, o null si todavia no tiene una asignada. Es nullable a proposito: los
+     * usuarios que existian antes de la columna se cargan a mano, y hasta entonces las pantallas
+     * avisan en vez de romper.
+     */
+    private Sucursal leerSucursal(ResultSet rs) throws SQLException {
+        long idSucursal = rs.getLong("id_sucursal");
+        if (rs.wasNull()) {
+            return null;
+        }
+        return new SucursalDAO(conn).getSucursal(idSucursal);
     }
 
     // ==================== Métodos para hash de contraseñas ====================

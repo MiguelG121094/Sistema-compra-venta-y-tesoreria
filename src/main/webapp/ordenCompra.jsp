@@ -361,16 +361,9 @@ usuario inicio sesion, se debe agregar esta validacion en cada una de las vistas
                                     </div>
                                     <div class="col-md-2 d-flex align-items-center">
                                         <label class="me-2">Sucursal:</label>
-                                        <form action="OrdenCompraServlet?menu=OrdenCompra&accion=CargarSucursal" method="POST">
-                                            <select name="idSucursal" class="form-select" onchange="this.form.submit()"
-                                                    disabled="true">
-                                                <option value="">Seleccionar sucursal</option>
-                                                <c:forEach var="suc" items="${listaSucursales}">
-                                                    <option value="${suc.getIdSucursal()}" ${suc.getIdSucursal() == sucursalSeleccionada.getIdSucursal() ? 'selected' : ''}>
-                                                        ${suc.getDescripcion()}</option>
-                                                </c:forEach>
-                                            </select>
-                                        </form>
+                                        <%-- La sucursal es la del usuario logueado: se muestra, no se elige --%>
+                                        <input class="form-control" type="text" readonly
+                                               value="${sucursalSeleccionada.descripcion}" />
                                     </div>
                                     <div class="col-md-3 d-flex align-items-center">
                                         <label style="white-space:" class="me-2">Condición de la compra:</label>

@@ -236,20 +236,12 @@ public class OrdenPagoServlet extends HttpServlet {
      */
     private void leerDatosFormulario(HttpServletRequest request, OrdenPagoState estado) throws SQLException {
         String reciboStr = request.getParameter("recibo");
-        String idSucursalStr = request.getParameter("idSucursal");
+        // La sucursal no se lee del formulario: es la del usuario y se fija al abrir la orden.
         String tipoPago = request.getParameter("tipoPago");
 
         if (reciboStr != null && !reciboStr.trim().isEmpty()) {
             // El recibo lo emite el proveedor: va como texto, puede traer letras y guiones.
             estado.ordenPago.setNumeroRecibo(reciboStr.trim());
-        }
-
-        if (idSucursalStr != null && !idSucursalStr.isEmpty()) {
-            Sucursal sucursal = sucursalService.getSucursal(Long.parseLong(idSucursalStr));
-            if (sucursal != null) {
-                estado.sucursalSeleccionada = sucursal;
-                estado.ordenPago.setSucursal(sucursal);
-            }
         }
 
         if (tipoPago != null && !tipoPago.isEmpty()) {
@@ -387,6 +379,20 @@ public class OrdenPagoServlet extends HttpServlet {
     /**
      * Crear nueva orden de pago (vacía: el detalle llega al seleccionar la provisión).
      */
+
+    /**
+     * Fija la sucursal del documento con la del usuario logueado. No se elige por pantalla: viene
+     * de {@code usuario.id_sucursal} y la vista solo la muestra.
+     */
+    private void fijarSucursalDelUsuario(HttpSession session, OrdenPagoState estado) {
+        Usuario usuario = (Usuario) session.getAttribute("usuario");
+        if (usuario == null || usuario.getSucursal() == null) {
+            return; // la validación al generar avisa que falta asignarla
+        }
+        estado.sucursalSeleccionada = usuario.getSucursal();
+        estado.ordenPago.setSucursal(usuario.getSucursal());
+    }
+
     private void accionNuevo(HttpServletRequest request, HttpServletResponse response,
             HttpSession session) throws ServletException, IOException, SQLException {
 
@@ -397,6 +403,7 @@ public class OrdenPagoServlet extends HttpServlet {
         estado.ordenPago.setNumero(ordenPagoService.obtenerProximoNumero());
         estado.ordenPago.setFechaEmision(new Date());
         estado.ordenPago.setEstado(ESTADO_OP_PENDIENTE);
+        fijarSucursalDelUsuario(session, estado);
 
         cargarListas(estado);
 
@@ -423,6 +430,7 @@ public class OrdenPagoServlet extends HttpServlet {
             estado.ordenPago.setNumero(ordenPagoService.obtenerProximoNumero());
             estado.ordenPago.setFechaEmision(new Date());
             estado.ordenPago.setEstado(ESTADO_OP_PENDIENTE);
+            fijarSucursalDelUsuario(session, estado);
             cargarListas(estado);
         } else {
             leerDatosFormulario(request, estado);
@@ -851,7 +859,7 @@ public class OrdenPagoServlet extends HttpServlet {
             return;
         }
         if (estado.sucursalSeleccionada == null) {
-            mostrarMensaje(request, "Debe seleccionar una sucursal", "alert-warning");
+            mostrarMensaje(request, "El usuario no tiene una sucursal asignada", "alert-warning");
             volverAVista(request, response, session, estado, token);
             return;
         }

@@ -374,9 +374,6 @@ public class FacturaCompraServlet extends HttpServlet {
                 case "CargarProveedor":
                     accionCargarProveedor(request, response, session, token);
                     break;
-                case "CambiarSucursal":
-                    accionCambiarSucursal(request, response, session, token);
-                    break;
                 case "CambiarCondicion":
                     accionCambiarCondicion(request, response, session, token);
                     break;
@@ -431,6 +428,9 @@ public class FacturaCompraServlet extends HttpServlet {
 
         estado.esNuevo = true;
         estado.facturaCompra.setUsuario(usuario);
+        // La sucursal sale del usuario: no se elige por pantalla ni se puede cambiar.
+        estado.sucursalSeleccionada = usuario.getSucursal();
+        estado.facturaCompra.setSucursal(usuario.getSucursal());
         estado.facturaCompra.setFechaCarga(new Date());
         estado.facturaCompra.setEstado("Pendiente");
 
@@ -580,33 +580,6 @@ public class FacturaCompraServlet extends HttpServlet {
             mostrarMensaje(request, "No se encontró el proveedor", "alert-warning");
         }
 
-        cargarDatosParaVista(request, estado, token);
-        forward(request, response, JSP_FACTURA);
-    }
-
-    /**
-     * Cambiar sucursal
-     */
-    private void accionCambiarSucursal(HttpServletRequest request, HttpServletResponse response,
-            HttpSession session, String token) throws ServletException, IOException, SQLException {
-
-        FacturaCompraState estado = obtenerEstadoORedireccionar(request, response, session, token);
-        if (estado == null) return;
-
-        // Leer todos los datos del formulario para mantenerlos
-        leerDatosFormulario(request, estado);
-
-        String idSucursalStr = request.getParameter("idSucursal");
-        if (idSucursalStr != null && !idSucursalStr.isEmpty()) {
-            Long idSucursal = Long.parseLong(idSucursalStr);
-            Sucursal sucursal = sucursalService.getSucursal(idSucursal);
-            if (sucursal != null) {
-                estado.sucursalSeleccionada = sucursal;
-                estado.facturaCompra.setSucursal(sucursal);
-            }
-        }
-
-        guardarEstado(session, token, estado);
         cargarDatosParaVista(request, estado, token);
         forward(request, response, JSP_FACTURA);
     }
@@ -888,7 +861,7 @@ public class FacturaCompraServlet extends HttpServlet {
         }
 
         if (estado.sucursalSeleccionada == null) {
-            mostrarMensaje(request, "Debe seleccionar una sucursal", "alert-warning");
+            mostrarMensaje(request, "El usuario no tiene una sucursal asignada", "alert-warning");
             cargarDatosParaVista(request, estado, token);
             forward(request, response, JSP_FACTURA);
             return;

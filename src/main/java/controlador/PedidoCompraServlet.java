@@ -134,16 +134,30 @@ public class PedidoCompraServlet extends HttpServlet {
                         pedidoCompra.setFecha(new Date());
                         pedidoCompra.setEstado("Pendiente");
                         pedidoCompra.setUsuario(usuario);
+
+                        /* La sucursal ya no se elige: es la del usuario. Con ella se cargan de una
+                           vez los depositos, que antes llegaban recien al elegirla en el combo. */
+                        sucursal = usuario.getSucursal();
+                        depositos = null;
+                        if (sucursal == null) {
+                            mostrarMensaje(request, "El usuario no tiene una sucursal asignada", "alert-warning");
+                        } else {
+                            pedidoCompra.setSucursal(sucursal);
+                            idSucursal = sucursal.getIdSucursal();
+                            depositos = depositoService.listarDepostioPorSucursal(idSucursal);
+                            if (depositos == null || depositos.isEmpty()) {
+                                mostrarMensaje(request, "La sucursal del usuario no tiene depósitos asignados",
+                                        "alert-warning");
+                            }
+                        }
+                        request.setAttribute("listaDepositos", depositos);
+
                         request.setAttribute("listPedCompraConDetalle", listaPedidoCompraConDetalle); //mantener lista de pedidos
                         request.setAttribute("listaSucursales", listaSucursales); //mantener lista de sucursales
                         request.setAttribute("listaAticulos", articulos); //mantener articulos
                         request.setAttribute("pedidoCompra", pedidoCompra); //enviamos datos del pedido nuevo cargado
                         request.setAttribute("newIdPedido", newIdPedido);
                         listaPedidoCompraDetalle = null; //vacia la lista de pedidoDetalle
-                        
-                        //enviar mensaje al tooltip
-                        request.setAttribute("mostrarTooltip", true);
-                        request.setAttribute("mensajeTooltip", "Seleccione una sucursal para cargar los artículos");
                         
                         request.getRequestDispatcher("pedidoCompra.jsp").forward(request, response);
 //                        request.getRequestDispatcher("PedidoCompraServlet?menu=PedidoCompra&accion=ListarModal").forward(request, response);

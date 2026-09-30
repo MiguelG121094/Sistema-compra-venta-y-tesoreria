@@ -36,20 +36,31 @@ public class SucursalDAO {
             stmt.setLong(1, idSucursal);
             try (ResultSet rs = stmt.executeQuery()){
                 while (rs.next()) {
-                    sucursal = new Sucursal(rs.getLong(1), rs.getString(2), rs.getString(3), rs.getString(4));
+                    sucursal = mapear(rs);
                 }
             }
         }
         return sucursal;
     }
     
+    /**
+     * Mapea la fila por nombre de columna. Antes se leia por indice, y el listado repetia la
+     * descripcion en la direccion y corria el estado un lugar.
+     */
+    private Sucursal mapear(ResultSet rs) throws SQLException {
+        Sucursal suc = new Sucursal(rs.getLong("id_sucursal"), rs.getString("suc_descripcion"),
+                rs.getString("suc_direccion"), rs.getString("suc_estado"));
+        suc.setEstablecimiento(rs.getString("suc_establecimiento"));
+        return suc;
+    }
+
     public List listarSucursles() throws SQLException{
         List listaSucursales = new ArrayList<>();
         String sql = "SELECT * FROM sucursal";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             try (ResultSet rs = stmt.executeQuery()){
                 while (rs.next()) {
-                    sucursal = new Sucursal(rs.getLong(1), rs.getString(2), rs.getString(2), rs.getString(3));
+                    sucursal = mapear(rs);
                     listaSucursales.add(sucursal);
                 }
             }

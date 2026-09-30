@@ -18,6 +18,9 @@ public class Usuario implements java.io.Serializable {
     private String password;
     private String estado;
     private Grupo grupo;
+    // Sucursal en la que trabaja el usuario. Es la que se carga sola en cada documento, para no
+    // elegirla en cada pantalla, y la que va a atar al cajero con su caja en Ventas.
+    private Sucursal sucursal;
 
     public Usuario() {
     }
@@ -73,6 +76,14 @@ public class Usuario implements java.io.Serializable {
 
     public void setEstado(String estado) {
         this.estado = estado;
+    }
+
+    public Sucursal getSucursal() {
+        return sucursal;
+    }
+
+    public void setSucursal(Sucursal sucursal) {
+        this.sucursal = sucursal;
     }
 
     public Grupo getGrupo() {

@@ -144,6 +144,14 @@ public class OrdenCompraServlet extends HttpServlet {
                         ordenCompra.setEstado("Pendiente");
                         ordenCompra.setUsuario(usuario);
 
+                        // La sucursal es la del usuario, no se elige por pantalla.
+                        sucursal = usuario.getSucursal();
+                        if (sucursal == null) {
+                            mostrarMensaje(request, "El usuario no tiene una sucursal asignada", "alert-warning");
+                        } else {
+                            ordenCompra.setSucursal(sucursal);
+                        }
+
                         request.setAttribute("listaPresupuestosConDetalle", presupuestosConDetalle);
                         request.setAttribute("listaOrdenesCompraConDetalle", ordenesCompraConDetalle);
                         request.setAttribute("listaSucursales", listaSucursales);
@@ -151,7 +159,7 @@ public class OrdenCompraServlet extends HttpServlet {
                         request.setAttribute("newIdOrdenCompra", newIdOrdenCompra);
                         request.setAttribute("listaOrdenCompraDetalle", listaOrdenCompraDetalle = null);
                         request.setAttribute("proveedorSeleccionado", proveedor = null);
-                        request.setAttribute("sucursalSeleccionada", sucursal = null);
+                        request.setAttribute("sucursalSeleccionada", sucursal);
 
                         request.getRequestDispatcher("ordenCompra.jsp").forward(request, response);
                         break;

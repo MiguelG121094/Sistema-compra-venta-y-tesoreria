@@ -183,14 +183,9 @@
                                         </div>
                                         <div class="col-md-4">
                                             <div class="form-floating mb-3 mb-md-0">
-                                                <select class="form-control" id="sucursal" name="idSucursal"
-                                                        <c:if test="${empty token or not esNuevo}">disabled</c:if>>
-                                                            <option value="">Seleccionar Sucursal</option>
-                                                        <c:forEach var="suc" items="${listaSucursales}">
-                                                            <option value="${suc.idSucursal}"
-                                                                    <c:if test="${sucursalSeleccionada.idSucursal == suc.idSucursal}">selected</c:if>>${suc.descripcion}</option>
-                                                        </c:forEach>
-                                                </select>
+                                                <%-- La sucursal es la del usuario logueado: se muestra, no se elige --%>
+                                                <input class="form-control" id="sucursal" type="text" readonly
+                                                       value="${sucursalSeleccionada.descripcion}" />
                                                 <label for="sucursal">Sucursal</label>
                                             </div>
                                         </div>

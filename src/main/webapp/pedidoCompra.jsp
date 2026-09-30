@@ -269,27 +269,9 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                     </div>
                                     <div class="col-md-2 d-flex align-items-center">
                                         <label class="me-2">Sucursal:</label>
-                                            <form id="fromProcesarSucursal" action="PedidoCompraServlet?menu=PedidoCompra&accion=CargarDeposito" method="POST">
-                                            <!-- select de Sucursales -->
-                                            <!--si tiene cargado el id pedido y la lista de pedido detalle está vacia habilita, 
-                                            pero si el id pedido está cargado y la lista de detalle pedido tiene algo cargado desabilita-->
-                                            <select data-bs-toggle="tooltip" data-bs-custom-class="custom-tooltip"
-                                                    id="selectSucursal" name="idSucursal" class="form-control" onchange="this.form.submit()"
-                                                <c:choose>
-                                                    <c:when test="${(not empty pedidoCompra.idPedido and empty listPedCompDetalle) 
-                                                                    or (not empty newIdPedido and empty listPedCompDetalle)}">
-                                                    </c:when>
-                                                    <c:otherwise>
-                                                        disabled
-                                                    </c:otherwise>
-                                                </c:choose>>
-                                                <option value="">Seleccionar sucursal</option>
-                                                    <c:forEach var="sucursal" items="${listaSucursales}">
-                                                        <option value="${sucursal.getIdSucursal()}" ${sucursal.getIdSucursal() == idSucursalSeleccionada ? 'selected' : ''}>
-                                                            ${sucursal.getDescripcion()}</option>
-                                                    </c:forEach>
-                                            </select>
-                                            </form>
+                                            <%-- La sucursal es la del usuario logueado: se muestra, no se elige --%>
+                                            <input id="selectSucursal" class="form-control" type="text" readonly
+                                                   value="${pedidoCompra.sucursal.descripcion}" />
                                                 <!--script para iniciallizar tooltipo y mostrar desde el servlet 
                                                 (servlet PedidoCompraServlet -> request.setAttribute("mensajeTooltip", "Debe seleccionar una sucursal");)-->
                                                 <script>

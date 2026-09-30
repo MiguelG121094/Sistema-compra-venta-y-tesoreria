@@ -140,16 +140,9 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                             </div>
                                             <div class="col-md-2">
                                                 <div class="form-floating mb-3 mb-md-0">
-                                                    <select class="form-control" id="sucursal" name="idSucursal"
-                                                            onchange="cambiarSucursal();" <c:if test="${not esNuevo}">disabled</c:if>>
-                                                        <option value="">Seleccionar Sucursal</option>
-                                                        <c:forEach var="suc" items="${listaSucursales}">
-                                                            <option value="${suc.idSucursal}"
-                                                                <c:if test="${sucursalSeleccionada.idSucursal == suc.idSucursal}">selected</c:if>>
-                                                                ${suc.descripcion}
-                                                            </option>
-                                                        </c:forEach>
-                                                    </select>
+                                                    <%-- La sucursal es la del usuario logueado: se muestra, no se elige --%>
+                                                    <input class="form-control" id="sucursal" type="text" readonly
+                                                           value="${sucursalSeleccionada.descripcion}" />
                                                     <label for="sucursal">Sucursal</label>
                                                 </div>
                                             </div>
@@ -770,11 +763,6 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
             function eliminarArticulo(index) {
                 document.getElementById('indexArticulo').value = index;
                 document.getElementById('accionPrincipal').value = 'EliminarArticulo';
-                document.getElementById('formPrincipal').submit();
-            }
-
-            function cambiarSucursal() {
-                document.getElementById('accionPrincipal').value = 'CambiarSucursal';
                 document.getElementById('formPrincipal').submit();
             }
 
