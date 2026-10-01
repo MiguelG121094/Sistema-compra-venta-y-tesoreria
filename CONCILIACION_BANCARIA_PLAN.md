@@ -236,14 +236,24 @@ movimientos del período  +  los de períodos anteriores que quedaron sin concil
 ```
 
 Se resuelve sin columnas nuevas, pero **no preguntando por los estados**: un movimiento está pendiente
-mientras **no figure en el detalle de ninguna conciliación que no esté anulada**.
+mientras **no haya sido tildado en el detalle de alguna conciliación que no esté anulada**.
 
 ```sql
 NOT EXISTS (SELECT 1 FROM conciliacion_bancaria_detalle cd
             JOIN conciliacion_bancaria cc ON cd.id_conc_bancaria = cc.id_conc_bancaria
             WHERE COALESCE(cc.conc_bancaria_estado, 'Vigente') <> 'Anulado'
+            AND cd.conc_bancaria_conciliado = TRUE
             AND cd.<enlace> = <movimiento>)
 ```
+
+> ⚠️ **El `conc_bancaria_conciliado = TRUE` es la clave del arrastre, y faltaba.** Corregido el
+> 2026-09-30, después de que Miguel lo encontrara probando: conció septiembre dejando un cheque sin
+> tildar porque el banco todavía no lo había cobrado, y en octubre ese cheque no aparecía en la grilla,
+> así que la conciliación no podía cuadrar contra el extracto. El motivo es que **el grabado guarda
+> todas las filas de la grilla, tildadas y sin tildar**, porque el detalle es la foto del período
+> (§5.0): sin este filtro, figurar en el detalle alcanzaba para dejar de estar pendiente, aunque nadie
+> lo hubiera conciliado. Con el filtro, lo que saca a un movimiento de la grilla es haber sido tildado,
+> que es lo que el arrastre tiene que mirar.
 
 Dos razones para preguntar contra el detalle y no contra `forma_pag_estado` / `chq_estado`:
 

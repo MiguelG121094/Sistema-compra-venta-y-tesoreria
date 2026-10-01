@@ -46,16 +46,24 @@ public class ConciliacionBancariaDAO {
             + "conc_banc_saldo_banco, conc_bancaria_estado, conc_bancaria_tipo_cambio";
 
     /**
-     * Un movimiento sigue pendiente mientras no este en el detalle de ninguna conciliacion que no
-     * haya sido anulada. Se pregunta contra el detalle y no contra forma_pag_estado / chq_estado
-     * porque debitos y creditos no tienen estado de conciliacion, y porque asi el arrastre no
-     * depende de que esos dos campos se hayan actualizado bien. El COALESCE cubre las filas
-     * anteriores al alta de conc_bancaria_estado, que valen como vigentes.
+     * Un movimiento sigue pendiente mientras no haya sido <b>tildado</b> en el detalle de alguna
+     * conciliacion que no haya sido anulada. Se pregunta contra el detalle y no contra
+     * forma_pag_estado / chq_estado porque debitos y creditos no tienen estado de conciliacion, y
+     * porque asi el arrastre no depende de que esos dos campos se hayan actualizado bien. El
+     * COALESCE cubre las filas anteriores al alta de conc_bancaria_estado, que valen como vigentes.
+     *
+     * <p><b>El filtro por `conc_bancaria_conciliado` es la clave del arrastre</b> (corregido el
+     * 2026-09-30): la conciliacion graba TODAS las filas de la grilla, tildadas y sin tildar, porque
+     * es la foto del periodo. Sin este filtro, un cheque que se dejo sin tildar en septiembre —el que
+     * el banco todavia no cobro— quedaba igual en el detalle de septiembre y no volvia a aparecer
+     * nunca mas, asi que octubre no podia conciliarlo y la conciliacion no cuadraba contra el
+     * extracto.
      */
     private static final String PENDIENTE =
             "NOT EXISTS (SELECT 1 FROM conciliacion_bancaria_detalle cd "
             + "JOIN conciliacion_bancaria cc ON cd.id_conc_bancaria = cc.id_conc_bancaria "
             + "WHERE COALESCE(cc.conc_bancaria_estado, '" + ESTADO_VIGENTE + "') <> '" + ESTADO_ANULADO + "' "
+            + "AND cd.conc_bancaria_conciliado = TRUE "
             + "AND cd.%s = %s)";
 
     private Connection conn;
