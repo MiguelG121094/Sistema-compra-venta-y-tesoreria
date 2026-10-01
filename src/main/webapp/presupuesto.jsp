@@ -173,7 +173,10 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                                     </thead>
                                                     <tbody>
                                                         <c:forEach var="PresupuestosConDet" items="${listaPresupuestosConDetalle}">
-                                                            <tr class="${PresupuestosConDet.getEstado() eq 'Anulado' ? 'table-danger' : (PresupuestosConDet.getEstado() eq 'Completado' ? 'table-success' : '')}">
+                                                            <tr class="${PresupuestosConDet.getEstado() eq 'Anulado' ? 'table-danger'
+                                                                         : (PresupuestosConDet.getEstado() eq 'Rechazado' ? 'table-secondary'
+                                                                         : (PresupuestosConDet.getEstado() eq 'Aprobado' ? 'table-info'
+                                                                         : (PresupuestosConDet.getEstado() eq 'Completado' ? 'table-success' : '')))}">
                                                                 <td align="center" valign="middle" class="text-center">${PresupuestosConDet.getIdPresupuesto()}</td>
                                                                 <td align="center" valign="middle" class="text-center">${PresupuestosConDet.getPedidoCompra().getIdPedido()}</td>
                                                                 <td align="center" valign="middle" class="text-center">${PresupuestosConDet.getUsuario().getPersona().getNombre()}
@@ -287,12 +290,41 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                             data-bs-target="#modalPedidos" class="btn btn-info text-white"
                                             <c:if test="${newIdPresupuesto == null}">disabled</c:if>>Buscar Pedido</button>
                                     <a href="" data-bs-toggle="modal" data-bs-target="#modalPresupuestos" class="btn btn-info text-white">Buscar Presupuesto</a>
-                                    <button href="" class="btn btn-primary"
-                                       <c:if test="${presupuesto.getIdPresupuesto() == null}">disabled</c:if>>Aprobar</button>
+                                    <%-- Solo se aprueba un presupuesto cargado y todavia pendiente --%>
+                                    <c:set var="aprobarBloqueado" value="${presupuesto.getIdPresupuesto() == null
+                                                                           or presupuesto.getEstado() ne 'Pendiente'
+                                                                           or not puedeEditar}" />
+                                    <button name="accion" value="Aprobar" type="button" data-bs-toggle="modal"
+                                            data-bs-target="#modalAprobar${presupuesto.getIdPresupuesto()}" class="btn btn-primary"
+                                            <c:if test="${aprobarBloqueado}">disabled
+                                              title="${not puedeEditar ? 'No tiene permisos' : (presupuesto.getIdPresupuesto() == null ? 'Cargue un presupuesto para aprobarlo' : 'El presupuesto está '.concat(presupuesto.getEstado()))}"</c:if>>Aprobar</button>
                                     <button name="accion" value="Anular" type="button" data-bs-toggle="modal"
                                         data-bs-target="#modalAnular${presupuesto.getIdPresupuesto()}" class="btn btn-danger"
                                         <c:if test="${presupuesto.getIdPresupuesto() == null or not puedeBorrar or esReadOnly}">disabled</c:if>>Anular</button>
                                 </form>
+                                <!-- Modal de confirmacion de aprobacion, sin javascript -->
+                                <div class="modal fade" id="modalAprobar${presupuesto.getIdPresupuesto()}" tabindex="-1" aria-hidden="true">
+                                  <div class="modal-dialog modal-dialog-centered">
+                                    <div class="modal-content">
+                                      <div class="modal-header">
+                                        <h1 class="modal-title fs-5">Confirmación</h1>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                      </div>
+                                      <div class="modal-body">
+                                        ¿Desea aprobar este presupuesto?
+                                      </div>
+                                      <div class="modal-footer">
+                                        <button type="button" class="btn btn-danger" data-bs-dismiss="modal">No</button>
+                                        <form action="PresupuestoServlet?menu=Presupuesto" method="POST">
+                                          <input type="hidden" name="accion" value="Aprobar">
+                                          <input type="hidden" name="id" value="${presupuesto.getIdPresupuesto()}">
+                                          <button type="submit" class="btn btn-primary">Sí</button>
+                                        </form>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+
                                 <!-- Modal de confirmacion sin javascript  -->
                                 <div class="modal fade" id="modalAnular${presupuesto.getIdPresupuesto()}" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
                                   <div class="modal-dialog modal-dialog-centered">

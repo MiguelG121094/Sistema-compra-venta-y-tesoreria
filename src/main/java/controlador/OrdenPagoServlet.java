@@ -78,7 +78,6 @@ public class OrdenPagoServlet extends HttpServlet {
         Long idOrdenPagoExistente;   // seteado al cargar una OP guardada (para ver/anular)
 
         // Datos para modales y combos
-        List<Sucursal> listaSucursales;
         List<Cuenta> listaCuentas;
         List<FormaPagoCabecera> listaFormaPago;
         List<Chequera> listaChequeras;
@@ -127,7 +126,6 @@ public class OrdenPagoServlet extends HttpServlet {
 
     /** Carga los combos y las listas de los modales en el estado (una vez por documento). */
     private void cargarListas(OrdenPagoState estado) throws SQLException {
-        estado.listaSucursales = sucursalService.listarSucursles();
         estado.listaCuentas = cuentaService.listarCuenta();
         estado.listaFormaPago = formaPagoCabeceraService.listarFormaPago();
         estado.listaChequeras = chequeraService.listarChequeras();
@@ -160,7 +158,6 @@ public class OrdenPagoServlet extends HttpServlet {
         }
 
         // Listas para modales y combos
-        request.setAttribute("listaSucursales", estado.listaSucursales);
         request.setAttribute("listaCuentas", estado.listaCuentas);
         request.setAttribute("saldosCuentas", saldosDe(estado.listaCuentas));
         request.setAttribute("listaFormaPago", estado.listaFormaPago);

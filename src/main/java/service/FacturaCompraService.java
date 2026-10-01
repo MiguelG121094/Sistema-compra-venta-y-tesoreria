@@ -380,7 +380,9 @@ public class FacturaCompraService {
                 Presupuesto presupuesto = ordenCompra.getPresupuesto();
                 if (presupuesto != null) {
                     PresupuestoDAO presupuestoDAO = new PresupuestoDAO(conn);
-                    presupuesto.setEstado("Pendiente");
+                    // Vuelve a 'Aprobado' y no a 'Pendiente': tuvo que estar aprobado para que
+                    // existiera la orden de compra, y los otros del pedido siguen rechazados.
+                    presupuesto.setEstado(PresupuestoDAO.ESTADO_APROBADO);
                     presupuestoDAO.actualizarPresupuestoCabecera(presupuesto);
                 }
             }

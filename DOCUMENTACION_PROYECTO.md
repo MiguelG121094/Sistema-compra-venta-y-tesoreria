@@ -395,6 +395,40 @@ Todas las entidades siguen el patrón POJO:
 
 ## Historial de Cambios
 
+### 2026-09-29 al 30 — Sucursal del usuario, y dos correcciones de tesorería
+
+**La sucursal sale del usuario y deja de elegirse en cada pantalla.** Se agregó `usuario.id_sucursal`
+(nullable, FK) y `Usuario` la lleva hidratada desde `UsuarioDAO.validarUsuario`, o sea que viaja en la
+sesión junto con los permisos. En Pedido de Compra, Orden de Compra, Factura de Compra, Orden de Pago y
+Nota de Crédito/Débito el combo pasó a ser un campo readonly que muestra la sucursal del usuario; si no
+tiene una asignada, las pantallas avisan con *"El usuario no tiene una sucursal asignada"*. Se quitaron la
+acción `CambiarSucursal` de Factura de Compra y el combo que disparaba `CargarDeposito` en Pedido, donde
+ahora los depósitos se cargan al presionar Nuevo. En la Nota de Crédito/Débito la sucursal arranca con la
+del usuario y pasa a ser la de la factura al cargarla, que es la que manda; **no se guarda en la nota**,
+porque esas dos cabeceras no tienen `id_sucursal`.
+
+Motiva el cambio Ventas: `caja` y `apertura_cierre_caja` cuelgan de la sucursal, así que el cajero tiene
+que quedar atado a la suya. Por eso se agregó también **`sucursal.suc_establecimiento`** (VARCHAR(3)), el
+primer tramo del número de comprobante paraguayo `001-002-0000123`. El segundo tramo, el punto de
+expedición, ya existía en `caja.caja_nro_expedicion` —es de la caja, no de la sucursal— y el tercero es el
+correlativo. Los dos ALTER están en `Migracion sucursal de usuario.sql`.
+
+De paso: `SucursalDAO` mapeaba por índice de columna y en `listarSucursles()` leía dos veces la misma, así
+que la dirección mostraba la descripción y el estado mostraba la dirección. Ahora mapea por nombre.
+
+**Corrección del arrastre de la conciliación.** Un cheque que se dejaba sin tildar no volvía a aparecer en
+el período siguiente, así que la conciliación no podía cuadrar contra el extracto. El grabado guarda todas
+las filas de la grilla, tildadas y sin tildar, porque el detalle es la foto del período; el criterio de
+"pendiente" sólo miraba si el movimiento figuraba en algún detalle, y con eso alcanzaba para darlo por
+conciliado. Se le agregó `AND cd.conc_bancaria_conciliado = TRUE`. Sin cambios de BD.
+
+**Corrección del estado de la rendición de fondo fijo.** Al generar la OP de reposición se anotaba
+`ff_rendicion_fecha_reposicion` pero el estado se quedaba en `'Provisionada'`, así que una rendición ya
+pagada se veía igual que una que todavía esperaba su OP. Ahora fecha y estado se mueven en el mismo
+UPDATE: `'Procesada'` al generar la OP y de vuelta a `'Provisionada'` al anularla. El circuito queda
+**Generada → Provisionada → Procesada**. El botón Anular de la rendición también se bloquea en
+`'Procesada'`. Sin ALTER: `ff_rendicion_estado` ya es VARCHAR.
+
 ### 2026-09-22 al 29 — Libro de Compras, gestión de cheques y arreglos de fondo fijo
 
 **Informe de Libro de Compras (primer informe del §H).** `LibroIvaCompraServlet` (sólo lectura, sin

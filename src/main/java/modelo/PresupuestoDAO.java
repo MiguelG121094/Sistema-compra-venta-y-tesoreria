@@ -105,7 +105,16 @@ public class PresupuestoDAO {
     }
     
     public List<Presupuesto> listarPresupuestoConDetalles() throws SQLException {
+        return listarPresupuestoConDetalles(null);
+    }
+
+    /**
+     * Presupuestos con su detalle concatenado. Con estado trae solo los de ese estado: la Orden de
+     * Compra pide los 'Aprobado', porque sin aprobacion no hay compra.
+     */
+    public List<Presupuesto> listarPresupuestoConDetalles(String estado) throws SQLException {
         List<Presupuesto> presupuestos = new ArrayList<>();
+        boolean filtraEstado = estado != null && !estado.trim().isEmpty();
 
         // con este query obtenemos el presupuesto con su detalle, los articulos se concatenan en una sola columna
         // tambien verificamos si el presupuesto ya tiene una orden de compra asociada
@@ -129,13 +138,17 @@ public class PresupuestoDAO {
                     "JOIN proveedor pr ON pc.id_proveedor = pr.id_proveedor\n" +
                     "JOIN presupuesto_detalle pd ON pc.id_presupuesto_cab = pd.id_presupuesto_cab\n" +
                     "JOIN articulo a ON pd.id_articulo = a.id_articulo\n" +
+                    (filtraEstado ? "WHERE pc.presu_cab_estado = ?\n" : "") +
                     "GROUP BY\n" +
                     "    pc.id_presupuesto_cab, pc.id_pedido_cab, pc.id_usuario, usuario_nombre,\n" +
                     "    pr.id_proveedor, pr.prov_razon_social, pc.presu_cab_fecha, pc.presu_cab_estado\n" +
                     "ORDER BY\n" +
                     "    pc.id_presupuesto_cab;";
-        try (PreparedStatement stmt = conn.prepareStatement(sql);
-             ResultSet rs = stmt.executeQuery()) {
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            if (filtraEstado) {
+                stmt.setString(1, estado.trim());
+            }
+            ResultSet rs = stmt.executeQuery();
             while (rs.next()) {
                 pedidoCompraDAO = new PedidoCompraDAO(conn);
                 usuarioDAO = new UsuarioDAO(conn);
@@ -362,4 +375,84 @@ public class PresupuestoDAO {
         return false;
     }
 
+    // ==================== APROBACION ====================
+
+    /** Estados de presu_cab_estado. */
+    public static final String ESTADO_PENDIENTE = "Pendiente";
+    public static final String ESTADO_APROBADO = "Aprobado";
+    public static final String ESTADO_RECHAZADO = "Rechazado";
+    public static final String ESTADO_ANULADO = "Anulado";
+    public static final String ESTADO_COMPLETADO = "Completado";
+
+    /**
+     * Lee el estado bloqueando la fila hasta el commit (FOR UPDATE), para que dos pantallas no
+     * aprueben dos presupuestos del mismo pedido a la vez.
+     *
+     * @return el estado actual, o null si el presupuesto no existe
+     */
+    public String getEstadoBloqueado(Long idPresupuesto) throws SQLException {
+        if (idPresupuesto == null) {
+            return null;
+        }
+        String sql = "SELECT presu_cab_estado FROM presupuesto_cabecera "
+                   + "WHERE id_presupuesto_cab = ? FOR UPDATE";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, idPresupuesto);
+            try (ResultSet rs = stmt.executeQuery()) {
+                return rs.next() ? rs.getString("presu_cab_estado") : null;
+            }
+        }
+    }
+
+    /** Pedido al que pertenece el presupuesto, o null si no existe. */
+    public Long getIdPedido(Long idPresupuesto) throws SQLException {
+        if (idPresupuesto == null) {
+            return null;
+        }
+        String sql = "SELECT id_pedido_cab FROM presupuesto_cabecera WHERE id_presupuesto_cab = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, idPresupuesto);
+            try (ResultSet rs = stmt.executeQuery()) {
+                return rs.next() ? rs.getLong("id_pedido_cab") : null;
+            }
+        }
+    }
+
+    public void actualizarEstado(Long idPresupuesto, String estado) throws SQLException {
+        if (idPresupuesto == null) {
+            return;
+        }
+        String sql = "UPDATE presupuesto_cabecera SET presu_cab_estado = ? WHERE id_presupuesto_cab = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, estado);
+            stmt.setLong(2, idPresupuesto);
+            stmt.executeUpdate();
+        }
+    }
+
+    /**
+     * Cambia de estado a los demas presupuestos del mismo pedido. Se usa para cerrar la compulsa:
+     * al aprobar uno, los que estaban 'Pendiente' pasan a 'Rechazado', y si esa aprobacion se
+     * deshace vuelven a 'Pendiente'.
+     *
+     * <p>Los anulados y los que ya tienen orden o factura quedan afuera por el estado de origen.
+     *
+     * @return cuantos presupuestos cambiaron
+     */
+    public int cambiarEstadoDeLosOtrosDelPedido(Long idPedido, Long idPresupuestoExcluido,
+            String estadoOrigen, String estadoDestino) throws SQLException {
+
+        if (idPedido == null || idPresupuestoExcluido == null) {
+            return 0;
+        }
+        String sql = "UPDATE presupuesto_cabecera SET presu_cab_estado = ? "
+                   + "WHERE id_pedido_cab = ? AND id_presupuesto_cab <> ? AND presu_cab_estado = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, estadoDestino);
+            stmt.setLong(2, idPedido);
+            stmt.setLong(3, idPresupuestoExcluido);
+            stmt.setString(4, estadoOrigen);
+            return stmt.executeUpdate();
+        }
+    }
 }

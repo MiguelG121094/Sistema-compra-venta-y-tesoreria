@@ -127,8 +127,8 @@ Gestiona las entidades relacionadas con personas.
 | Persona | Datos básicos de personas |
 | Cliente | Compradores |
 | Proveedor | Vendedores/Suministradores |
-| Sucursal | Puntos de venta/operación |
-| Usuario | Usuarios del sistema |
+| Sucursal | Puntos de venta/operación (con su establecimiento, el primer tramo del nro de comprobante) |
+| Usuario | Usuarios del sistema (cada uno con su sucursal, que se carga sola en los documentos) |
 
 ### 6. Soporte Fiscal (no es un módulo de contabilidad)
 El sistema **no implementa contabilidad** (asientos, plan de cuentas, balances). Solo roza el área fiscal mediante las siguientes entidades de apoyo:

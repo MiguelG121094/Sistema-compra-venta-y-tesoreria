@@ -674,19 +674,22 @@ apunta al responsable mientras su detalle apunta a las facturas de los comercios
 otra. `OrdenPagoServlet` toma el proveedor **de la provisión**, así que la OP sale a nombre del
 responsable — que es lo correcto: a él se le repone. El *Tipo de pago* es `'reposicionFF'`, el valor
 que la cabecera de la OP ya tenía previsto. Al generarla se descuenta el saldo de cada cuenta a pagar
-y se completa `ff_rendicion_fecha_reposicion` en la rendición, que es el último eslabón.
+y se completa `ff_rendicion_fecha_reposicion` en la rendición, **que pasa a `'Procesada'`** — ese es el
+último eslabón. Hasta el 2026-09-30 sólo se anotaba la fecha y el estado se quedaba en `'Provisionada'`,
+así que una rendición ya pagada se veía igual que una que esperaba su OP.
 
 #### E.1.3 Estados
 
 | Documento | Estados | Transiciones |
 |---|---|---|
 | `cuenta_pagar` | `Pendiente` → `Rendida` → `En provision` → `Cancelado` | La rendición marca `'Rendida'`; la provisión, `'En provision'`; la OP descuenta el saldo y recalcula |
-| `fondo_fijo_rendicion` | `Generada` → `Provisionada`; `Anulado` | La provisión la marca; anular la provisión la devuelve a `'Generada'` |
+| `fondo_fijo_rendicion` | `Generada` → `Provisionada` → `Procesada`; `Anulado` | La provisión la marca `'Provisionada'`; la OP de reposición, `'Procesada'` (2026-09-30, junto con `ff_rendicion_fecha_reposicion`, en el mismo UPDATE). Anular la OP la devuelve a `'Provisionada'` y anular la provisión, a `'Generada'` |
 | `provision_cuenta_pagar` | `Pendiente` → `Procesada`; `Anulado` | Sin cambios respecto de la provisión normal |
 
 Las anulaciones revierten hacia atrás, cada una un solo paso:
 
-- **Anular la OP** devuelve el saldo y la provisión vuelve a `'Pendiente'`.
+- **Anular la OP** devuelve el saldo, la provisión vuelve a `'Pendiente'` y la rendición, de
+  `'Procesada'` a `'Provisionada'` (se le borra la fecha de reposición).
 - **Anular la provisión** devuelve las cuentas a `'Rendida'` —no a `'Pendiente'`, porque siguen
   rendidas— y la rendición a `'Generada'`.
 - **Anular la rendición** devuelve las cuentas al estado que les corresponde por saldo y las deja

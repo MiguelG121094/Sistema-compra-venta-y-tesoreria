@@ -12,7 +12,7 @@
       listaFormasPago (List<FormaPagoDetalle>) -> carrito de formas de pago
       totalOrden (Long) = ord_pag_monto (Σ importe a pagar del detalle)
       sumaFormas (Long) = Σ montos de las formas cargadas
-      listaSucursales, listaCuentas, listaFormaPago (Cheque/Transferencia),
+      listaCuentas, listaFormaPago (Cheque/Transferencia),
       listaChequeras, listaTipoCheque
       La moneda ya NO va en la cabecera (la define la cuenta de cada forma). El tipo de cambio
       va por forma de pago (input tipoCambioForma en el modal -> FormaPagoDetalle.tipoCambio).

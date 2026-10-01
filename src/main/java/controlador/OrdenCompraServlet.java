@@ -121,8 +121,8 @@ public class OrdenCompraServlet extends HttpServlet {
 
                 switch (accion) {
                     case "ListarModal":
-                        // Listar presupuestos aprobados para seleccionar
-                        presupuestosConDetalle = presupuestoService.listarPresupuestoConDetalles();
+                        // Listar presupuestos aprobados para seleccionar: sin aprobacion no hay compra
+                        presupuestosConDetalle = presupuestoService.listarPresupuestosAprobados();
                         request.setAttribute("listaPresupuestosConDetalle", presupuestosConDetalle);
                         // Listar ordenes de compra existentes
                         ordenesCompraConDetalle = ordenCompraService.listarOrdenesCompraConDetalles();

@@ -74,7 +74,6 @@ public class FacturaCompraServlet extends HttpServlet {
         List<OrdenCompra> listaOrdenesCompra;
         List<FacturaCompra> listaFacturasCompra;
         List<Proveedor> listaProveedores;
-        List<Sucursal> listaSucursales;
         List<Articulo> listaArticulos;
         List<TipoImpuesto> listaTipoImpuesto;
     }
@@ -128,7 +127,6 @@ public class FacturaCompraServlet extends HttpServlet {
         request.setAttribute("listaOrdenesCompra", estado.listaOrdenesCompra);
         request.setAttribute("listaFacturasCompra", estado.listaFacturasCompra);
         request.setAttribute("listaProveedores", estado.listaProveedores);
-        request.setAttribute("listaSucursales", estado.listaSucursales);
         request.setAttribute("listaArticulos", estado.listaArticulos);
         request.setAttribute("listaTipoImpuesto", estado.listaTipoImpuesto);
     }
@@ -438,7 +436,6 @@ public class FacturaCompraServlet extends HttpServlet {
         estado.listaFacturasCompra = facturaCompraService.listarFacturasCompra();
         estado.listaOrdenesCompra = ordenCompraService.listarOrdenesCompraConDetalles();
         estado.listaProveedores = proveedorService.listarProveedores();
-        estado.listaSucursales = sucursalService.listarSucursles();
         estado.listaArticulos = articuloService.listarArticulo();
         estado.listaTipoImpuesto = tipoImpuestoService.listarTipoImpuesto();
 
@@ -490,7 +487,6 @@ public class FacturaCompraServlet extends HttpServlet {
         // Cargar listas para modales
         estado.listaFacturasCompra = facturaCompraService.listarFacturasCompra();
         estado.listaOrdenesCompra = ordenCompraService.listarOrdenesCompraConDetalles();
-        estado.listaSucursales = sucursalService.listarSucursles();
         estado.listaArticulos = articuloService.listarArticulo();
         estado.listaTipoImpuesto = tipoImpuestoService.listarTipoImpuesto();
 

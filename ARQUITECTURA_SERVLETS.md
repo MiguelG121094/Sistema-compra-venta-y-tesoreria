@@ -93,7 +93,7 @@ private static class FacturaCompraState implements Serializable {
     FacturaCompra facturaCompra = new FacturaCompra();
     List<FacturaCompraDetalle> listaDetalle = new ArrayList<>();
     Proveedor proveedorSeleccionado;
-    Sucursal sucursalSeleccionada;
+    Sucursal sucursalSeleccionada;   // la del usuario logueado, no se elige (ver abajo)
     OrdenCompra ordenCompraSeleccionada;
     FacturaCompraDetalle detalleSeleccionado;  // Para edición de artículo
     boolean esNuevo = false;
@@ -102,11 +102,20 @@ private static class FacturaCompraState implements Serializable {
     List<OrdenCompra> listaOrdenesCompra;
     List<FacturaCompra> listaFacturasCompra;
     List<Proveedor> listaProveedores;
-    List<Sucursal> listaSucursales;
     List<Articulo> listaArticulos;
     List<TipoImpuesto> listaTipoImpuesto;  // Para facturas de gasto/fondo fijo
 }
 ```
+
+### La sucursal no va en el formulario
+
+Desde el 2026-09-29 la sucursal **sale del usuario logueado** (`usuario.id_sucursal`, hidratada en el
+login y guardada en la sesión), no de un combo. El servlet la fija al abrir el documento y la vista la
+muestra en un input readonly; por eso el State ya no carga `listaSucursales`. Si el usuario no tiene
+sucursal asignada, la pantalla avisa y no deja generar el documento.
+
+La excepción es la Nota de Crédito/Débito: arranca con la del usuario y pasa a ser **la de la factura**
+al cargarla, porque la nota corrige un comprobante que ya tiene la suya.
 
 ### Métodos Helper para Manejo de Sesión
 

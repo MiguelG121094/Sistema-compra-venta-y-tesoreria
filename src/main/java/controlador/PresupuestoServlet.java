@@ -118,6 +118,7 @@ public class PresupuestoServlet extends HttpServlet {
                         }
                         break;
                     case "EditarPrecioArticuloList":
+                    case "Aprobar":
                         if (puedeEditar == null || !puedeEditar) {
                             mostrarMensaje(request, "No tiene permisos para realizar esta acción", "alert-danger");
                             request.getRequestDispatcher("PresupuestoServlet?menu=Presupuesto&accion=ListarModal").forward(request, response);
@@ -460,6 +461,32 @@ public class PresupuestoServlet extends HttpServlet {
                         request.getRequestDispatcher("PresupuestoServlet?menu=Presupuesto&accion=ListarModal").forward(request, response);
 
                         break;
+                    case "Aprobar":
+                        try {
+                            if (presupuesto == null || presupuesto.getIdPresupuesto() == null) {
+                                mostrarMensaje(request, "Debe seleccionar un presupuesto para aprobar", "alert-warning");
+                            } else {
+                                /* Aprobar es elegir con que proveedor se compra: el Service marca
+                                   este presupuesto y rechaza los otros del mismo pedido. */
+                                int rechazados = presupuestoService.aprobarPresupuesto(
+                                        presupuesto.getIdPresupuesto());
+                                String msg = "Presupuesto aprobado correctamente";
+                                if (rechazados > 0) {
+                                    msg += ". " + rechazados + (rechazados == 1
+                                            ? " presupuesto del mismo pedido quedó rechazado"
+                                            : " presupuestos del mismo pedido quedaron rechazados");
+                                }
+                                mostrarMensaje(request, msg, "alert-success");
+                            }
+                        } catch (SQLException e) {
+                            mostrarMensaje(request, e.getMessage(), "alert-warning");
+                        }
+                        presupuesto = null;
+                        listaPresupuestoDetalle = null;
+
+                        request.getRequestDispatcher("PresupuestoServlet?menu=Presupuesto&accion=ListarModal").forward(request, response);
+
+                        break;
                     case "Anular":
                         try {
                             if (presupuesto == null || presupuesto.getIdPresupuesto() == null) {
@@ -477,9 +504,17 @@ public class PresupuestoServlet extends HttpServlet {
 
                                     mostrarMensaje(request, msg, "alert-warning");
                                 } else {
-                                    presupuesto.setEstado("Anulado");
-                                    presupuestoService.actualizarPresupuestoCabecera(presupuesto);
-                                    mostrarMensaje(request, "Presupuesto anulado correctamente", "alert-success");
+                                    /* El Service lo anula y, si estaba aprobado, devuelve a
+                                       'Pendiente' los que se habian rechazado por esa aprobacion. */
+                                    int reabiertos = presupuestoService.anularPresupuesto(
+                                            presupuesto.getIdPresupuesto());
+                                    String msg = "Presupuesto anulado correctamente";
+                                    if (reabiertos > 0) {
+                                        msg += ". " + reabiertos + (reabiertos == 1
+                                                ? " presupuesto vuelve a quedar pendiente"
+                                                : " presupuestos vuelven a quedar pendientes");
+                                    }
+                                    mostrarMensaje(request, msg, "alert-success");
                                 }
                             }
                         } catch (SQLException e) {

@@ -216,6 +216,10 @@ detalle de ninguna conciliación que no esté anulada**. No se pregunta por `for
 
 - **Débitos y créditos no tienen estado de conciliación** (`debitos_estado` es Vigente/Anulado, que es
   otro eje). Para ellos no hay alternativa, así que hacerlo igual para los tres orígenes sale gratis.
+- Lo que saca a un movimiento de la grilla es **haber sido tildado** (`conc_bancaria_conciliado = TRUE`),
+  no figurar en el detalle: el grabado guarda todas las filas, tildadas y sin tildar, porque el detalle es
+  la foto del período. Faltaba ese filtro y se corrigió el 2026-09-30, después de que un cheque sin tildar
+  en septiembre no volviera a aparecer en octubre.
 - Preguntando contra el detalle, **el arrastre no depende de que un `UPDATE` haya salido bien**. El dato
   es el hecho mismo de haber sido conciliado.
 
