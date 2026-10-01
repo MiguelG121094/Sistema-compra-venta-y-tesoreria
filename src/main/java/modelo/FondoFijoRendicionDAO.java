@@ -20,6 +20,8 @@ public class FondoFijoRendicionDAO {
 
     public static final String ESTADO_GENERADA = "Generada";
     public static final String ESTADO_PROVISIONADA = "Provisionada";
+    /** La orden de pago de la reposicion ya se genero: el responsable cobro su plata. */
+    public static final String ESTADO_PROCESADA = "Procesada";
     public static final String ESTADO_ANULADO = "Anulado";
 
     private static final String COLUMNAS =
@@ -90,19 +92,28 @@ public class FondoFijoRendicionDAO {
     }
 
     /**
-     * Completa la fecha de reposicion cuando se paga la orden de pago de la reposicion.
-     * Con fecha nula la borra, que es lo que corresponde si esa orden de pago se anula.
+     * Completa la fecha de reposicion cuando se genera la orden de pago de la reposicion, y mueve
+     * el estado con ella: la rendicion pasa de 'Provisionada' a 'Procesada'.
+     *
+     * <p>Con fecha nula hace la reversa —borra la fecha y vuelve a 'Provisionada'—, que es lo que
+     * corresponde si esa orden de pago se anula. Fecha y estado van juntos en el mismo UPDATE para
+     * que no puedan quedar contandose cosas distintas.
+     *
+     * <p>Una rendicion anulada no se toca: ese estado gana sobre el del circuito.
      */
     public void registrarReposicion(Long idRendicion, java.util.Date fechaReposicion) throws SQLException {
-        String sql = "UPDATE fondo_fijo_rendicion SET ff_rendicion_fecha_reposicion = ? "
-                   + "WHERE id_fondofijo_rendicion = ?";
+        String sql = "UPDATE fondo_fijo_rendicion SET ff_rendicion_fecha_reposicion = ?, "
+                   + "ff_rendicion_estado = ? "
+                   + "WHERE id_fondofijo_rendicion = ? AND ff_rendicion_estado <> ?";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             if (fechaReposicion == null) {
                 stmt.setNull(1, java.sql.Types.DATE);
             } else {
                 stmt.setDate(1, new java.sql.Date(fechaReposicion.getTime()));
             }
-            stmt.setLong(2, idRendicion);
+            stmt.setString(2, fechaReposicion == null ? ESTADO_PROVISIONADA : ESTADO_PROCESADA);
+            stmt.setLong(3, idRendicion);
+            stmt.setString(4, ESTADO_ANULADO);
             stmt.executeUpdate();
         }
     }
