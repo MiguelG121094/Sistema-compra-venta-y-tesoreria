@@ -144,14 +144,14 @@
                                                 <label for="fechaEmision">Fecha Emisión</label>
                                             </div>
                                         </div>
-                                        <div class="col-md-2">
+                                        <div class="col-md-1">
                                             <div class="form-floating">
-                                                <input class="form-control" id="nroRendicion" type="text" placeholder="Nro Rendición" readonly
+                                                <input class="form-control" id="nroRendicion" title="Nro Rendición" type="text" placeholder="Nro Rendición" readonly
                                                        value="${rendicion.numeroRendicion}" />
                                                 <label for="nroRendicion">Nro Rendición</label>
                                             </div>
                                         </div>
-                                        <div class="col-md-1">
+                                        <div class="col-md-2">
                                             <div class="form-floating">
                                                 <input class="form-control" id="estado" type="text" placeholder="Estado" readonly
                                                        value="${rendicion.estado}" />
