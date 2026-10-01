@@ -28,7 +28,6 @@ import modelo.Persona;
 import modelo.Presupuesto;
 import modelo.PresupuestoDetalle;
 import modelo.Proveedor;
-import modelo.Sucursal;
 import modelo.Usuario;
 import service.ArticuloService;
 import service.DepositoService;
@@ -40,7 +39,6 @@ import service.PersonaService;
 import service.PresupuestoDetalleService;
 import service.PresupuestoService;
 import service.ProveedorService;
-import service.SucursalService;
 import service.UsuarioService;
 
 /**
@@ -61,10 +59,6 @@ public class PresupuestoServlet extends HttpServlet {
     private UsuarioService usuarioService = new UsuarioService();
     private Persona persona = new Persona();
     private PersonaService personaService = new PersonaService();
-    private Sucursal sucursal;
-    private Long idSucursal;
-    private List<Sucursal> listaSucursales = new ArrayList<>();
-    private SucursalService sucursalService = new SucursalService();
     private Deposito deposito;
     private List<Deposito> depositos = new ArrayList<>();
     private DepositoService depositoService = new DepositoService();

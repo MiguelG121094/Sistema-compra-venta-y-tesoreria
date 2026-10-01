@@ -60,7 +60,7 @@ public class NotaCreditoDebitoServlet extends HttpServlet {
 
         FacturaCompra facturaReferenciada;
         Proveedor proveedorSeleccionado;
-        Sucursal sucursalSeleccionada;               // heredada de la factura (solo lectura)
+        Sucursal sucursalSeleccionada;               // la del usuario, y al cargar la factura la de ella
         String condicionHeredada;                    // condición de la factura (solo lectura)
 
         NotaCreditoCompraDetalle detalleSeleccionado;
@@ -284,6 +284,9 @@ public class NotaCreditoDebitoServlet extends HttpServlet {
         estado.nota.setUsuario(usuario);
         estado.nota.setFechaCarga(new Date());
         estado.nota.setEstado("Pendiente");
+        // Arranca con la sucursal del usuario; al cargar la factura pasa a ser la de esa factura,
+        // que es la que manda: la nota corrige un comprobante que ya tiene su sucursal.
+        estado.sucursalSeleccionada = usuario.getSucursal();
 
         estado.listaFacturas = facturaCompraService.listarFacturasCompra();
         estado.listaTipoImpuesto = tipoImpuestoService.listarTipoImpuesto();

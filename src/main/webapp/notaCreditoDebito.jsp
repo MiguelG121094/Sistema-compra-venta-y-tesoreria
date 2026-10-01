@@ -149,9 +149,9 @@
                                                 </div>
                                                 <div class="col-md-2">
                                                     <div class="form-floating mb-3 mb-md-0">
-                                                        <select class="form-control" id="sucursal" disabled>
-                                                            <option>${sucursalHeredada.descripcion}</option>
-                                                        </select>
+                                                        <%-- La sucursal no se elige: es la del usuario, y la de la factura cuando se carga --%>
+                                                        <input class="form-control" id="sucursal" type="text" readonly
+                                                               value="${sucursalHeredada.descripcion}" />
                                                         <label for="sucursal">Sucursal</label>
                                                     </div>
                                                 </div>
