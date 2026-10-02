@@ -189,12 +189,17 @@ public class PresupuestoDetalleDAO {
             return cantidadesPorArticulo;
         }
 
-        // Query que suma las cantidades de todos los presupuestos asociados al pedido
+        /* Suma solo lo que ya quedo resuelto: los presupuestos APROBADOS (y los 'Completado', que
+           son los aprobados que ya se facturaron). Un presupuesto 'Pendiente' no consume nada del
+           pedido, porque un mismo pedido se manda a varios proveedores y cada uno lo presupuesta
+           entero: si contaran todos, el primer presupuesto dejaba al pedido sin cantidades
+           pendientes y no se podia cargar el del segundo proveedor. */
         String sql = "SELECT pd.id_articulo, SUM(pd.presu_det_cantidad) AS cantidad_total " +
                     "FROM presupuesto_detalle pd " +
                     "INNER JOIN presupuesto_cabecera pc ON pd.id_presupuesto_cab = pc.id_presupuesto_cab " +
                     "WHERE pc.id_pedido_cab = ? " +
-                    "AND pc.presu_cab_estado NOT IN ('Anulado', 'Cancelado') " +
+                    "AND pc.presu_cab_estado IN ('" + PresupuestoDAO.ESTADO_APROBADO + "', '"
+                    + PresupuestoDAO.ESTADO_COMPLETADO + "') " +
                     "GROUP BY pd.id_articulo";
 
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {

@@ -409,7 +409,9 @@ public class PedidoCompraDAO {
                 "        SUM(pres_det.presu_det_cantidad) AS cantidad_presupuestada " +
                 "    FROM presupuesto_cabecera pres_cab " +
                 "    JOIN presupuesto_detalle pres_det ON pres_cab.id_presupuesto_cab = pres_det.id_presupuesto_cab " +
-                "    WHERE pres_cab.presu_cab_estado NOT IN ('Anulado', 'Cancelado') " +
+                // Mismo criterio que PresupuestoDetalleDAO.obtenerCantidadesPresupuestadasPorPedido:
+                // solo consume el pedido lo aprobado, no cada presupuesto que llega de un proveedor.
+                "    WHERE pres_cab.presu_cab_estado IN ('Aprobado', 'Completado') " +
                 "    GROUP BY pres_cab.id_pedido_cab, pres_det.id_articulo " +
                 ") presu ON pc.id_pedido_cab = presu.id_pedido_cab AND pd.id_articulo = presu.id_articulo " +
                 "GROUP BY " +
