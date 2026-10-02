@@ -71,6 +71,21 @@ public class FacturaCompra implements java.io.Serializable {
         this.idFacturaCompra = idFacturaCompra;
     }
 
+    /**
+     * Estado de la cuenta a pagar de esta factura (Pendiente / Rendida / En provision / Cancelado).
+     * NO se persiste en factura_compra_cabecera: el pago lo gobierna cuenta_pagar y aca solo se
+     * trae hidratado para mostrarlo en la grilla.
+     */
+    private String estadoCuentaPagar;
+
+    public String getEstadoCuentaPagar() {
+        return estadoCuentaPagar;
+    }
+
+    public void setEstadoCuentaPagar(String estadoCuentaPagar) {
+        this.estadoCuentaPagar = estadoCuentaPagar;
+    }
+
     public String getNumero() {
         return numero;
     }

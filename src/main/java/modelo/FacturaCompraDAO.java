@@ -81,11 +81,16 @@ public class FacturaCompraDAO {
 
     public List<FacturaCompra> listarFacturasCompra() throws SQLException {
         List<FacturaCompra> facturas = new ArrayList<>();
-        String sql = "SELECT id_fact_comp_cab, fact_comp_numero, fact_comp_timbrado, fact_comp_fecha_venci_timb, " +
-                    "fact_comp_fecha_emision, fact_comp_fecha_carga, fact_comp_condicion, fact_comp_plazo, " +
-                    "fact_comp_fecha_venci, fact_comp_observacion, fact_comp_estado, fact_comp_tipo_factura, " +
-                    "id_proveedor, id_sucursal, id_usuario, id_orden_compra_cab " +
-                    "FROM factura_compra_cabecera";
+        /* El estado del pago no vive en la factura: lo gobierna cuenta_pagar, que avanza
+           Pendiente -> Rendida -> En provision -> Cancelado. Se trae con un LEFT JOIN para
+           mostrarlo en la grilla, sin duplicarlo en factura_compra_cabecera. */
+        String sql = "SELECT f.id_fact_comp_cab, f.fact_comp_numero, f.fact_comp_timbrado, f.fact_comp_fecha_venci_timb, " +
+                    "f.fact_comp_fecha_emision, f.fact_comp_fecha_carga, f.fact_comp_condicion, f.fact_comp_plazo, " +
+                    "f.fact_comp_fecha_venci, f.fact_comp_observacion, f.fact_comp_estado, f.fact_comp_tipo_factura, " +
+                    "f.id_proveedor, f.id_sucursal, f.id_usuario, f.id_orden_compra_cab, " +
+                    "cp.cta_pag_estado " +
+                    "FROM factura_compra_cabecera f " +
+                    "LEFT JOIN cuenta_pagar cp ON cp.id_fact_comp_cab = f.id_fact_comp_cab";
 
         proveedorDAO = new ProveedorDAO(conn);
         sucursalDAO = new SucursalDAO(conn);
@@ -116,6 +121,7 @@ public class FacturaCompraDAO {
                     usuarioDAO.getUsuario(rs.getLong("id_usuario")),
                     ordenCompra
                 );
+                facturaCompra.setEstadoCuentaPagar(rs.getString("cta_pag_estado"));
                 facturas.add(facturaCompra);
             }
         }

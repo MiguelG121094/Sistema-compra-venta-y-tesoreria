@@ -505,6 +505,7 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                                         <th class="text-bg-dark text-center">Proveedor</th>
                                                         <th class="text-bg-dark text-center">RUC</th>
                                                         <th class="text-bg-dark text-center">Estado</th>
+                                                        <th class="text-bg-dark text-center">Estado de pago</th>
                                                         <th class="text-bg-dark text-center">Fecha</th>
                                                         <th class="text-bg-dark text-center no-search">Acciones</th>
                                                     </tr>
@@ -526,6 +527,8 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                                             <td class="text-center">${fac.proveedor.razonSocial}</td>
                                                             <td class="text-center">${fac.proveedor.ruc}</td>
                                                             <td class="text-center">${fac.estado}</td>
+                                                            <%-- Sale de cuenta_pagar: es la que avanza con la rendición, la provisión y la OP --%>
+                                                            <td class="text-center">${fac.estadoCuentaPagar}</td>
                                                             <td class="text-center">
                                                                 <fmt:formatDate value="${fac.fechaCarga}" pattern="dd/MM/yyyy"/>
                                                             </td>
