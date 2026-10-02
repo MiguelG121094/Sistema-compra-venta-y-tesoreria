@@ -5,6 +5,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
 import modelo.CuentaPagarDAO;
+import modelo.FacturaCompraDAO;
 import modelo.FondoFijoRendicionDAO;
 import modelo.OrdenPagoDAO;
 import modelo.ProvisionCuentaPagar;
@@ -67,6 +68,8 @@ public class ProvisionCuentaPagarService {
      *   1. INSERT cabecera de provisión.
      *   2. INSERT cada detalle (cuenta a pagar + importe a pagar).
      *   3. Reserva cada cuenta a pagar (estado 'En provision', sin tocar el saldo).
+     *   4. Marca la factura como 'Procesada': es su ultimo estado, lo que sigue lo cuenta la
+     *      cuenta a pagar.
      */
     public Long guardarProvisionCompleta(ProvisionCuentaPagar provision,
             List<ProvisionCuentaPagarDetalle> detalles) throws SQLException {
@@ -79,13 +82,14 @@ public class ProvisionCuentaPagarService {
 
             ProvisionCuentaPagarDAO dao = new ProvisionCuentaPagarDAO(conn);
             CuentaPagarDAO cuentaPagarDAO = new CuentaPagarDAO(conn);
+            FacturaCompraDAO facturaDAO = new FacturaCompraDAO(conn);
 
             idProvision = dao.insertarProvision(provision);
             for (ProvisionCuentaPagarDetalle det : detalles) {
                 dao.insertarDetalle(det, idProvision);
-                cuentaPagarDAO.marcarEnProvision(
-                    det.getCuentaPagar().getIdCuentaPagar(),
-                    det.getCuentaPagar().getFacturaCompra().getIdFacturaCompra());
+                Long idFactura = det.getCuentaPagar().getFacturaCompra().getIdFacturaCompra();
+                cuentaPagarDAO.marcarEnProvision(det.getCuentaPagar().getIdCuentaPagar(), idFactura);
+                facturaDAO.actualizarEstado(idFactura, FacturaCompraDAO.ESTADO_PROCESADA);
             }
 
             // Si la provisión se armó desde una rendición, la rendición queda tomada: el modal de
@@ -128,6 +132,7 @@ public class ProvisionCuentaPagarService {
 
             ProvisionCuentaPagarDAO dao = new ProvisionCuentaPagarDAO(conn);
             CuentaPagarDAO cuentaPagarDAO = new CuentaPagarDAO(conn);
+            FacturaCompraDAO facturaDAO = new FacturaCompraDAO(conn);
 
             // La fila se bloquea (FOR UPDATE) antes de mirar nada: sin esto una OP que se esta
             // generando sobre esta misma provision puede grabar entre la validacion y el UPDATE.
@@ -155,10 +160,11 @@ public class ProvisionCuentaPagarService {
             for (ProvisionCuentaPagarDetalle det : detalles) {
                 // Si venía de una rendición, la cuenta vuelve a 'Rendida': la factura sigue rendida,
                 // lo que se deshizo es la provisión.
+                Long idFactura = det.getCuentaPagar().getFacturaCompra().getIdFacturaCompra();
                 cuentaPagarDAO.revertirProvision(
-                    det.getCuentaPagar().getIdCuentaPagar(),
-                    det.getCuentaPagar().getFacturaCompra().getIdFacturaCompra(),
-                    idRendicion != null);
+                    det.getCuentaPagar().getIdCuentaPagar(), idFactura, idRendicion != null);
+                // La factura vuelve a 'Pendiente': deshacer la provision la saca del circuito.
+                facturaDAO.actualizarEstado(idFactura, FacturaCompraDAO.ESTADO_PENDIENTE);
             }
             if (idRendicion != null) {
                 new FondoFijoRendicionDAO(conn).actualizarEstado(

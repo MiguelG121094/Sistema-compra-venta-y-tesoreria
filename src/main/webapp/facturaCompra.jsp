@@ -512,7 +512,7 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                                 </thead>
                                                 <tbody>
                                                     <c:forEach var="fac" items="${listaFacturasCompra}">
-                                                        <tr class="${fac.estado == 'Anulado' ? 'table-danger' : (fac.estado == 'Completado' ? 'table-success' : '')}">
+                                                        <tr class="${fac.estado == 'Anulado' ? 'table-danger' : (fac.estado == 'Procesada' ? 'table-success' : '')}">
                                                             <td class="text-center">${fac.idFacturaCompra}</td>
                                                             <td class="text-center">${fac.numero}</td>
                                                             <%-- Las mismas etiquetas que el combo de la cabecera, no el valor que se guarda --%>

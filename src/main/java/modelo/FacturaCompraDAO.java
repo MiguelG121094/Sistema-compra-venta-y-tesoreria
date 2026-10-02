@@ -433,4 +433,33 @@ public class FacturaCompraDAO {
         }
         return false;
     }
+
+    // ==================== ESTADO DE LA FACTURA ====================
+
+    /** Estados de fact_comp_estado. */
+    public static final String ESTADO_PENDIENTE = "Pendiente";
+    public static final String ESTADO_PROCESADA = "Procesada";
+    public static final String ESTADO_ANULADO = "Anulado";
+
+    /**
+     * Cambia solo el estado de la cabecera. La factura nace 'Pendiente' y pasa a 'Procesada' cuando
+     * entra en una provision; ahi se queda, porque lo que sigue —la orden de pago— lo cuenta
+     * cuenta_pagar. Anular la provision la devuelve a 'Pendiente'.
+     *
+     * <p>Corre sobre la Connection compartida; la transaccion la controla el Service.
+     */
+    public void actualizarEstado(Long idFacturaCompra, String estado) throws SQLException {
+        if (idFacturaCompra == null) {
+            return;
+        }
+        String sql = "UPDATE factura_compra_cabecera SET fact_comp_estado = ? "
+                   + "WHERE id_fact_comp_cab = ? AND fact_comp_estado <> ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, estado);
+            stmt.setLong(2, idFacturaCompra);
+            // Una factura anulada no vuelve al circuito: ese estado gana.
+            stmt.setString(3, ESTADO_ANULADO);
+            stmt.executeUpdate();
+        }
+    }
 }
