@@ -514,7 +514,15 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                                         <tr class="${fac.estado == 'Anulado' ? 'table-danger' : (fac.estado == 'Completado' ? 'table-success' : '')}">
                                                             <td class="text-center">${fac.idFacturaCompra}</td>
                                                             <td class="text-center">${fac.numero}</td>
-                                                            <td class="text-center">${fac.tipoFactura}</td>
+                                                            <%-- Las mismas etiquetas que el combo de la cabecera, no el valor que se guarda --%>
+                                                            <td class="text-center">
+                                                                <c:choose>
+                                                                    <c:when test="${fac.tipoFactura eq 'compraArt'}">Factura Compra de Artículos</c:when>
+                                                                    <c:when test="${fac.tipoFactura eq 'fondoFijo'}">Factura Fondo Fijo</c:when>
+                                                                    <c:when test="${fac.tipoFactura eq 'gasto'}">Factura de Gasto</c:when>
+                                                                    <c:otherwise>${fac.tipoFactura}</c:otherwise>
+                                                                </c:choose>
+                                                            </td>
                                                             <td class="text-center">${fac.proveedor.razonSocial}</td>
                                                             <td class="text-center">${fac.proveedor.ruc}</td>
                                                             <td class="text-center">${fac.estado}</td>
