@@ -336,9 +336,9 @@ Sistema-compra-venta-y-tesoreria/
 | Componente | Modelo | DAO | Service | Servlet | JSP | Estado |
 |------------|:------:|:---:|:-------:|:-------:|:---:|--------|
 | Pedido de Compra | ✅ | ✅ | ✅ | ✅ | ✅ | **Completo** |
-| Presupuesto | ✅ | ✅ | ✅ | ✅ | ✅ | **Completo** |
+| Presupuesto | ✅ | ✅ | ✅ | ✅ | ✅ | **Completo** — con aprobación: aprobar uno rechaza los otros presupuestos del mismo pedido, y la Orden de Compra sólo parte de un aprobado |
 | Orden de Compra | ✅ | ✅ | ✅ | ✅ | ✅ | **Completo** |
-| Factura de Compra | ✅ | ✅ | ✅ | ✅ | ✅ | **Completo** (con triggers stock + Libro IVA + Cuenta a Pagar) |
+| Factura de Compra | ✅ | ✅ | ✅ | ✅ | ✅ | **Completo** (con triggers stock + Libro IVA + Cuenta a Pagar). Pasa a `Procesada` al provisionarse; el avance del pago lo muestra la columna "Estado de pago", que sale de `cuenta_pagar` |
 | Nota Crédito Compra | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ Completo (`NotaCreditoDebitoServlet` + `notaCreditoDebito.jsp`, con validación de cantidad devuelta ≤ comprada; triggers de stock corridos contra la BD el 2026-08-17 — ver [plan](NOTA_CREDITO_DEBITO_PLAN.md)) |
 | Nota Débito Compra | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ Completo (mismo servlet/vista que la Nota de Crédito) |
 | Nota Remisión Compra | ✅ | ❌ | ❌ | ❌ | ⚠️ | Parcial (vista inicial) |

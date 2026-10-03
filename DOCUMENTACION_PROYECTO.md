@@ -351,6 +351,30 @@ Faltan crear las vistas para las nuevas funcionalidades:
 Pedido Compra → Presupuesto (cotización) → Orden Compra → Factura Compra → Cuenta a Pagar
 ```
 
+**La compulsa de presupuestos.** Un mismo pedido se manda a varios proveedores y vuelve con un
+presupuesto de cada uno. Aprobar uno es elegir con quién se compra, así que **cierra la compulsa**: los
+otros presupuestos de ese pedido que estaban `Pendiente` pasan a `Rechazado`, en la misma transacción
+(`PresupuestoService.aprobarPresupuesto`, 2026-10-01). La Orden de Compra sólo parte de un presupuesto
+`Aprobado`: sin aprobación no hay compra.
+
+| Documento | Estados | Transiciones |
+|---|---|---|
+| `presupuesto_cabecera` | `Pendiente` → `Aprobado` → `Completado`; `Rechazado`; `Anulado` | Aprobar marca `'Aprobado'` y rechaza a los otros del pedido; facturar la OC lo deja `'Completado'` y anular esa factura lo devuelve a `'Aprobado'` |
+| `factura_compra_cabecera` | `Pendiente` → `Procesada`; `Anulado` | La provisión lo marca `'Procesada'` y ahí se queda; anular la provisión lo devuelve a `'Pendiente'` |
+| `cuenta_pagar` | `Pendiente` → `Rendida` → `En provision` → `Cancelado` | Es la que sigue el pago, y la que muestra la columna "Estado de pago" de la grilla de facturas |
+
+Dos cosas que conviene no confundir:
+
+- **Las cantidades pendientes del pedido las consume sólo lo aprobado.** `obtenerCantidadesPresupuestadasPorPedido`
+  suma únicamente los presupuestos `'Aprobado'` y `'Completado'`. Si contara todos, el primer presupuesto
+  dejaría al pedido sin cantidades pendientes y no se podría cargar el del segundo proveedor. Si el
+  aprobado cubre sólo una parte, el resto del pedido sigue disponible, así que la compra repartida entre
+  varios proveedores también funciona.
+- **El estado de la factura no es el del pago.** `fact_comp_estado` dice si el documento vale
+  (`Pendiente`/`Procesada`/`Anulado`); quién avanza con el pago es `cuenta_pagar`. Por eso la grilla de
+  facturas muestra las dos columnas, y una factura ya pagada se ve como `Procesada` / `Cancelado`.
+  Anular la factura también anula su cuenta a pagar, así que las dos quedan en `Anulado`.
+
 ### Flujo de Ventas
 ```
 Pedido Venta → Factura Venta → Nota Remisión → Cuenta a Cobrar
@@ -394,6 +418,39 @@ Todas las entidades siguen el patrón POJO:
 ---
 
 ## Historial de Cambios
+
+### 2026-10-01 al 03 — Aprobación de presupuestos y estados de la factura
+
+**Aprobación del presupuesto (§ el botón existía sin función).** El botón "Aprobar" de `presupuesto.jsp`
+era un `<button>` sin acción. Ahora abre un modal de confirmación y dispara la acción `Aprobar`, que el
+servlet resuelve con su estructura de siempre (sin Session+Token, un `case` más en el switch).
+`PresupuestoService.aprobarPresupuesto` corre en una transacción: bloquea la fila con `FOR UPDATE`, valida
+que esté `Pendiente`, la marca `Aprobado` y pasa a `Rechazado` los otros presupuestos del mismo pedido.
+`anularPresupuesto` hace la reversa: si el que se anula estaba aprobado, los rechazados vuelven a
+`Pendiente`, porque si no el pedido quedaría sin ningún presupuesto aprobable. La Orden de Compra pasó a
+listar sólo los aprobados —lo que su comentario ya decía, aunque listaba todos— y al anular una factura el
+presupuesto vuelve a `Aprobado` y no a `Pendiente`.
+
+**Corrección: un pedido ya no se "agota" con el primer presupuesto.** Las cantidades pendientes se
+calculaban sumando todos los presupuestos no anulados, así que después de cargar el primero el modal no
+dejaba volver a elegir ese pedido para el segundo proveedor. Ahora sólo suman los `Aprobado` y
+`Completado`. El mismo criterio se aplicó en la versión SQL del cálculo
+(`PedidoCompraDAO.listarPedidosConArticulosPendientesLogicaSQL`) para no dejar dos reglas conviviendo.
+
+**Estado de la factura y estado del pago.** `fact_comp_estado` sólo valía `Pendiente` o `Anulado` y nunca
+reflejaba el circuito, cosa que se notaba sobre todo en las facturas de fondo fijo: ya rendidas y hasta ya
+repuestas, seguían figurando como pendientes. Se resolvió por los dos lados: la grilla de facturas suma la
+columna **Estado de pago**, que sale de `cuenta_pagar` con un LEFT JOIN y no se persiste en la factura
+(`FacturaCompra.estadoCuentaPagar`), y la factura gana el estado **`Procesada`**, que le pone la provisión
+y es su último estado —lo que sigue lo cuenta la cuenta a pagar—. Anular la provisión la devuelve a
+`Pendiente`. El UPDATE excluye las anuladas, para que ese estado gane siempre.
+
+**Detalles de vista.** El modal de búsqueda de facturas muestra las etiquetas del combo
+(Factura Compra de Artículos / Fondo Fijo / de Gasto) en vez de los valores guardados. Y las grillas de
+Fondo Fijo, Chequeras y Cuentas Bancarias se desbordaban de la pantalla: tenían anchos en línea que sumaban
+más de 100% (33% + 65% + 33px), la tabla no estaba dentro de un `table-responsive` y DataTables fijaba el
+ancho en píxeles al cargar. Ahora usan la grilla de Bootstrap, scrollean dentro de su tarjeta y se
+inicializan con `autoWidth: false`.
 
 ### 2026-09-29 al 30 — Sucursal del usuario, y dos correcciones de tesorería
 
