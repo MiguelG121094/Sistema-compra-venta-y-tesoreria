@@ -52,9 +52,9 @@
                         <c:set var="vHasta" value="${rearmar ? param.hastaNumero : chequeraEdit.getHastaNumero()}" />
                         <c:set var="editando" value="${not empty vId}" />
 
-                        <div class="d-flex">
+                        <div class="row g-3">
                             <!-- Formulario -->
-                            <div class="col-sm-2" style="width: 33%;">
+                            <div class="col-12 col-xl-4">
                                 <div class="card">
                                     <div class="card-body">
                                         <form action="ChequeraServlet?menu=Chequera" method="POST">
@@ -104,10 +104,10 @@
                             </div>
 
                             <!-- Tabla -->
-                            <div class="col-sm-7" style="margin-left: 33px;width: 65%;">
+                            <div class="col-12 col-xl-8">
                                 <div class="card">
-                                    <div class="card-body">
-                                        <table id="tablaChequeras" class="table table-bordered">
+                                    <div class="card-body table-responsive">
+                                        <table id="tablaChequeras" class="table table-bordered w-100">
                                             <thead>
                                                 <tr>
                                                     <th class="text-bg-dark text-center">Id</th>
@@ -196,6 +196,9 @@
         <script>
             $(document).ready(function () {
                 $('#tablaChequeras').DataTable({
+                    // Sin esto DataTables calcula un ancho fijo en px al cargar y la grilla se
+                    // desborda al cambiar el zoom o el tamaño de la ventana.
+                    autoWidth: false,
                     language: { url: "DataTables 2/es-ES.json" }
                 });
             });
