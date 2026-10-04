@@ -42,4 +42,18 @@ public class PresentacionDAO {
         return presentacion;
     }
     
+
+    /** Todas las presentaciones, para el combo del ABM de articulos. */
+    public List<Presentacion> listarPresentacion() throws SQLException {
+        List<Presentacion> presentaciones = new ArrayList<>();
+        String sql = "SELECT id_presentacion, pres_descripcion FROM presentacion ORDER BY pres_descripcion";
+        try (PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+            while (rs.next()) {
+                presentaciones.add(new Presentacion(rs.getLong("id_presentacion"),
+                        rs.getString("pres_descripcion")));
+            }
+        }
+        return presentaciones;
+    }
 }

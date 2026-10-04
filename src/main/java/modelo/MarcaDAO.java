@@ -43,4 +43,17 @@ public class MarcaDAO {
         return marca;
     }
     
+
+    /** Todas las marcas, para el combo del ABM de articulos. */
+    public List<Marca> listarMarca() throws SQLException {
+        List<Marca> marcas = new ArrayList<>();
+        String sql = "SELECT id_marca, mar_descripcion FROM marca ORDER BY mar_descripcion";
+        try (PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+            while (rs.next()) {
+                marcas.add(new Marca(rs.getLong("id_marca"), rs.getString("mar_descripcion")));
+            }
+        }
+        return marcas;
+    }
 }

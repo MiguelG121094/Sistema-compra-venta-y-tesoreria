@@ -9,6 +9,8 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.List;
 import javax.transaction.Transactional;
@@ -182,4 +184,97 @@ public class ArticuloDAO {
 //        }
 //    }
     
+
+    // ==================== ABM ====================
+
+    /** Estados de art_estado. */
+    public static final String ESTADO_ACTIVO = "Activo";
+    public static final String ESTADO_INACTIVO = "Inactivo";
+
+    /**
+     * Da de alta el articulo. Solo la descripcion, el precio de venta, el estado y el impuesto son
+     * obligatorios en la base; el tipo, la marca, la presentacion, el precio de compra y el codigo
+     * de barras admiten nulo, asi que se mandan como NULL cuando no vienen cargados.
+     *
+     * <p>Corre sobre la Connection compartida; la transaccion la controla el Service.
+     */
+    public Long insertarArticulo(Articulo articulo) throws SQLException {
+        if (articulo == null) {
+            return null;
+        }
+        String sql = "INSERT INTO articulo (art_descripcion, art_precio_compra, art_precio_venta, "
+                   + "art_estado, art_codigo, id_tipo_articulo, id_marca, id_presentacion, id_impuesto) "
+                   + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        try (PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            cargarParametros(stmt, articulo);
+            stmt.executeUpdate();
+            try (ResultSet generatedKeys = stmt.getGeneratedKeys()) {
+                if (generatedKeys.next()) {
+                    articulo.setIdArticulo(generatedKeys.getLong(1));
+                    return articulo.getIdArticulo();
+                }
+            }
+        }
+        return null;
+    }
+
+    public void actualizarArticulo(Articulo articulo) throws SQLException {
+        if (articulo == null || articulo.getIdArticulo() == null) {
+            return;
+        }
+        String sql = "UPDATE articulo SET art_descripcion = ?, art_precio_compra = ?, "
+                   + "art_precio_venta = ?, art_estado = ?, art_codigo = ?, id_tipo_articulo = ?, "
+                   + "id_marca = ?, id_presentacion = ?, id_impuesto = ? "
+                   + "WHERE id_articulo = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            cargarParametros(stmt, articulo);
+            stmt.setLong(10, articulo.getIdArticulo());
+            stmt.executeUpdate();
+        }
+    }
+
+    /**
+     * Borra el articulo de la base. Si tiene movimientos —pedidos, presupuestos, facturas o stock—
+     * la FK lo impide y PostgreSQL devuelve un error de integridad (SQLState 23503), que el Service
+     * traduce a un mensaje entendible.
+     */
+    public void eliminarArticulo(Long idArticulo) throws SQLException {
+        if (idArticulo == null) {
+            return;
+        }
+        String sql = "DELETE FROM articulo WHERE id_articulo = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, idArticulo);
+            stmt.executeUpdate();
+        }
+    }
+
+    /** Los nueve parametros que comparten el alta y la edicion, en el mismo orden. */
+    private void cargarParametros(PreparedStatement stmt, Articulo articulo) throws SQLException {
+        stmt.setString(1, articulo.getDescripcion());
+        setNullableLong(stmt, 2, articulo.getPrecioCompra());
+        stmt.setLong(3, articulo.getPrecioVenta() == null ? 0L : articulo.getPrecioVenta());
+        stmt.setString(4, articulo.getEstado() != null ? articulo.getEstado() : ESTADO_ACTIVO);
+        if (articulo.getCodigo() != null && !articulo.getCodigo().trim().isEmpty()) {
+            stmt.setString(5, articulo.getCodigo().trim());
+        } else {
+            stmt.setNull(5, Types.VARCHAR);
+        }
+        setNullableLong(stmt, 6, articulo.getTipoArticulo() != null
+                ? articulo.getTipoArticulo().getIdTipoArticulo() : null);
+        setNullableLong(stmt, 7, articulo.getMarca() != null
+                ? articulo.getMarca().getIdMarca() : null);
+        setNullableLong(stmt, 8, articulo.getPresentacion() != null
+                ? articulo.getPresentacion().getIdPresentacion() : null);
+        setNullableLong(stmt, 9, articulo.getTipoImpuesto() != null
+                ? articulo.getTipoImpuesto().getIdTipoImpuesto() : null);
+    }
+
+    private void setNullableLong(PreparedStatement stmt, int posicion, Long valor) throws SQLException {
+        if (valor == null) {
+            stmt.setNull(posicion, Types.INTEGER);
+        } else {
+            stmt.setLong(posicion, valor);
+        }
+    }
 }

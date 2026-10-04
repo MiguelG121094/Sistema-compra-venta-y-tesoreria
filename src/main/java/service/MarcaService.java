@@ -7,6 +7,7 @@ package service;
 import conexion.Conexion;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.List;
 import modelo.Marca;
 import modelo.MarcaDAO;
 
@@ -24,6 +25,12 @@ public class MarcaService {
         } catch (SQLException e) {
             System.out.println("Error en MarcaService: "+ e);
             return null;
+        }
+    }
+
+    public List<Marca> listarMarca() throws SQLException {
+        try (Connection conn = Conexion.getConnection()) {
+            return new MarcaDAO(conn).listarMarca();
         }
     }
 }

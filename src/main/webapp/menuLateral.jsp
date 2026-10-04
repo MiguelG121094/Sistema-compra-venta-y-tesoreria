@@ -43,7 +43,7 @@ usuario inicio sesion, se debe agregar esta validacon en cada una de las vistas 
                                 <nav class="sb-sidenav-menu-nested nav">
                                     <a class="nav-link" href="TipoArticuloServlet?menu=TipoArticulo&accion=Listar">Tipo de artículo</a>
                                     <a class="nav-link" href="marca.jsp">Marca</a>
-                                    <a class="nav-link" href="articulo.jsp">Artículos</a>
+                                    <a class="nav-link" href="ArticuloServlet?menu=Articulo&accion=Listar">Artículos</a>
                                 </nav>
                             </div>
                             <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#pagesCollapseError" aria-expanded="false" aria-controls="pagesCollapseError">

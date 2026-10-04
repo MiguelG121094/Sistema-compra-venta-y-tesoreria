@@ -7,6 +7,7 @@ package service;
 import conexion.Conexion;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.List;
 import modelo.Presentacion;
 import modelo.PresentacionDAO;
 
@@ -24,6 +25,12 @@ public class PresentacionService {
         } catch (SQLException e) {
             System.out.println("Error en PresentacionService: " + e);
             return null;
+        }
+    }
+
+    public List<Presentacion> listarPresentacion() throws SQLException {
+        try (Connection conn = Conexion.getConnection()) {
+            return new PresentacionDAO(conn).listarPresentacion();
         }
     }
 }
