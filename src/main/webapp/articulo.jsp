@@ -179,6 +179,7 @@
                                                     <th class="text-bg-dark text-center">Marca</th>
                                                     <th class="text-bg-dark text-center">Presentación</th>
                                                     <th class="text-bg-dark text-center">Tipo de artículo</th>
+                                                    <th class="text-bg-dark text-center">Impuesto</th>
                                                     <th class="text-bg-dark text-center">Precio compra</th>
                                                     <th class="text-bg-dark text-center">Precio venta</th>
                                                     <th class="text-bg-dark text-center">Estado</th>
@@ -194,6 +195,7 @@
                                                         <td class="text-center">${art.getMarca().getDescripcion()}</td>
                                                         <td class="text-center">${art.getPresentacion().getDescripcion()}</td>
                                                         <td class="text-center">${art.getTipoArticulo().getDescripcion()}</td>
+                                                        <td class="text-center">${art.getTipoImpuesto().getDescripcion()}</td>
                                                         <td class="text-end"><fmt:formatNumber value="${art.getPrecioCompra()}" pattern="#,##0"/></td>
                                                         <td class="text-end"><fmt:formatNumber value="${art.getPrecioVenta()}" pattern="#,##0"/></td>
                                                         <td class="text-center">${art.getEstado()}</td>
