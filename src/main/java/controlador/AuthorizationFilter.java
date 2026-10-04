@@ -10,7 +10,7 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import modelo.Permiso;
 
-@WebFilter(urlPatterns = {"/FacturaCompraServlet", "/PedidoCompraServlet", "/PresupuestoServlet", "/OrdenCompraServlet", "/NotaCreditoDebitoServlet", "/LibroIvaCompraServlet", "/ArticuloServlet", "/CuentaServlet", "/ChequeraServlet", "/ChequeServlet", "/ProvisionCuentaPagarServlet", "/OrdenPagoServlet", "/MovimientoBancarioServlet", "/DebitoServlet", "/CreditoServlet", "/FondoFijoServlet", "/FondoFijoRendicionServlet", "/ConciliacionBancariaServlet"})
+@WebFilter(urlPatterns = {"/FacturaCompraServlet", "/PedidoCompraServlet", "/PresupuestoServlet", "/OrdenCompraServlet", "/NotaCreditoDebitoServlet", "/LibroIvaCompraServlet", "/ArticuloServlet", "/StockServlet", "/CuentaServlet", "/ChequeraServlet", "/ChequeServlet", "/ProvisionCuentaPagarServlet", "/OrdenPagoServlet", "/MovimientoBancarioServlet", "/DebitoServlet", "/CreditoServlet", "/FondoFijoServlet", "/FondoFijoRendicionServlet", "/ConciliacionBancariaServlet"})
 public class AuthorizationFilter implements Filter {
 
     private static final Map<String, String> URL_MODULO = new HashMap<>();
@@ -22,6 +22,7 @@ public class AuthorizationFilter implements Filter {
         URL_MODULO.put("NotaCreditoDebitoServlet", "compra");
         URL_MODULO.put("LibroIvaCompraServlet", "compra");
         URL_MODULO.put("ArticuloServlet", "compra");
+        URL_MODULO.put("StockServlet", "compra");
         URL_MODULO.put("CuentaServlet", "tesoreria");
         URL_MODULO.put("ChequeraServlet", "tesoreria");
         URL_MODULO.put("ChequeServlet", "tesoreria");
