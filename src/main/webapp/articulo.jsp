@@ -197,7 +197,7 @@
                                                         <td class="text-center">${art.getMarca().getDescripcion()}</td>
                                                         <td class="text-center">${art.getPresentacion().getDescripcion()}</td>
                                                         <td class="text-center">${art.getTipoArticulo().getDescripcion()}</td>
-                                                        <td class="text-center">${art.getTipoImpuesto().getDescripcion()}</td>
+                                                        <td class="text-center">${art.getTipoImpuesto().getDescripcion()} %</td>
                                                         <td class="text-end"><fmt:formatNumber value="${art.getPrecioCompra()}" pattern="#,##0"/></td>
                                                         <td class="text-end"><fmt:formatNumber value="${art.getPrecioVenta()}" pattern="#,##0"/></td>
                                                         <td class="text-center">${art.getEstado()}</td>
