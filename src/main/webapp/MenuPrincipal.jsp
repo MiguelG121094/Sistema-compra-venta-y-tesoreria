@@ -164,7 +164,7 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                         <nav class="sb-sidenav-menu-nested nav flex-column p-2">
                                             <a class="nav-link text-white py-1" href="TipoArticuloServlet?menu=TipoArticulo&accion=Listar">Tipo de artículo</a>
                                             <a class="nav-link text-white py-1" href="ArticuloServlet?menu=Articulo&accion=Listar">Artículos</a>
-                                            <a class="nav-link text-white py-1" href="StockServlet?menu=Stock&accion=Listar">Stock por depósito</a>
+                                            <a class="nav-link text-white py-1" href="StockServlet?menu=Stock&accion=Listar">Stock</a>
                                             <a class="nav-link text-white py-1" href="#">Ajuste de Stock</a>
                                         </nav>
                                     </div>
