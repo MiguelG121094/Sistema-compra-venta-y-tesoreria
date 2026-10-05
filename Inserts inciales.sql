@@ -108,48 +108,48 @@ VALUES('Caja blanda');
 -- INSERTS PARA ARTICULOS
 INSERT INTO public.articulo
 (id_tipo_articulo, id_marca, id_impuesto, id_presentacion, art_descripcion, art_precio_compra, art_precio_venta, art_estado)
-VALUES(1, 1, 1, 2, 'Coca Cola de 2 litros', 8000, 12000, 'activo');
+VALUES(1, 1, 1, 2, 'Coca Cola de 2 litros', 8000, 12000, 'Activo');
 INSERT INTO public.articulo
 (id_tipo_articulo, id_marca, id_impuesto, id_presentacion, art_descripcion, art_precio_compra, art_precio_venta, art_estado)
-VALUES(5, 8, 1, 1, 'Granadina botella de 1 litro', 12000, 18000, 'activo');
+VALUES(5, 8, 1, 1, 'Granadina botella de 1 litro', 12000, 18000, 'Activo');
 INSERT INTO public.articulo
 (id_tipo_articulo, id_marca, id_impuesto, id_presentacion, art_descripcion, art_precio_compra, art_precio_venta, art_estado)
-VALUES(3, 5, 1, 3, 'Jugo frugos de 1 litro', 7000, 10000, 'activo');
+VALUES(3, 5, 1, 3, 'Jugo frugos de 1 litro', 7000, 10000, 'Activo');
 INSERT INTO public.articulo
 (id_tipo_articulo, id_marca, id_impuesto, id_presentacion, art_descripcion, art_precio_compra, art_precio_venta, art_estado)
-VALUES(4, 7, 1, 2, 'Tres leones de 500 ml', 2000, 5000, 'activo');
+VALUES(4, 7, 1, 2, 'Tres leones de 500 ml', 2000, 5000, 'Activo');
 INSERT INTO public.articulo
 (id_tipo_articulo, id_marca, id_impuesto, id_presentacion, art_descripcion, art_precio_compra, art_precio_venta, art_estado)
-VALUES(2, 3, 1, 4, 'Ouro fino tubito en lata', 3000, 4000, 'activo');
+VALUES(2, 3, 1, 4, 'Ouro fino tubito en lata', 3000, 4000, 'Activo');
 INSERT INTO public.articulo
 (id_tipo_articulo, id_marca, id_impuesto, id_presentacion, art_descripcion, art_precio_compra, art_precio_venta, art_estado)
-VALUES(6, 9, 1, 5, 'Palermo Duo de 20', 2500, 4000, 'activo');
+VALUES(6, 9, 1, 5, 'Palermo Duo de 20', 2500, 4000, 'Activo');
 INSERT INTO public.articulo
 (id_tipo_articulo, id_marca, id_impuesto, id_presentacion, art_descripcion, art_precio_compra, art_precio_venta, art_estado)
-VALUES(6, 10, 1, 6, 'San marino de 10', 1800, 3000, 'activo');
+VALUES(6, 10, 1, 6, 'San marino de 10', 1800, 3000, 'Activo');
 
 
 -- INSERT SUCURSALES
 INSERT INTO public.sucursal
 (suc_descripcion, suc_direccion, suc_estado)
-VALUES('Ciudad del Este - Don Bosco', 'Paraguay', 'activo');
+VALUES('Ciudad del Este - Don Bosco', 'Paraguay', 'Activo');
 INSERT INTO public.sucursal
 (suc_descripcion, suc_direccion, suc_estado)
-VALUES('Asuncion - Sajonia', 'Isabel la Catolica 1810', 'activo');
+VALUES('Asuncion - Sajonia', 'Isabel la Catolica 1810', 'Activo');
 INSERT INTO public.sucursal
 (suc_descripcion, suc_direccion, suc_estado)
-VALUES('Villa Elisa - Tres Bocas', 'Americo Picco', 'activo');
+VALUES('Villa Elisa - Tres Bocas', 'Americo Picco', 'Activo');
 
 -- INSERT DEPOSITOS
 INSERT INTO public.deposito
 (dep_descripcion, dep_estado, id_sucursal)
-VALUES('Deposito1-Asu/Sajonia', 'activo', 2);
+VALUES('Deposito1-Asu/Sajonia', 'Activo', 2);
 INSERT INTO public.deposito
 (dep_descripcion, dep_estado, id_sucursal)
-VALUES('Deposito2-Asu/Sajonia', 'activo', 2);
+VALUES('Deposito2-Asu/Sajonia', 'Activo', 2);
 INSERT INTO public.deposito
 (dep_descripcion, dep_estado, id_sucursal)
-VALUES('Deposito1-CDE/DonBosco', 'activo', 1);
+VALUES('Deposito1-CDE/DonBosco', 'Activo', 1);
 
 
 -- INSERT GRUPO
@@ -259,16 +259,16 @@ VALUES('Responsable fondo fijo', NULL, 1, '666666-6', 'Responsable fondo fijo', 
 -- INSERT USUARIO
 INSERT INTO public.usuario
 (id_persona, usu_user, usu_pass, usu_estado, id_grupo)
-VALUES(1, 'admin', '123', 'activo', 1);
+VALUES(1, 'admin', '123', 'Activo', 1);
 INSERT INTO public.usuario
 (id_persona, usu_user, usu_pass, usu_estado, id_grupo)
 VALUES(4, 'Maria Stella', '123', 'inactivo', 3);
 INSERT INTO public.usuario
 (id_persona, usu_user, usu_pass, usu_estado, id_grupo)
-VALUES(2, 'Gustavo', '123', 'activo', 2);
+VALUES(2, 'Gustavo', '123', 'Activo', 2);
 INSERT INTO public.usuario
 (id_persona, usu_user, usu_pass, usu_estado, id_grupo)
-VALUES(3, 'Adolfo Gustavo', '123', 'activo', 4);
+VALUES(3, 'Adolfo Gustavo', '123', 'Activo', 4);
 
 
 
@@ -289,12 +289,12 @@ INSERT INTO public.tipo_comprobante (tipo_comprob_descripcion) VALUES('Nota de D
 -- INSERT TIMBRADO (vigente, para el tipo comprobante Factura)
 INSERT INTO public.timbrado
 (tim_numero, tim_fecha_autorizacion, tim_fecha_vencimineto, tim_estado, id_tipo_comprob)
-VALUES(12345678, '2026-01-01', '2027-12-31', 'activo', 1);
+VALUES(12345678, '2026-01-01', '2027-12-31', 'Activo', 1);
 
 -- ARTICULO ADICIONAL CON IVA 10% (los existentes son todos 5%) -> id 8
 INSERT INTO public.articulo
 (id_tipo_articulo, id_marca, id_impuesto, id_presentacion, art_descripcion, art_precio_compra, art_precio_venta, art_estado)
-VALUES(2, 2, 2, 4, 'Pilsen lata 473ml', 5000, 7000, 'activo');
+VALUES(2, 2, 2, 4, 'Pilsen lata 473ml', 5000, 7000, 'Activo');
 
 -- FACTURA DE COMPRA 1 (Credito, mercaderia) -> id 1. Proveedor 4 (Paresa), Sucursal 1, Usuario 1. Total 180000
 INSERT INTO public.factura_compra_cabecera

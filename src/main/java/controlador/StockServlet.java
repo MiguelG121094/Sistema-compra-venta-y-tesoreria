@@ -21,8 +21,10 @@ import modelo.Articulo;
 import modelo.Deposito;
 import modelo.Stock;
 import modelo.Usuario;
+import modelo.Sucursal;
 import service.DepositoService;
 import service.StockService;
+import service.SucursalService;
 
 @WebServlet(name = "StockServlet", urlPatterns = {"/StockServlet"})
 public class StockServlet extends HttpServlet {
@@ -32,6 +34,7 @@ public class StockServlet extends HttpServlet {
 
     private final StockService stockService = new StockService();
     private final DepositoService depositoService = new DepositoService();
+    private final SucursalService sucursalService = new SucursalService();
 
     protected void processRequest(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
@@ -123,19 +126,28 @@ public class StockServlet extends HttpServlet {
     private void listar(HttpServletRequest request, HttpServletResponse response, Usuario usuario)
             throws ServletException, IOException, SQLException {
 
-        /* Los depositos son los de la sucursal del usuario: cada uno administra el stock de donde
-           trabaja, igual que los documentos salen con su sucursal. */
-        List<Deposito> depositos = new ArrayList<>();
-        if (usuario.getSucursal() != null && usuario.getSucursal().getIdSucursal() != null) {
-            depositos = depositoService.listarDepostioPorSucursal(usuario.getSucursal().getIdSucursal());
-        } else {
+        /* Arranca en la sucursal del usuario, pero acá sí se puede cambiar: es una pantalla de
+           consulta, no un documento que deja registrada su sucursal. Sirve para mirar el stock de
+           las otras sucursales y sus depósitos. */
+        Long idSucursal = leerId(request.getParameter("idSucursal"));
+        if (idSucursal == null && usuario.getSucursal() != null) {
+            idSucursal = usuario.getSucursal().getIdSucursal();
+        }
+        if (idSucursal == null) {
             mostrarMensaje(request, "El usuario no tiene una sucursal asignada", "alert-warning");
         }
+
+        List<Deposito> depositos = idSucursal == null
+                ? new ArrayList<Deposito>() : depositoService.listarDepostioPorSucursal(idSucursal);
         if (depositos == null) {
             depositos = new ArrayList<>();
         }
 
         Long idDeposito = leerId(request.getParameter("idDeposito"));
+        // Al cambiar de sucursal, el deposito que venia elegido ya no pertenece a la lista.
+        if (idDeposito != null && !perteneceA(depositos, idDeposito)) {
+            idDeposito = null;
+        }
         if (idDeposito == null && depositos.size() == 1) {
             // Con un solo deposito no tiene sentido obligar a elegirlo.
             idDeposito = depositos.get(0).getIdDeposito();
@@ -144,12 +156,24 @@ public class StockServlet extends HttpServlet {
         if (idDeposito != null) {
             request.setAttribute("listaStock", stockService.listarPorDeposito(idDeposito));
         }
+        List<Sucursal> sucursales = sucursalService.listarSucursles();
+        request.setAttribute("listaSucursales", sucursales == null ? new ArrayList<Sucursal>() : sucursales);
         request.setAttribute("listaDepositos", depositos);
+        request.setAttribute("idSucursal", idSucursal);
         request.setAttribute("idDeposito", idDeposito);
         request.getRequestDispatcher(JSP_STOCK).forward(request, response);
     }
 
     // ==================== AUXILIARES ====================
+
+    private boolean perteneceA(List<Deposito> depositos, Long idDeposito) {
+        for (Deposito dep : depositos) {
+            if (idDeposito.equals(dep.getIdDeposito())) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     /** Cantidad entera y no negativa; vacio vale 0, que es "sin limite definido". */
     private Long leerCantidad(HttpServletRequest request, String valor, String campo) {

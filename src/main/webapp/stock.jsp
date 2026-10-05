@@ -37,15 +37,31 @@
                         <!-- Título -->
                         <div style="text-align: center; background-color: #dadada; border-radius: 10px; border: 2px solid black; margin-top: 20px;">
                             <span style="height: 100%; width: 100%; background-color: yellow">
-                                <h1 style="text-align: center"><strong>STOCK POR DEPÓSITO</strong></h1></span>
+                                <h1 style="text-align: center"><strong>STOCK</strong></h1></span>
                         </div>
                         <div style="border-bottom: 1px solid black; width: 100%; margin: 20px 0;"></div>
 
-                        <!-- Depósito -->
+                        <!-- Sucursal y depósito -->
                         <div class="card mb-4">
                             <div class="card-body">
                                 <form action="StockServlet?menu=Stock" method="POST">
                                     <div class="row">
+                                        <div class="col-md-5">
+                                            <%-- Arranca en la sucursal del usuario y se puede cambiar:
+                                                 es una pantalla de consulta, no un documento --%>
+                                            <div class="form-floating mb-3 mb-md-0">
+                                                <select class="form-control" id="idSucursal" name="idSucursal"
+                                                        onchange="this.form.submit();">
+                                                    <c:forEach var="suc" items="${listaSucursales}">
+                                                        <option value="${suc.getIdSucursal()}"
+                                                            ${idSucursal == suc.getIdSucursal() ? 'selected' : ''}>
+                                                            ${suc.getDescripcion()}
+                                                        </option>
+                                                    </c:forEach>
+                                                </select>
+                                                <label for="idSucursal">Sucursal</label>
+                                            </div>
+                                        </div>
                                         <div class="col-md-5">
                                             <div class="form-floating mb-3 mb-md-0">
                                                 <select class="form-control" id="idDeposito" name="idDeposito"
@@ -70,6 +86,7 @@
                         <c:if test="${not empty idDeposito}">
                             <form action="StockServlet?menu=Stock" method="POST">
                                 <input type="hidden" name="accion" value="Guardar">
+                                <input type="hidden" name="idSucursal" value="${idSucursal}">
                                 <input type="hidden" name="idDeposito" value="${idDeposito}">
 
                                 <div class="card mb-4">
@@ -116,7 +133,7 @@
                                     <div class="card-footer">
                                         <button type="submit" class="btn btn-success"
                                                 <c:if test="${not puedeEditar}">disabled title="No tiene permisos"</c:if>>Guardar</button>
-                                        <a href="StockServlet?menu=Stock&accion=Listar&idDeposito=${idDeposito}"
+                                        <a href="StockServlet?menu=Stock&accion=Listar&idSucursal=${idSucursal}&idDeposito=${idDeposito}"
                                            class="btn btn-danger">Cancelar</a>
                                     </div>
                                 </div>
