@@ -21,6 +21,7 @@
 <!DOCTYPE html>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
+<%@ taglib prefix="fn" uri="http://java.sun.com/jsp/jstl/functions" %>
 <%@ page contentType="text/html;charset=UTF-8" language="java" pageEncoding="UTF-8" %>
 <html>
     <jsp:include page="header.jsp" />
@@ -188,7 +189,8 @@
                                             </thead>
                                             <tbody>
                                                 <c:forEach var="art" items="${listaArticulos}">
-                                                    <tr class="${art.getEstado() eq estadoInactivo ? 'table-secondary' : ''}">
+                                                    <%-- Sin distinguir mayúsculas: el seed cargó los estados en minúscula --%>
+                                                    <tr class="${fn:toUpperCase(art.getEstado()) eq fn:toUpperCase(estadoInactivo) ? 'table-secondary' : ''}">
                                                         <td class="text-center">${art.getIdArticulo()}</td>
                                                         <td>${art.getDescripcion()}</td>
                                                         <td class="text-center">${art.getCodigo()}</td>

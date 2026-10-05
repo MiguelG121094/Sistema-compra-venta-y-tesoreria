@@ -36,7 +36,8 @@ public class StockDAO {
                    + "s.stk_cantidad_minima, s.stk_cantidad_maxima, s.stk_stock_actual "
                    + "FROM articulo a "
                    + "LEFT JOIN stock s ON s.id_articulo = a.id_articulo AND s.id_deposito = ? "
-                   + "WHERE a.art_estado = ? "
+                   // Sin distinguir mayusculas: el seed cargo 'activo' y el ABM graba 'Activo'.
+                   + "WHERE UPPER(a.art_estado) = UPPER(?) "
                    + "ORDER BY a.art_descripcion";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setLong(1, idDeposito);
