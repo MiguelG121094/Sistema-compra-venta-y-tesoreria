@@ -190,7 +190,11 @@ src/main/webapp/
 
 ### 1. DAOs (Data Access Objects)
 
-**Stock**: Nota — se decidió que el stock se gestiona vía **triggers PL/pgSQL** en PostgreSQL (ver `Procedimientos y Triggers para BD.sql`), no vía DAO en Java. Por eso `StockDAO` no figura en pendientes.
+**Stock**: el **stock actual** se gestiona vía **triggers PL/pgSQL** en PostgreSQL (ver
+`Procedimientos y Triggers para BD.sql`), no desde Java: la aplicación no lo escribe nunca. Desde el
+2026-10-04 sí existe `StockDAO`, pero sólo para los **puntos de reposición** (mínima y máxima) y para
+listarlos; su UPSERT crea la fila con stock actual 0 y en el conflicto **no toca** `stk_stock_actual`,
+que sigue siendo del trigger y, más adelante, del ajuste de stock.
 
 Faltan crear los DAOs para las siguientes entidades:
 
@@ -251,6 +255,9 @@ Faltan crear los servicios REST para las nuevas entidades:
 [x] TipoCuentaService · FormaPagoCabeceraService · TipoChequeService · ChequeraService ✅ (combos de tesorería, 2026-07)
 [x] ProvisionCuentaPagarService · OrdenPagoService ✅ (transaccionales, 2026-07)
 [x] ChequeService ✅ (2026-09-29 — anulación individual y entrega; la emisión sigue dentro de la transacción de la OP)
+[x] ArticuloService ✅ (ABM completo, 2026-10-04 — antes sólo listaba)
+[x] StockService ✅ (puntos de reposición por depósito, 2026-10-04)
+[x] MarcaService · PresentacionService ✅ (listados para los combos del ABM de artículos, 2026-10-04)
 [ ] AjusteStockService
 [x] ConciliacionBancariaService ✅ (grabar, anular y los saldos de la cuenta, 2026-09-05/08)
 [x] FondoFijoService · FondoFijoRendicionService ✅ (2026-09-01/03)
@@ -268,7 +275,8 @@ Faltan crear los controladores para las nuevas funcionalidades:
 [x] OrdenPagoServlet ✅ (2026-07 — Session+Token, pendiente de prueba end-to-end)
 [x] ChequeServlet ✅ (2026-09-29 — gestión de cheques emitidos: anulación individual y entrega. Los cheques se siguen emitiendo desde la Orden de Pago)
 [ ] DebitoCreditoServlet (movimientos bancarios)
-[ ] StockServlet
+[x] ArticuloServlet ✅ (ABM de artículos, 2026-10-04)
+[x] StockServlet ✅ (puntos de reposición por depósito, 2026-10-04/05)
 [ ] AjusteStockServlet
 [x] ConciliacionBancariaServlet ✅ (Session+Token, 2026-09-05)
 [x] FondoFijoServlet · FondoFijoRendicionServlet ✅ (2026-09-01/03)
@@ -287,7 +295,8 @@ Faltan crear las vistas para las nuevas funcionalidades:
 [x] provision.jsp           ✅ (provisión de cuenta a pagar, 2026-07)
 [x] ordenPago.jsp           ✅ (orden de pago con carrito de formas de pago, 2026-07)
 [x] cheque.jsp              ✅ (grilla de cheques con Entrega y Anular, 2026-09-29)
-[ ] stock.jsp
+[x] articulo.jsp ✅ (ABM de artículos, 2026-10-04 — reemplaza la copia del ABM de clientes que tenía)
+[x] stock.jsp ✅ (stock por sucursal y depósito, 2026-10-04/05)
 [ ] ajusteStock.jsp
 [x] conciliacionBancaria.jsp ✅ (2026-09-05, con el formato de `Images/conciliacion_ejemplo.jpg`)
 [x] fondoFijo.jsp · fondoFijoRendicion.jsp ✅ (2026-09-01/03)
@@ -418,6 +427,39 @@ Todas las entidades siguen el patrón POJO:
 ---
 
 ## Historial de Cambios
+
+### 2026-10-04 al 06 — ABM de artículos y pantalla de Stock
+
+**ABM de artículos.** `articulo.jsp` era una copia del ABM de clientes apuntando a un `Controlador`
+inexistente, no había `ArticuloServlet` y `ArticuloDAO` sólo tenía consultas. Se hizo el ABM completo
+siguiendo `Images/Prototipo-Articulo.png` y el molde de Cuentas Bancarias: DAO con alta, edición y
+borrado, Service con sus transacciones, servlet sin estado en variables de instancia y vista nueva.
+
+Dos cosas que el prototipo no traía y se agregaron: el **código de barras** (`art_codigo`), que es el que
+usa el escaneo desde el celular y sin el cual los artículos nuevos no se pueden escanear, y las columnas
+de **Estado** e **Impuesto** en la grilla. Obligatorios sólo los que exige la base: descripción, precio de
+venta, impuesto y estado. **Eliminar borra de la base**: si el artículo ya tiene movimientos la FK lo
+impide, y el Service traduce el error de integridad (SQLState 23503) a un mensaje que explica que
+corresponde darlo de baja cambiándole el estado. De paso, `MarcaService` y `PresentacionService` no tenían
+listado y sus combos quedaban vacíos.
+
+**Pantalla de Stock.** Los campos `stk_cantidad_minima` y `stk_cantidad_maxima` no se podían cargar desde
+ningún lado. **No se pusieron en el ABM de artículos**: la PK de `stock` es `(id_deposito, id_articulo)`,
+así que son del artículo *en cada depósito* y no del artículo. La pantalla nueva muestra el stock de un
+depósito con los dos límites editables y el **stock actual de sólo lectura**, y se graba entera en una
+sola transacción. Lista **todos los artículos activos**, tengan o no fila de stock, para poder fijar los
+límites antes de la primera compra; el UPSERT crea la fila con stock actual 0 y respeta el `ON CONFLICT`
+del trigger. La grilla va sin paginado, por lo mismo que la conciliación: DataTables saca del DOM las
+filas de las otras páginas y esos campos no se enviarían al grabar.
+
+Desde el 2026-10-05 la pantalla tiene además un **selector de sucursal**, que arranca en la del usuario y
+se puede cambiar para ver las demás con sus depósitos. Acá sí se permite cambiarla, a diferencia de los
+documentos: es una consulta y no queda registrada en ningún lado.
+
+**Normalización del estado de los artículos.** El seed cargaba `art_estado = 'activo'` en minúscula y el
+ABM nuevo graba `'Activo'`, así que la pantalla de Stock mostraba sólo los artículos nuevos. El filtro
+pasó a comparar sin distinguir mayúsculas y el seed se normalizó a `'Activo'` (18 filas, también de
+sucursal, depósito, usuario y timbrado). Para las bases ya cargadas queda el UPDATE correspondiente.
 
 ### 2026-10-01 al 03 — Aprobación de presupuestos y estados de la factura
 

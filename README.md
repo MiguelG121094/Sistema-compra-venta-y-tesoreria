@@ -344,6 +344,18 @@ Sistema-compra-venta-y-tesoreria/
 | Nota Remisión Compra | ✅ | ❌ | ❌ | ❌ | ⚠️ | Parcial (vista inicial) |
 | Cuenta a Pagar | ✅ | ✅ | ✅ | ❌ | ❌ | Backend listo (integrado con Factura Compra) |
 
+### Módulo de Inventario
+
+| Componente | Modelo | DAO | Service | Servlet | JSP | Estado |
+|------------|:------:|:---:|:-------:|:-------:|:---:|--------|
+| Artículo | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ **Completo** — ABM con código de barras; eliminar borra de la base y avisa si el artículo ya tiene movimientos |
+| Stock (puntos de reposición) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ **Completo** — mínima y máxima por sucursal y depósito; el stock actual lo mueven los triggers, acá va de sólo lectura |
+| Tipo de Artículo | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ **Completo** |
+| Marca | ✅ | ✅ | ✅ | ❌ | ❌ | Backend listo — falta el ABM (el menú enlaza un `marca.jsp` que no existe) |
+| Presentación | ✅ | ✅ | ✅ | ❌ | ❌ | Backend listo — falta el ABM |
+| Ajuste de Stock | ✅ | ❌ | ❌ | ❌ | ❌ | Pendiente |
+| Depósito | ✅ | ✅ | ✅ | ❌ | ❌ | Backend listo (se usa desde Pedido de Compra y Stock) |
+
 ### Módulo de Ventas
 
 | Componente | Modelo | DAO | Service | Servlet | JSP | Estado |
