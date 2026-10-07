@@ -58,7 +58,7 @@
                                             <th class="text-bg-dark text-center">Proveedor</th>
                                             <th class="text-bg-dark text-center">Entrega</th>
                                             <th class="text-bg-dark text-center">Retirado por</th>
-                                            <th class="text-bg-dark text-center no-search">Acción</th>
+                                            <th class="text-bg-dark text-center no-search no-export">Acción</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -176,11 +176,12 @@
             $(document).ready(function () {
                 $('#tablaCheques').DataTable({
                     dom: 'Bfrtip', // Permite usar botones de exportación
+                    // Las columnas con la clase no-export (acciones) no salen en lo exportado
                     buttons: [
-                        'copy', // Copiar al portapapeles
-                        'excelHtml5', // Exportar a Excel
-                        'pdfHtml5', // Exportar a PDF
-                        'print' // Imprimir
+                        {extend: 'copy', exportOptions: {columns: ':not(.no-export)'}}, // Copiar al portapapeles
+                        {extend: 'excelHtml5', exportOptions: {columns: ':not(.no-export)'}}, // Exportar a Excel
+                        {extend: 'pdfHtml5', exportOptions: {columns: ':not(.no-export)'}}, // Exportar a PDF
+                        {extend: 'print', exportOptions: {columns: ':not(.no-export)'}} // Imprimir
                     ],
                     language: { url: "DataTables 2/es-ES.json" }
                 });

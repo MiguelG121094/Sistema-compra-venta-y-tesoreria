@@ -445,7 +445,7 @@ usuario inicio sesion, se debe agregar esta validacion en cada una de las vistas
                                                 <th class="text-bg-dark text-center">Cantidad</th>
                                                 <th class="text-bg-dark text-center">Precio de compra (Gs.)</th>
                                                 <th class="text-bg-dark text-center">Subtotal (Gs.)</th>
-                                                <th class="text-bg-dark text-center no-search">Acciones</th>
+                                                <th class="text-bg-dark text-center no-search no-export">Acciones</th>
                                             </tr>
                                         </thead>
 
@@ -659,11 +659,12 @@ usuario inicio sesion, se debe agregar esta validacion en cada una de las vistas
             $(document).ready(function () {
                 $('#tablaOrdenCompraDetalle').DataTable({
                     dom: 'Bfrtip',
+                    // Las columnas con la clase no-export (acciones) no salen en lo exportado
                     buttons: [
-                        'copy',
-                        'excelHtml5',
-                        'pdfHtml5',
-                        'print'
+                        {extend: 'copy', exportOptions: {columns: ':not(.no-export)'}},
+                        {extend: 'excelHtml5', exportOptions: {columns: ':not(.no-export)'}},
+                        {extend: 'pdfHtml5', exportOptions: {columns: ':not(.no-export)'}},
+                        {extend: 'print', exportOptions: {columns: ':not(.no-export)'}}
                     ],
                     initComplete: function () {
                         this.api()

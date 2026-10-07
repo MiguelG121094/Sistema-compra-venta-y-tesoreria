@@ -428,11 +428,12 @@
                 $(document).ready(function () {
                     $('#tablaPrueba1').DataTable({
                         dom: 'Bfrtip', // Permite usar botones de exportación
+                        // Las columnas con la clase no-export (acciones) no salen en lo exportado
                         buttons: [
-                            'copy', // Copiar al portapapeles
-                            'excelHtml5', // Exportar a Excel
-                            'pdfHtml5', // Exportar a PDF
-                            'print' // Imprimir
+                            {extend: 'copy', exportOptions: {columns: ':not(.no-export)'}}, // Copiar al portapapeles
+                            {extend: 'excelHtml5', exportOptions: {columns: ':not(.no-export)'}}, // Exportar a Excel
+                            {extend: 'pdfHtml5', exportOptions: {columns: ':not(.no-export)'}}, // Exportar a PDF
+                            {extend: 'print', exportOptions: {columns: ':not(.no-export)'}} // Imprimir
                         ],
                         //Inicializador del buscadr por cada columna
                         initComplete: function () {
@@ -471,11 +472,12 @@
             $(document).ready(function () {
                     $('#tablaPrueba2').DataTable({
                         dom: 'Bfrtip', // Permite usar botones de exportación
+                        // Las columnas con la clase no-export (acciones) no salen en lo exportado
                         buttons: [
-                            'copy', // Copiar al portapapeles
-                            'excelHtml5', // Exportar a Excel
-                            'pdfHtml5', // Exportar a PDF
-                            'print' // Imprimir
+                            {extend: 'copy', exportOptions: {columns: ':not(.no-export)'}}, // Copiar al portapapeles
+                            {extend: 'excelHtml5', exportOptions: {columns: ':not(.no-export)'}}, // Exportar a Excel
+                            {extend: 'pdfHtml5', exportOptions: {columns: ':not(.no-export)'}}, // Exportar a PDF
+                            {extend: 'print', exportOptions: {columns: ':not(.no-export)'}} // Imprimir
                         ],
                         //Inicializador del buscadr por cada columna
                         initComplete: function () {

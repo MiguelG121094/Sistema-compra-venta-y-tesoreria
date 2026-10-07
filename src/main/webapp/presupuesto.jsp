@@ -471,7 +471,7 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                                 <th class="text-bg-dark text-center">Cantidad</th>
                                                 <th class="text-bg-dark text-center" title="Precio de la última compra de este artículo">Últ. compra (Gs.)</th>
                                                 <th class="text-bg-dark text-center">Precio de compra (Gs.)</th>
-                                                <th class="text-bg-dark text-center no-search">Acciones</th>
+                                                <th class="text-bg-dark text-center no-search no-export">Acciones</th>
                                             </tr>
                                         </thead>
 
@@ -756,11 +756,12 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
             $(document).ready(function () {
                 $('#tablaPrueba2').DataTable({
                     dom: 'Bfrtip', // Permite usar botones de exportación
+                    // Las columnas con la clase no-export (acciones) no salen en lo exportado
                     buttons: [
-                        'copy', // Copiar al portapapeles
-                        'excelHtml5', // Exportar a Excel
-                        'pdfHtml5', // Exportar a PDF
-                        'print' // Imprimir
+                        {extend: 'copy', exportOptions: {columns: ':not(.no-export)'}}, // Copiar al portapapeles
+                        {extend: 'excelHtml5', exportOptions: {columns: ':not(.no-export)'}}, // Exportar a Excel
+                        {extend: 'pdfHtml5', exportOptions: {columns: ':not(.no-export)'}}, // Exportar a PDF
+                        {extend: 'print', exportOptions: {columns: ':not(.no-export)'}} // Imprimir
                     ],
                     //Inicializador del buscadr por cada columna
                     initComplete: function () {
