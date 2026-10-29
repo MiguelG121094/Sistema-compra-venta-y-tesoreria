@@ -80,7 +80,7 @@ CREATE TABLE public.cuenta (
                 id_cuenta INTEGER NOT NULL DEFAULT nextval('public.cuenta_id_cuenta_seq'),
                 id_tipo_cuenta INTEGER NOT NULL,
                 id_enti_finan INTEGER NOT NULL,
-                cuenta_numero INTEGER NOT NULL,
+                cuenta_numero VARCHAR NOT NULL,
                 id_moneda INTEGER NOT NULL,
                 CONSTRAINT id_cuenta PRIMARY KEY (id_cuenta)
 );
@@ -100,11 +100,13 @@ CREATE TABLE public.conciliacion_bancaria (
                 conc_bancaria_saldo_inicial INTEGER NOT NULL,
                 conc_bancaria_saldo_final INTEGER NOT NULL,
                 conc_banc_saldo_banco INTEGER NOT NULL,
-                conc_bancaria_estado VARCHAR,
+                conc_bancaria_estado VARCHAR(20),
                 conc_bancaria_tipo_cambio DOUBLE PRECISION,
                 CONSTRAINT id_conc_bancaria PRIMARY KEY (id_conc_bancaria)
 );
 COMMENT ON TABLE public.conciliacion_bancaria IS 'cuando se guarda una orden de pago viene y guarda tambien en la conciliacion la orden de pago que se hizo en cheque o transferencia y esa conciliacion es de la cuenta de itau y pasa restando el monto que se pagó';
+COMMENT ON COLUMN public.conciliacion_bancaria.conc_bancaria_estado IS 'estado vigente o anulado';
+COMMENT ON COLUMN public.conciliacion_bancaria.conc_bancaria_tipo_cambio IS 'el tipo de cambio al cierre, se usa en cuentas en moneda extranjera';
 
 
 ALTER SEQUENCE public.conciliacion_bancaria_id_conc_bancaria_seq OWNED BY public.conciliacion_bancaria.id_conc_bancaria;
@@ -278,9 +280,10 @@ CREATE TABLE public.sucursal (
                 suc_descripcion VARCHAR(50) NOT NULL,
                 suc_direccion VARCHAR(200),
                 suc_estado VARCHAR(20) NOT NULL,
-                suc_establecimiento VARCHAR(3),
+                suc_establecimiento VARCHAR(3) NOT NULL,
                 CONSTRAINT id_sucursal PRIMARY KEY (id_sucursal)
 );
+COMMENT ON COLUMN public.sucursal.suc_establecimiento IS 'numero de sucursal que va en la factura de venta ("001"-002-0000123)';
 
 
 ALTER SEQUENCE public.sucursal_id_sucursal_seq OWNED BY public.sucursal.id_sucursal;
@@ -290,11 +293,12 @@ CREATE SEQUENCE public.caja_id_caja_seq;
 CREATE TABLE public.caja (
                 id_caja INTEGER NOT NULL DEFAULT nextval('public.caja_id_caja_seq'),
                 caja_descripcion VARCHAR(50) NOT NULL,
-                caja_nro_expedicion INTEGER NOT NULL,
+                caja_nro_expedicion VARCHAR(3) NOT NULL,
                 caja_estado VARCHAR(20) NOT NULL,
                 id_sucursal INTEGER NOT NULL,
                 CONSTRAINT id_caja PRIMARY KEY (id_caja)
 );
+COMMENT ON COLUMN public.caja.caja_nro_expedicion IS 'numero de caja que va en la factura venta (001-"002"-0000123)';
 
 
 ALTER SEQUENCE public.caja_id_caja_seq OWNED BY public.caja.id_caja;
@@ -560,7 +564,7 @@ CREATE TABLE public.orden_pago_cabecera (
                 ord_pag_monto INTEGER NOT NULL,
                 ord_pag_estado VARCHAR(100) NOT NULL,
                 id_provi_cta_pagar_cabecera INTEGER NOT NULL,
-                ord_pag_nro_recibo INTEGER,
+                ord_pag_nro_recibo VARCHAR NOT NULL,
                 id_sucursal INTEGER NOT NULL,
                 ord_pag_tipo_pago VARCHAR NOT NULL,
                 id_proveedor INTEGER NOT NULL,
@@ -568,7 +572,7 @@ CREATE TABLE public.orden_pago_cabecera (
 );
 COMMENT ON TABLE public.orden_pago_cabecera IS 'No se puede generar una OP sin antes haber hecho una provision de cta a pag';
 COMMENT ON COLUMN public.orden_pago_cabecera.ord_pag_nro_recibo IS 'numero de recibo que da el proveedor en caso de que la compra sea a credito';
-COMMENT ON COLUMN public.orden_pago_cabecera.ord_pag_tipo_pago IS 'detalle de si el pago es para reposicion de fondo fijo u otro gasto(Aqui se debe seleccionar la opcion de si es reposicion de FF u otros gastos) (aqui debe traer la info de la factura compra fact_comp_tipo_factura)';
+COMMENT ON COLUMN public.orden_pago_cabecera.ord_pag_tipo_pago IS 'detalle de si el pago es para reposicion de fondo fijo u otro gasto(Aqui se debe seleccionar la opcion de si es reposicion de FF u otros gastos) (aqui debe traer la info de la factura compra fact_comp_tipo_factura o de si en la provision esta cargado id_ff)';
 
 
 ALTER SEQUENCE public.orden_pago_cabecera_id_orden_pago_cabecera_seq OWNED BY public.orden_pago_cabecera.id_orden_pago;
@@ -582,7 +586,7 @@ CREATE TABLE public.usuario (
                 usu_pass VARCHAR(50) NOT NULL,
                 usu_estado VARCHAR(20) NOT NULL,
                 id_grupo INTEGER NOT NULL,
-                id_sucursal INTEGER,
+                id_sucursal INTEGER NOT NULL,
                 CONSTRAINT id_usuario PRIMARY KEY (id_usuario)
 );
 
@@ -909,7 +913,7 @@ CREATE TABLE public.cobro_tarjeta (
                 id_cobro_tarjeta INTEGER NOT NULL DEFAULT nextval('public.cobro_tarjeta_id_cobro_tarjeta_seq'),
                 id_cobro INTEGER NOT NULL,
                 id_tarjeta INTEGER NOT NULL,
-                tarjeta_nro_boleta_post INTEGER NOT NULL,
+                tarjeta_nro_boleta_post VARCHAR NOT NULL,
                 CONSTRAINT id_cobro_tarjeta PRIMARY KEY (id_cobro_tarjeta, id_cobro)
 );
 
@@ -952,7 +956,7 @@ CREATE SEQUENCE public.nota_remision_cabecera_id_nota_rem_cab_seq;
 
 CREATE TABLE public.nota_remision_cabecera (
                 id_nota_rem_cab INTEGER NOT NULL DEFAULT nextval('public.nota_remision_cabecera_id_nota_rem_cab_seq'),
-                nota_rem_numero INTEGER NOT NULL,
+                nota_rem_numero VARCHAR,
                 nota_rem_timbrado INTEGER NOT NULL,
                 nota_rem_fecha_venci_timb DATE NOT NULL,
                 nota_rem_fecha_emision DATE NOT NULL,
@@ -1089,71 +1093,6 @@ COMMENT ON COLUMN public.factura_compra_detalle.fact_det_descripcion IS 'Para it
 
 ALTER SEQUENCE public.factura_compra_detalle_id_fact_comp_det_seq OWNED BY public.factura_compra_detalle.id_fact_comp_det;
 
-CREATE SEQUENCE public.cuenta_pagar_id_cta_pagar_seq;
-
-CREATE TABLE public.cuenta_pagar (
-                id_cta_pagar INTEGER NOT NULL DEFAULT nextval('public.cuenta_pagar_id_cta_pagar_seq'),
-                id_fact_comp_cab INTEGER NOT NULL,
-                cta_pag_monto INTEGER NOT NULL,
-                cta_pag_estado VARCHAR(100) NOT NULL,
-                cta_pag_fecha_venci DATE NOT NULL,
-                cta_pag_saldo INTEGER NOT NULL,
-                cta_pag_plazo INTEGER,
-                cta_pag_origen VARCHAR(10) DEFAULT 'FACTURA' NOT NULL,
-                id_nota_cred_comp_cab INTEGER,
-                id_nota_debi_comp_cab INTEGER,
-                CONSTRAINT id_cta_pagar PRIMARY KEY (id_cta_pagar, id_fact_comp_cab)
-);
-COMMENT ON TABLE public.cuenta_pagar IS 'una factura de fondo fijo está con estado RENDICION PENDIENTE y luego cuando se realiza la rendicion pasa a estado PENDIENTE DE PROVISION o PENDIENTE o algo asi';
-COMMENT ON COLUMN public.cuenta_pagar.cta_pag_plazo IS 'plazo total para pagar la factura, en días o meses';
-COMMENT ON COLUMN public.cuenta_pagar.cta_pag_origen IS 'comprobante de la fila: FACTURA, NOTA_CRED o NOTA_DEBI. Las notas llevan el id_fact_comp_cab de la factura que corrigen';
-
-
-ALTER SEQUENCE public.cuenta_pagar_id_cta_pagar_seq OWNED BY public.cuenta_pagar.id_cta_pagar;
-
-CREATE SEQUENCE public.provision_cuenta_pagar_detalle_id_provi_cta_pagar_detalle_seq;
-
-CREATE TABLE public.provision_cuenta_pagar_detalle (
-                id_provi_cta_pagar_detalle INTEGER NOT NULL DEFAULT nextval('public.provision_cuenta_pagar_detalle_id_provi_cta_pagar_detalle_seq'),
-                id_provi_cta_pagar_cabecera INTEGER NOT NULL,
-                id_cta_pagar INTEGER NOT NULL,
-                id_fact_comp_cab INTEGER NOT NULL,
-                prov_cta_pag_monto INTEGER NOT NULL,
-                CONSTRAINT id_provision_cta_pag PRIMARY KEY (id_provi_cta_pagar_detalle)
-);
-COMMENT ON TABLE public.provision_cuenta_pagar_detalle IS 'Facturas incluidas en la provision por proveedor';
-
-
-ALTER SEQUENCE public.provision_cuenta_pagar_detalle_id_provi_cta_pagar_detalle_seq OWNED BY public.provision_cuenta_pagar_detalle.id_provi_cta_pagar_detalle;
-
-CREATE SEQUENCE public.fondo_fijo_rendicion_detalle_id_ff_rendicion_detalle_seq;
-
-CREATE TABLE public.fondo_fijo_rendicion_detalle (
-                id_ff_rendicion_detalle INTEGER NOT NULL DEFAULT nextval('public.fondo_fijo_rendicion_detalle_id_ff_rendicion_detalle_seq'),
-                id_fondofijo_rendicion INTEGER NOT NULL,
-                id_cta_pagar INTEGER NOT NULL,
-                id_fact_comp_cab INTEGER NOT NULL,
-                monto_rendido INTEGER,
-                CONSTRAINT fondo_fijo_rendicion_detalle_pk PRIMARY KEY (id_ff_rendicion_detalle)
-);
-
-
-ALTER SEQUENCE public.fondo_fijo_rendicion_detalle_id_ff_rendicion_detalle_seq OWNED BY public.fondo_fijo_rendicion_detalle.id_ff_rendicion_detalle;
-
-CREATE SEQUENCE public.orden_pago_detalle_id_orden_pago_det_seq;
-
-CREATE TABLE public.orden_pago_detalle (
-                id_orden_pago_det INTEGER NOT NULL DEFAULT nextval('public.orden_pago_detalle_id_orden_pago_det_seq'),
-                orden_pag_det_monto INTEGER NOT NULL,
-                id_cta_pagar INTEGER NOT NULL,
-                id_fact_comp_cab INTEGER NOT NULL,
-                id_orden_pago INTEGER NOT NULL,
-                CONSTRAINT id_orden_pago_detalle PRIMARY KEY (id_orden_pago_det)
-);
-
-
-ALTER SEQUENCE public.orden_pago_detalle_id_orden_pago_det_seq OWNED BY public.orden_pago_detalle.id_orden_pago_det;
-
 CREATE SEQUENCE public.nota_debito_compra_cabecera_id_nota_debi_comp_cab_seq;
 
 CREATE TABLE public.nota_debito_compra_cabecera (
@@ -1211,6 +1150,71 @@ CREATE TABLE public.nota_credito_compra_cabecera (
 
 
 ALTER SEQUENCE public.nota_credito_compra_cabecera_id_nota_cred_comp_cab_seq OWNED BY public.nota_credito_compra_cabecera.id_nota_cred_comp_cab;
+
+CREATE SEQUENCE public.cuenta_pagar_id_cta_pagar_seq;
+
+CREATE TABLE public.cuenta_pagar (
+                id_cta_pagar INTEGER NOT NULL DEFAULT nextval('public.cuenta_pagar_id_cta_pagar_seq'),
+                id_fact_comp_cab INTEGER NOT NULL,
+                cta_pag_monto INTEGER NOT NULL,
+                cta_pag_estado VARCHAR(100) NOT NULL,
+                cta_pag_fecha_venci DATE NOT NULL,
+                cta_pag_saldo INTEGER NOT NULL,
+                cta_pag_plazo INTEGER,
+                cta_pag_origen VARCHAR(10) NOT NULL,
+                id_nota_cred_comp_cab INTEGER,
+                id_nota_debi_comp_cab INTEGER NOT NULL,
+                CONSTRAINT id_cta_pagar PRIMARY KEY (id_cta_pagar, id_fact_comp_cab)
+);
+COMMENT ON TABLE public.cuenta_pagar IS 'una factura de fondo fijo está con estado RENDICION PENDIENTE y luego cuando se realiza la rendicion pasa a estado PENDIENTE DE PROVISION o PENDIENTE o algo asi';
+COMMENT ON COLUMN public.cuenta_pagar.cta_pag_plazo IS 'plazo total para pagar la factura, en días o meses';
+COMMENT ON COLUMN public.cuenta_pagar.cta_pag_origen IS 'comprobante de la fila, FACTURA, NOTA_CRED o NOTA_DEBI. Las notas tienen el id_fact_comp_cab de la factura que corrigen';
+
+
+ALTER SEQUENCE public.cuenta_pagar_id_cta_pagar_seq OWNED BY public.cuenta_pagar.id_cta_pagar;
+
+CREATE SEQUENCE public.provision_cuenta_pagar_detalle_id_provi_cta_pagar_detalle_seq;
+
+CREATE TABLE public.provision_cuenta_pagar_detalle (
+                id_provi_cta_pagar_detalle INTEGER NOT NULL DEFAULT nextval('public.provision_cuenta_pagar_detalle_id_provi_cta_pagar_detalle_seq'),
+                id_provi_cta_pagar_cabecera INTEGER NOT NULL,
+                id_cta_pagar INTEGER NOT NULL,
+                id_fact_comp_cab INTEGER NOT NULL,
+                prov_cta_pag_monto INTEGER NOT NULL,
+                CONSTRAINT id_provision_cta_pag PRIMARY KEY (id_provi_cta_pagar_detalle)
+);
+COMMENT ON TABLE public.provision_cuenta_pagar_detalle IS 'Facturas incluidas en la provision por proveedor';
+
+
+ALTER SEQUENCE public.provision_cuenta_pagar_detalle_id_provi_cta_pagar_detalle_seq OWNED BY public.provision_cuenta_pagar_detalle.id_provi_cta_pagar_detalle;
+
+CREATE SEQUENCE public.fondo_fijo_rendicion_detalle_id_ff_rendicion_detalle_seq;
+
+CREATE TABLE public.fondo_fijo_rendicion_detalle (
+                id_ff_rendicion_detalle INTEGER NOT NULL DEFAULT nextval('public.fondo_fijo_rendicion_detalle_id_ff_rendicion_detalle_seq'),
+                id_fondofijo_rendicion INTEGER NOT NULL,
+                id_cta_pagar INTEGER NOT NULL,
+                id_fact_comp_cab INTEGER NOT NULL,
+                monto_rendido INTEGER,
+                CONSTRAINT fondo_fijo_rendicion_detalle_pk PRIMARY KEY (id_ff_rendicion_detalle)
+);
+
+
+ALTER SEQUENCE public.fondo_fijo_rendicion_detalle_id_ff_rendicion_detalle_seq OWNED BY public.fondo_fijo_rendicion_detalle.id_ff_rendicion_detalle;
+
+CREATE SEQUENCE public.orden_pago_detalle_id_orden_pago_det_seq;
+
+CREATE TABLE public.orden_pago_detalle (
+                id_orden_pago_det INTEGER NOT NULL DEFAULT nextval('public.orden_pago_detalle_id_orden_pago_det_seq'),
+                orden_pag_det_monto INTEGER NOT NULL,
+                id_cta_pagar INTEGER NOT NULL,
+                id_fact_comp_cab INTEGER NOT NULL,
+                id_orden_pago INTEGER NOT NULL,
+                CONSTRAINT id_orden_pago_detalle PRIMARY KEY (id_orden_pago_det)
+);
+
+
+ALTER SEQUENCE public.orden_pago_detalle_id_orden_pago_det_seq OWNED BY public.orden_pago_detalle.id_orden_pago_det;
 
 CREATE SEQUENCE public.libro_iva_compra_id_libro_iva_compra_seq;
 
@@ -1575,6 +1579,13 @@ ON UPDATE NO ACTION
 NOT DEFERRABLE;
 
 ALTER TABLE public.orden_pago_cabecera ADD CONSTRAINT sucursal_orden_pagoorden_pago_cabecera_fk
+FOREIGN KEY (id_sucursal)
+REFERENCES public.sucursal (id_sucursal)
+ON DELETE NO ACTION
+ON UPDATE NO ACTION
+NOT DEFERRABLE;
+
+ALTER TABLE public.usuario ADD CONSTRAINT sucursal_usuario_fk
 FOREIGN KEY (id_sucursal)
 REFERENCES public.sucursal (id_sucursal)
 ON DELETE NO ACTION
@@ -2337,13 +2348,6 @@ ON DELETE NO ACTION
 ON UPDATE NO ACTION
 NOT DEFERRABLE;
 
-ALTER TABLE public.cuenta_pagar ADD CONSTRAINT factura_compra_cabecera_cuenta_pagar_fk
-FOREIGN KEY (id_fact_comp_cab)
-REFERENCES public.factura_compra_cabecera (id_fact_comp_cab)
-ON DELETE NO ACTION
-ON UPDATE NO ACTION
-NOT DEFERRABLE;
-
 ALTER TABLE public.factura_compra_detalle ADD CONSTRAINT factura_compra_cabecera_factura_compra_detalle_fk
 FOREIGN KEY (id_fact_comp_cab)
 REFERENCES public.factura_compra_cabecera (id_fact_comp_cab)
@@ -2358,23 +2362,9 @@ ON DELETE NO ACTION
 ON UPDATE NO ACTION
 NOT DEFERRABLE;
 
-ALTER TABLE public.orden_pago_detalle ADD CONSTRAINT cuenta_pagar_orden_pago_detalle_fk
-FOREIGN KEY (id_cta_pagar, id_fact_comp_cab)
-REFERENCES public.cuenta_pagar (id_cta_pagar, id_fact_comp_cab)
-ON DELETE NO ACTION
-ON UPDATE NO ACTION
-NOT DEFERRABLE;
-
-ALTER TABLE public.fondo_fijo_rendicion_detalle ADD CONSTRAINT cuenta_pagar_fondo_fijo_rendicion_detalle_fk
-FOREIGN KEY (id_cta_pagar, id_fact_comp_cab)
-REFERENCES public.cuenta_pagar (id_cta_pagar, id_fact_comp_cab)
-ON DELETE NO ACTION
-ON UPDATE NO ACTION
-NOT DEFERRABLE;
-
-ALTER TABLE public.provision_cuenta_pagar_detalle ADD CONSTRAINT cuenta_pagar_provision_cuenta_pagar_detalle_fk
-FOREIGN KEY (id_cta_pagar, id_fact_comp_cab)
-REFERENCES public.cuenta_pagar (id_cta_pagar, id_fact_comp_cab)
+ALTER TABLE public.cuenta_pagar ADD CONSTRAINT factura_compra_cabecera_cuenta_pagar_fk
+FOREIGN KEY (id_fact_comp_cab)
+REFERENCES public.factura_compra_cabecera (id_fact_comp_cab)
 ON DELETE NO ACTION
 ON UPDATE NO ACTION
 NOT DEFERRABLE;
@@ -2387,6 +2377,13 @@ ON UPDATE NO ACTION
 NOT DEFERRABLE;
 
 ALTER TABLE public.libro_iva_compra ADD CONSTRAINT nota_debito_compra_cabecera_libro_iva_compra_fk
+FOREIGN KEY (id_nota_debi_comp_cab)
+REFERENCES public.nota_debito_compra_cabecera (id_nota_debi_comp_cab)
+ON DELETE NO ACTION
+ON UPDATE NO ACTION
+NOT DEFERRABLE;
+
+ALTER TABLE public.cuenta_pagar ADD CONSTRAINT nota_debito_compra_cabecera_cuenta_pagar_fk
 FOREIGN KEY (id_nota_debi_comp_cab)
 REFERENCES public.nota_debito_compra_cabecera (id_nota_debi_comp_cab)
 ON DELETE NO ACTION
@@ -2414,9 +2411,23 @@ ON DELETE NO ACTION
 ON UPDATE NO ACTION
 NOT DEFERRABLE;
 
-ALTER TABLE public.cuenta_pagar ADD CONSTRAINT nota_debito_compra_cabecera_cuenta_pagar_fk
-FOREIGN KEY (id_nota_debi_comp_cab)
-REFERENCES public.nota_debito_compra_cabecera (id_nota_debi_comp_cab)
+ALTER TABLE public.orden_pago_detalle ADD CONSTRAINT cuenta_pagar_orden_pago_detalle_fk
+FOREIGN KEY (id_cta_pagar, id_fact_comp_cab)
+REFERENCES public.cuenta_pagar (id_cta_pagar, id_fact_comp_cab)
+ON DELETE NO ACTION
+ON UPDATE NO ACTION
+NOT DEFERRABLE;
+
+ALTER TABLE public.fondo_fijo_rendicion_detalle ADD CONSTRAINT cuenta_pagar_fondo_fijo_rendicion_detalle_fk
+FOREIGN KEY (id_cta_pagar, id_fact_comp_cab)
+REFERENCES public.cuenta_pagar (id_cta_pagar, id_fact_comp_cab)
+ON DELETE NO ACTION
+ON UPDATE NO ACTION
+NOT DEFERRABLE;
+
+ALTER TABLE public.provision_cuenta_pagar_detalle ADD CONSTRAINT cuenta_pagar_provision_cuenta_pagar_detalle_fk
+FOREIGN KEY (id_cta_pagar, id_fact_comp_cab)
+REFERENCES public.cuenta_pagar (id_cta_pagar, id_fact_comp_cab)
 ON DELETE NO ACTION
 ON UPDATE NO ACTION
 NOT DEFERRABLE;
