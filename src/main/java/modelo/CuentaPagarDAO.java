@@ -28,15 +28,50 @@ public class CuentaPagarDAO {
         this.conn = conn;
     }
 
+    // ==================== ORIGEN DE LA FILA ====================
+    // Una fila por comprobante: la factura y cada nota de crédito/débito tienen la suya, todas con
+    // el id_fact_comp_cab de la factura. Ver NOTA_CREDITO_DEBITO_PLAN.md §4.2.
+
+    public static final String ORIGEN_FACTURA = "FACTURA";
+    public static final String ORIGEN_NOTA_CREDITO = "NOTA_CRED";
+    public static final String ORIGEN_NOTA_DEBITO = "NOTA_DEBI";
+
+    /** Columnas del comprobante; van con {@link #JOIN_COMPROBANTE} y la tabla con alias cp. */
+    static final String COLUMNAS_COMPROBANTE =
+            "cp.cta_pag_origen, cp.id_nota_cred_comp_cab, cp.id_nota_debi_comp_cab, "
+          + "ncc.nota_cred_comp_numero, ndc.nota_debi_comp_numero ";
+
+    static final String JOIN_COMPROBANTE =
+            "LEFT JOIN nota_credito_compra_cabecera ncc ON cp.id_nota_cred_comp_cab = ncc.id_nota_cred_comp_cab "
+          + "LEFT JOIN nota_debito_compra_cabecera ndc ON cp.id_nota_debi_comp_cab = ndc.id_nota_debi_comp_cab ";
+
+    /** Completa el origen y la nota de la fila (solo id y número, lo que muestran los listados). */
+    static void leerComprobante(ResultSet rs, CuentaPagar cp) throws SQLException {
+        cp.setOrigen(rs.getString("cta_pag_origen"));
+        long idNotaCredito = rs.getLong("id_nota_cred_comp_cab");
+        if (!rs.wasNull()) {
+            NotaCreditoCompra nc = new NotaCreditoCompra(idNotaCredito);
+            nc.setNumero(rs.getString("nota_cred_comp_numero"));
+            cp.setNotaCredito(nc);
+        }
+        long idNotaDebito = rs.getLong("id_nota_debi_comp_cab");
+        if (!rs.wasNull()) {
+            NotaDebitoCompra nd = new NotaDebitoCompra(idNotaDebito);
+            nd.setNumero(rs.getString("nota_debi_comp_numero"));
+            cp.setNotaDebito(nd);
+        }
+    }
+
     public CuentaPagar getCuentaPagar(Long idCuentaPagar, Long idFacturaCompra) throws SQLException {
         if (idCuentaPagar == null || idFacturaCompra == null) {
             LOGGER.log(Level.WARNING, "Error: parámetros nulos");
             return null;
         }
         CuentaPagar cuentaPagar = null;
-        String sql = "SELECT id_cta_pagar, id_fact_comp_cab, cta_pag_monto, cta_pag_estado, " +
-                    "cta_pag_fecha_venci, cta_pag_saldo FROM cuenta_pagar " +
-                    "WHERE id_cta_pagar = ? AND id_fact_comp_cab = ?";
+        String sql = "SELECT cp.id_cta_pagar, cp.id_fact_comp_cab, cp.cta_pag_monto, cp.cta_pag_estado, " +
+                    "cp.cta_pag_fecha_venci, cp.cta_pag_saldo, " + COLUMNAS_COMPROBANTE +
+                    "FROM cuenta_pagar cp " + JOIN_COMPROBANTE +
+                    "WHERE cp.id_cta_pagar = ? AND cp.id_fact_comp_cab = ?";
 
         facturaCompraDAO = new FacturaCompraDAO(conn);
 
@@ -53,6 +88,7 @@ public class CuentaPagarDAO {
                         rs.getDate("cta_pag_fecha_venci"),
                         rs.getLong("cta_pag_saldo")
                     );
+                    leerComprobante(rs, cuentaPagar);
                 }
             }
         }
@@ -208,8 +244,8 @@ public class CuentaPagarDAO {
     }
 
     /**
-     * Obtiene la cuenta a pagar asociada a una factura de compra.
-     * Asume una única cuenta a pagar por factura.
+     * Obtiene la cuenta a pagar de la propia factura (origen FACTURA). Las de sus notas tienen el
+     * mismo id_fact_comp_cab y quedan afuera.
      */
     public CuentaPagar getByFactura(Long idFacturaCompra) throws SQLException {
         if (idFacturaCompra == null) {
@@ -219,10 +255,11 @@ public class CuentaPagarDAO {
 
         String sql = "SELECT id_cta_pagar, id_fact_comp_cab, cta_pag_monto, cta_pag_estado, " +
                     "cta_pag_fecha_venci, cta_pag_saldo FROM cuenta_pagar " +
-                    "WHERE id_fact_comp_cab = ?";
+                    "WHERE id_fact_comp_cab = ? AND cta_pag_origen = ?";
 
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setLong(1, idFacturaCompra);
+            stmt.setString(2, ORIGEN_FACTURA);
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
                     CuentaPagar cp = new CuentaPagar();
@@ -232,6 +269,7 @@ public class CuentaPagarDAO {
                     cp.setEstado(rs.getString("cta_pag_estado"));
                     cp.setFechaVencimiento(rs.getDate("cta_pag_fecha_venci"));
                     cp.setSaldo(rs.getLong("cta_pag_saldo"));
+                    cp.setOrigen(ORIGEN_FACTURA);
                     return cp;
                 }
             }
@@ -240,8 +278,8 @@ public class CuentaPagarDAO {
     }
 
     /**
-     * Cambia el estado a 'Anulado' de la cuenta a pagar asociada a una factura.
-     * No elimina el registro, para preservar trazabilidad.
+     * Cambia el estado a 'Anulado' de la cuenta a pagar de la propia factura (no las de sus notas,
+     * que se anulan con la nota). No elimina el registro, para preservar trazabilidad.
      */
     public void anularPorFactura(Long idFacturaCompra) throws SQLException {
         if (idFacturaCompra == null) {
@@ -249,16 +287,18 @@ public class CuentaPagarDAO {
             return;
         }
 
-        String sql = "UPDATE cuenta_pagar SET cta_pag_estado = 'Anulado' WHERE id_fact_comp_cab = ?";
+        String sql = "UPDATE cuenta_pagar SET cta_pag_estado = 'Anulado' "
+                   + "WHERE id_fact_comp_cab = ? AND cta_pag_origen = ?";
 
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setLong(1, idFacturaCompra);
+            stmt.setString(2, ORIGEN_FACTURA);
             stmt.executeUpdate();
         }
     }
 
-    // ==================== AJUSTE POR NOTA DE CRÉDITO / DÉBITO ====================
-    // Enfoque 1 con neteo en la provisión — ver NOTA_CREDITO_DEBITO_PLAN.md §4/§8.
+    // ==================== FILA PROPIA DE LA NOTA DE CRÉDITO / DÉBITO ====================
+    // Cada nota tiene su fila; la de la factura no se toca. Ver NOTA_CREDITO_DEBITO_PLAN.md §4.
 
     private static final String ESTADO_PENDIENTE   = "Pendiente";
     private static final String ESTADO_CANCELADO   = "Cancelado";
@@ -267,101 +307,145 @@ public class CuentaPagarDAO {
     private static final String ESTADO_EN_PROVISION = "En provision";
     private static final String ESTADO_RENDIDA     = "Rendida";
 
-    public enum TipoNota { CREDITO, DEBITO }
-
     /**
-     * Aplica (o reversa) el efecto de una Nota de Crédito/Débito sobre el saldo de la
-     * cuenta a pagar de una factura.
-     * Enfoque 1 con neteo en la provisión — ver NOTA_CREDITO_DEBITO_PLAN.md §4/§8.
+     * Inserta la cuenta a pagar de una nota. Lleva el id de la factura que corrige (así entra en
+     * la provisión del mismo proveedor), monto y saldo con el signo de la nota y vence en su fecha
+     * de emisión. El estado sale del saldo: la NC nace 'Saldo a favor' y la ND 'Pendiente'.
      *
-     * El saldo PUEDE quedar negativo (= saldo a favor); NO se bloquea NC &gt; saldo:
-     * ese negativo se netea después en la provisión del proveedor.
-     * Estado recalculado: saldo &gt; 0 -&gt; Pendiente | = 0 -&gt; Cancelado | &lt; 0 -&gt; Saldo a favor.
+     * <p>Corre sobre la Connection compartida; la transacción la controla el Service de la nota.
      *
-     * Corre sobre la Connection compartida; NO hace commit/rollback (lo controla el
-     * Service/Servlet que abrió la transacción, igual que la sincronización de Factura de Compra).
-     *
-     * @param idFacturaCompra factura referenciada por la nota (1 cuenta a pagar por factura)
-     * @param montoNota       monto de la nota, SIEMPRE positivo
-     * @param tipo            CREDITO (resta al saldo) o DEBITO (suma al saldo)
-     * @param reversa         false = aplicar la nota | true = revertir (anulación de la nota)
-     * @return nuevo saldo de la cuenta a pagar tras el ajuste
-     * @throws SQLException si la factura no tiene cuenta a pagar gestionable o hay error de BD
+     * @param monto total de la nota con signo, el mismo de su fila de libro IVA (NC &lt; 0, ND &gt; 0)
      */
-    public long ajustarSaldoPorNota(Long idFacturaCompra, long montoNota,
-                                    TipoNota tipo, boolean reversa) throws SQLException {
-
-        if (idFacturaCompra == null) {
-            throw new SQLException("ajustarSaldoPorNota: idFacturaCompra es nulo");
+    public Long insertarCuentaPagarNota(Long idFacturaCompra, String origen, Long idNota,
+            long monto, java.util.Date fechaEmision) throws SQLException {
+        if (idFacturaCompra == null || idNota == null || fechaEmision == null) {
+            throw new SQLException("insertarCuentaPagarNota: parámetros nulos");
         }
-        if (montoNota <= 0) {
-            throw new SQLException("ajustarSaldoPorNota: el monto de la nota debe ser > 0 "
-                    + "(recibido: " + montoNota + ")");
+        boolean esCredito = ORIGEN_NOTA_CREDITO.equals(origen);
+        if (!esCredito && !ORIGEN_NOTA_DEBITO.equals(origen)) {
+            throw new SQLException("insertarCuentaPagarNota: origen inválido " + origen);
         }
-
-        // Signo: NC resta, ND suma. La reversa (anulación) invierte el signo.
-        long delta = (tipo == TipoNota.CREDITO) ? -montoNota : montoNota;
-        if (reversa) {
-            delta = -delta;
+        if (esCredito ? monto >= 0 : monto <= 0) {
+            throw new SQLException("El total de la nota no tiene el signo esperado (" + monto + ")");
         }
 
-        // Read-modify-write con la lógica de estado resuelta en Java (no en la consulta).
-        // 1. Leer el saldo actual bloqueando la fila hasta el commit (FOR UPDATE evita
-        //    lost-updates entre transacciones concurrentes; este método siempre corre en tx).
-        //    Excluye la cuenta anulada: una factura anulada no ajusta saldo.
-        Long saldoActual = null;
-        String sqlSelect = "SELECT cta_pag_saldo FROM cuenta_pagar "
-                         + "WHERE id_fact_comp_cab = ? AND cta_pag_estado <> ? FOR UPDATE";
-        try (PreparedStatement stmt = conn.prepareStatement(sqlSelect)) {
+        String sql = "INSERT INTO cuenta_pagar (id_fact_comp_cab, cta_pag_monto, cta_pag_estado, "
+                   + "cta_pag_fecha_venci, cta_pag_saldo, cta_pag_plazo, cta_pag_origen, "
+                   + "id_nota_cred_comp_cab, id_nota_debi_comp_cab) "
+                   + "VALUES (?, ?, ?, ?, ?, NULL, ?, ?, ?)";
+        try (PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             stmt.setLong(1, idFacturaCompra);
-            stmt.setString(2, ESTADO_ANULADO);
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    saldoActual = rs.getLong("cta_pag_saldo");
+            stmt.setLong(2, monto);
+            stmt.setString(3, calcularEstadoPorSaldo(monto));
+            stmt.setDate(4, new java.sql.Date(fechaEmision.getTime()));
+            stmt.setLong(5, monto);
+            stmt.setString(6, origen);
+            if (esCredito) {
+                stmt.setLong(7, idNota);
+                stmt.setNull(8, java.sql.Types.INTEGER);
+            } else {
+                stmt.setNull(7, java.sql.Types.INTEGER);
+                stmt.setLong(8, idNota);
+            }
+            stmt.executeUpdate();
+            try (ResultSet keys = stmt.getGeneratedKeys()) {
+                if (keys.next()) {
+                    return keys.getLong(1);
                 }
             }
         }
-        if (saldoActual == null) {
-            throw new SQLException("No se pudo ajustar: la factura " + idFacturaCompra
-                    + " no tiene cuenta a pagar gestionable (inexistente o anulada).");
-        }
-
-        // 2. Calcular el nuevo saldo y el estado en Java.
-        long nuevoSaldo = saldoActual + delta;
-        String nuevoEstado = calcularEstadoPorSaldo(nuevoSaldo);
-
-        // 3. Actualizar con los valores ya resueltos.
-        String sqlUpdate = "UPDATE cuenta_pagar SET cta_pag_saldo = ?, cta_pag_estado = ? "
-                         + "WHERE id_fact_comp_cab = ? AND cta_pag_estado <> ?";
-        try (PreparedStatement stmt = conn.prepareStatement(sqlUpdate)) {
-            stmt.setLong(1, nuevoSaldo);
-            stmt.setString(2, nuevoEstado);
-            stmt.setLong(3, idFacturaCompra);
-            stmt.setString(4, ESTADO_ANULADO);
-            stmt.executeUpdate();
-        }
-
-        LOGGER.log(Level.INFO,
-            "Cuenta a pagar de factura {0} ajustada por nota (delta={1}) -> saldo={2}",
-            new Object[]{idFacturaCompra, delta, nuevoSaldo});
-        return nuevoSaldo;
+        throw new SQLException("No se generó el id de la cuenta a pagar de la nota");
     }
 
     /**
-     * Indica si la factura tiene pagos en curso/aplicados: existe al menos una linea de
-     * provision u orden de pago que la referencia. Reemplaza la heuristica saldo < monto
-     * (que con Notas de Credito ya no implica pago). Ver NOTA_CREDITO_DEBITO_PLAN.md §8.4.
+     * Anula la cuenta a pagar de una nota, siempre que no haya entrado al circuito de pago: en
+     * provisión, en una rendición o con el saldo ya aplicado en una OP se rechaza con un mensaje
+     * para el usuario. Bloquea la fila con FOR UPDATE para que una provisión no la tome mientras
+     * tanto. Ver NOTA_CREDITO_DEBITO_PLAN.md §4.4.
+     */
+    public void anularCuentaPagarNota(String origen, Long idNota) throws SQLException {
+        String columnaNota;
+        if (ORIGEN_NOTA_CREDITO.equals(origen)) {
+            columnaNota = "id_nota_cred_comp_cab";
+        } else if (ORIGEN_NOTA_DEBITO.equals(origen)) {
+            columnaNota = "id_nota_debi_comp_cab";
+        } else {
+            throw new SQLException("anularCuentaPagarNota: origen inválido " + origen);
+        }
+
+        Long idCtaPagar = null;
+        Long idFactura = null;
+        long monto = 0;
+        long saldo = 0;
+        String estado = null;
+        String sqlSelect = "SELECT id_cta_pagar, id_fact_comp_cab, cta_pag_monto, cta_pag_saldo, "
+                         + "cta_pag_estado FROM cuenta_pagar WHERE " + columnaNota + " = ? FOR UPDATE";
+        try (PreparedStatement stmt = conn.prepareStatement(sqlSelect)) {
+            stmt.setLong(1, idNota);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    idCtaPagar = rs.getLong("id_cta_pagar");
+                    idFactura = rs.getLong("id_fact_comp_cab");
+                    monto = rs.getLong("cta_pag_monto");
+                    saldo = rs.getLong("cta_pag_saldo");
+                    estado = rs.getString("cta_pag_estado");
+                }
+            }
+        }
+
+        if (idCtaPagar == null) {
+            throw new SQLException("La nota no tiene cuenta a pagar. Verifique que se haya corrido "
+                    + "la migración de cuenta a pagar por comprobante.");
+        }
+        if (ESTADO_ANULADO.equals(estado)) {
+            return;
+        }
+        if (ESTADO_EN_PROVISION.equals(estado)) {
+            throw new SQLException("No se puede anular: la nota está en una provisión. "
+                    + "Anule primero la provisión.");
+        }
+        if (ESTADO_RENDIDA.equals(estado)) {
+            throw new SQLException("No se puede anular: la nota está en una rendición de fondo fijo. "
+                    + "Anule primero la rendición.");
+        }
+        if (saldo != monto) {
+            throw new SQLException("No se puede anular: la nota ya se aplicó en una orden de pago. "
+                    + "Anule primero la orden de pago y su provisión.");
+        }
+
+        String sqlUpdate = "UPDATE cuenta_pagar SET cta_pag_estado = ? "
+                         + "WHERE id_cta_pagar = ? AND id_fact_comp_cab = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sqlUpdate)) {
+            stmt.setString(1, ESTADO_ANULADO);
+            stmt.setLong(2, idCtaPagar);
+            stmt.setLong(3, idFactura);
+            stmt.executeUpdate();
+        }
+    }
+
+    /**
+     * Indica si la cuenta a pagar de la propia factura está en alguna provisión u orden de pago.
+     * Las filas de sus notas no cuentan: tienen su propio circuito. Reemplaza la heurística
+     * saldo &lt; monto. Ver NOTA_CREDITO_DEBITO_PLAN.md §8.4.
      */
     public boolean tienePagosAplicados(Long idFacturaCompra) throws SQLException {
         if (idFacturaCompra == null) {
             return false;
         }
         String sql =
-            "SELECT (EXISTS (SELECT 1 FROM orden_pago_detalle WHERE id_fact_comp_cab = ?) " +
-            "     OR EXISTS (SELECT 1 FROM provision_cuenta_pagar_detalle WHERE id_fact_comp_cab = ?))";
+            "SELECT (EXISTS (SELECT 1 FROM orden_pago_detalle d " +
+            "                JOIN cuenta_pagar cp ON d.id_cta_pagar = cp.id_cta_pagar " +
+            "                 AND d.id_fact_comp_cab = cp.id_fact_comp_cab " +
+            "                WHERE d.id_fact_comp_cab = ? AND cp.cta_pag_origen = ?) " +
+            "     OR EXISTS (SELECT 1 FROM provision_cuenta_pagar_detalle d " +
+            "                JOIN cuenta_pagar cp ON d.id_cta_pagar = cp.id_cta_pagar " +
+            "                 AND d.id_fact_comp_cab = cp.id_fact_comp_cab " +
+            "                WHERE d.id_fact_comp_cab = ? AND cp.cta_pag_origen = ?))";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setLong(1, idFacturaCompra);
-            stmt.setLong(2, idFacturaCompra);
+            stmt.setString(2, ORIGEN_FACTURA);
+            stmt.setLong(3, idFacturaCompra);
+            stmt.setString(4, ORIGEN_FACTURA);
             try (ResultSet rs = stmt.executeQuery()) {
                 return rs.next() && rs.getBoolean(1);
             }
@@ -383,9 +467,10 @@ public class CuentaPagarDAO {
         }
         String sql = "SELECT cp.id_cta_pagar, cp.id_fact_comp_cab, cp.cta_pag_monto, cp.cta_pag_estado, "
                    + "cp.cta_pag_fecha_venci, cp.cta_pag_saldo, cp.cta_pag_plazo, "
-                   + "f.fact_comp_numero, f.fact_comp_fecha_emision "
+                   + "f.fact_comp_numero, f.fact_comp_fecha_emision, " + COLUMNAS_COMPROBANTE
                    + "FROM cuenta_pagar cp "
                    + "JOIN factura_compra_cabecera f ON cp.id_fact_comp_cab = f.id_fact_comp_cab "
+                   + JOIN_COMPROBANTE
                    + "WHERE f.id_proveedor = ? AND cp.cta_pag_saldo <> 0 "
                    // Las rendidas se provisionan desde la rendicion, a nombre del responsable: si
                    // tambien aparecieran aca se podrian pagar dos veces, una a cada uno.
@@ -411,6 +496,7 @@ public class CuentaPagarDAO {
                     cp.setSaldo(rs.getLong("cta_pag_saldo"));
                     long plazo = rs.getLong("cta_pag_plazo");
                     cp.setPlazo(rs.wasNull() ? null : plazo);
+                    leerComprobante(rs, cp);
                     cuentas.add(cp);
                 }
             }
@@ -491,9 +577,10 @@ public class CuentaPagarDAO {
         List<CuentaPagar> cuentas = new ArrayList<>();
         String sql = "SELECT cp.id_cta_pagar, cp.id_fact_comp_cab, cp.cta_pag_monto, cp.cta_pag_estado, "
                    + "cp.cta_pag_fecha_venci, cp.cta_pag_saldo, cp.cta_pag_plazo, "
-                   + "f.fact_comp_numero, f.fact_comp_fecha_emision, f.id_proveedor "
+                   + "f.fact_comp_numero, f.fact_comp_fecha_emision, f.id_proveedor, " + COLUMNAS_COMPROBANTE
                    + "FROM cuenta_pagar cp "
                    + "JOIN factura_compra_cabecera f ON cp.id_fact_comp_cab = f.id_fact_comp_cab "
+                   + JOIN_COMPROBANTE
                    + "WHERE f.fact_comp_tipo_factura = 'fondoFijo' AND cp.cta_pag_saldo <> 0 "
                    + "AND cp.cta_pag_estado NOT IN ('En provision', 'Anulado', 'Rendida') "
                    + "ORDER BY cp.id_cta_pagar";
@@ -517,6 +604,7 @@ public class CuentaPagarDAO {
                 cp.setSaldo(rs.getLong("cta_pag_saldo"));
                 long plazo = rs.getLong("cta_pag_plazo");
                 cp.setPlazo(rs.wasNull() ? null : plazo);
+                leerComprobante(rs, cp);
                 cuentas.add(cp);
             }
         }

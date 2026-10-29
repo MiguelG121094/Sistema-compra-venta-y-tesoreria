@@ -21,6 +21,11 @@ public class CuentaPagar implements java.io.Serializable {
     private Date fechaVencimiento;
     private Long saldo;
     private Long plazo;
+    /* Comprobante de la fila: FACTURA, NOTA_CRED o NOTA_DEBI. Las notas llevan en facturaCompra
+       la factura que corrigen. Ver NOTA_CREDITO_DEBITO_PLAN.md §4.2. */
+    private String origen;
+    private NotaCreditoCompra notaCredito;
+    private NotaDebitoCompra notaDebito;
 
     public CuentaPagar() {
     }
@@ -93,5 +98,48 @@ public class CuentaPagar implements java.io.Serializable {
 
     public void setPlazo(Long plazo) {
         this.plazo = plazo;
+    }
+
+    public String getOrigen() {
+        return origen;
+    }
+
+    public void setOrigen(String origen) {
+        this.origen = origen;
+    }
+
+    public NotaCreditoCompra getNotaCredito() {
+        return notaCredito;
+    }
+
+    public void setNotaCredito(NotaCreditoCompra notaCredito) {
+        this.notaCredito = notaCredito;
+    }
+
+    public NotaDebitoCompra getNotaDebito() {
+        return notaDebito;
+    }
+
+    public void setNotaDebito(NotaDebitoCompra notaDebito) {
+        this.notaDebito = notaDebito;
+    }
+
+    /** Una fila sin origen es de factura: es lo que habia antes de que las notas tuvieran fila. */
+    public boolean isOrigenFactura() {
+        return origen == null || CuentaPagarDAO.ORIGEN_FACTURA.equals(origen);
+    }
+
+    /**
+     * Comprobante de la fila para los listados de provision, orden de pago y rendicion: el numero
+     * de la factura, o el de la nota con su prefijo.
+     */
+    public String getComprobante() {
+        if (CuentaPagarDAO.ORIGEN_NOTA_CREDITO.equals(origen) && notaCredito != null) {
+            return "NC " + notaCredito.getNumero();
+        }
+        if (CuentaPagarDAO.ORIGEN_NOTA_DEBITO.equals(origen) && notaDebito != null) {
+            return "ND " + notaDebito.getNumero();
+        }
+        return facturaCompra != null ? facturaCompra.getNumero() : null;
     }
 }

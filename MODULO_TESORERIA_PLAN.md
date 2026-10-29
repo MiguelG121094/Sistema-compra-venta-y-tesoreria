@@ -80,7 +80,7 @@ tesorería). Ver §4 el detalle por sub-módulo.
 |---|---|
 | **Referenciales → Cuenta bancaria** (ABM) | ✅ `CuentaDAO`/`CuentaService`/`CuentaServlet`/`cuenta.jsp`, más `MonedaDAO`/`Service`, `TipoCuentaDAO`/`Service`, `EntidadFinancieraDAO`/`Service` (para los combos). Seed cargado (moneda, tipo_entidad_financiera, entidad_financiera, tipo_cuenta). Servlet limpio (sin el bug de variables de instancia). |
 | **Provisión de cuenta a pagar** | ✅ **Completo**: `ProvisionCuentaPagarDAO` + `ProvisionCuentaPagarService` (transaccional), `ProvisionCuentaPagarServlet` (Session+Token), `provision.jsp` (calcado del prototipo). Reserva las cuentas (`En provision`, sin tocar el saldo) y netea el saldo a favor de NC (valida **neto ≥ 0**). |
-| **`CuentaPagarDAO`** (ampliado) | `ajustarSaldoPorNota` (lógica de estado en Java, `SELECT ... FOR UPDATE`), `tienePagosAplicados`, `listarCuentasPagarPorProveedor` (saldo ≠ 0, incluye negativos + N° factura + plazo + fecha emisión), `marcarEnProvision`, `revertirProvision`, helper `calcularEstadoPorSaldo`. Además: **persistencia de `cta_pag_plazo`** corregida (antes no se guardaba) y campo `plazo` en la entidad `CuentaPagar`. |
+| **`CuentaPagarDAO`** (ampliado) | `insertarCuentaPagarNota` / `anularCuentaPagarNota` (fila propia de cada NC/ND desde 2026-10-29; reemplazan a `ajustarSaldoPorNota`), `tienePagosAplicados`, `listarCuentasPagarPorProveedor` (saldo ≠ 0, incluye negativos + N° factura + plazo + fecha emisión), `marcarEnProvision`, `revertirProvision`, helper `calcularEstadoPorSaldo`. Además: **persistencia de `cta_pag_plazo`** corregida (antes no se guardaba) y campo `plazo` en la entidad `CuentaPagar`. |
 | **Orden de pago** | ✅ **Completa y probada end-to-end** (2026-08-17): esquema + POJOs alineados, `OrdenPagoDAO`/`OrdenPagoDetalleDAO`/`FormaPagoDetalleDAO`/`ChequeDAO`/`ChequeraDAO`, `OrdenPagoService` transaccional (guard anti doble-pago + anulación con reversa total), `ordenPago.jsp` y **`OrdenPagoServlet`** (Session+Token). Ver §C. |
 
 **Servlets de tesorería existentes:** `CuentaServlet`, `ProvisionCuentaPagarServlet`,
@@ -105,7 +105,7 @@ Todo se construye calcando lo ya consolidado en **Compras**:
 - **Session + Token** en los servlets (thread-safe, multi-pestaña) — referencia `FacturaCompraServlet`.
 - **DAO/Service transaccional**: el **Service es dueño de la conexión** (`setAutoCommit(false)` +
   commit/rollback), construye los DAOs con esa conexión, y estos corren sin commit propio (igual que
-  `CuentaPagarDAO.ajustarSaldoPorNota`).
+  `CuentaPagarDAO.descontarSaldo`).
 - **Permisos** vía `AuthorizationFilter` (módulo `tesoreria`) + `<c:if>` en la JSP.
 - **UTF-8** por `web.xml` (ya configurado), Toastr, máscaras de miles.
 
@@ -150,7 +150,8 @@ vistas de "Referenciales de Tesorería".
 guardar cabecera + detalle (cada línea con `prov_cta_pag_monto`).
 
 **⭐ Integración con Nota de Crédito (decisión ya tomada — ver `NOTA_CREDITO_DEBITO_PLAN.md` §4/§8.3):**
-Acá se **consume el "saldo a favor"** de las NC (Enfoque 1 con neteo). Por eso la provisión debe:
+Acá se **consume el "saldo a favor"** de las NC. Desde el 2026-10-29 cada NC tiene su propia fila
+en `cuenta_pagar` (NOTA_CREDITO_DEBITO_PLAN.md §4), que entra a la provisión como línea negativa. Por eso la provisión debe:
 - **Relajar el filtro** de "cuentas a pagar del proveedor": traer las de **saldo ≠ 0** (incluidas las
   de **saldo negativo** = saldo a favor), no solo `saldo > 0`. Hoy `CuentaPagarDAO.listarCuentasPagarPendientes()`
   filtra `cta_pag_saldo > 0` → **hay que agregar un método que incluya negativos**.

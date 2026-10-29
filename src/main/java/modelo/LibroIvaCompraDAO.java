@@ -105,7 +105,9 @@ public class LibroIvaCompraDAO {
             return;
         }
 
-        String sql = "DELETE FROM libro_iva_compra WHERE id_fact_comp_cab = ?";
+        // Solo la fila de la factura: las de sus notas tienen el mismo id_fact_comp_cab.
+        String sql = "DELETE FROM libro_iva_compra WHERE id_fact_comp_cab = ? "
+                   + "AND COALESCE(libro_iva_comp_origen, '" + ORIGEN_FACTURA + "') = '" + ORIGEN_FACTURA + "'";
 
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setLong(1, idFacturaCompra);
@@ -114,8 +116,8 @@ public class LibroIvaCompraDAO {
     }
 
     /**
-     * Marca como 'Anulado' los registros del libro IVA asociados a una factura.
-     * Preserva el registro para trazabilidad fiscal (no se elimina físicamente).
+     * Marca como 'Anulado' el registro del libro IVA de la propia factura (las filas de sus notas
+     * se anulan con la nota). Preserva el registro para trazabilidad fiscal.
      */
     public void anularPorFactura(Long idFacturaCompra) throws SQLException {
         if (idFacturaCompra == null) {
@@ -124,7 +126,8 @@ public class LibroIvaCompraDAO {
         }
 
         String sql = "UPDATE libro_iva_compra SET libro_iva_comp_estado = 'Anulado' "
-                   + "WHERE id_fact_comp_cab = ?";
+                   + "WHERE id_fact_comp_cab = ? "
+                   + "AND COALESCE(libro_iva_comp_origen, '" + ORIGEN_FACTURA + "') = '" + ORIGEN_FACTURA + "'";
 
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setLong(1, idFacturaCompra);

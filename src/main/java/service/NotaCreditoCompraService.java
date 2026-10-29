@@ -142,7 +142,8 @@ public class NotaCreditoCompraService {
      *   1. Inserta la cabecera de la nota.
      *   2. Inserta los detalles (dispara el trigger de stock en las líneas con depósito).
      *   3. Registra la fila de libro IVA (origen NOTA_CRED, montos NEGATIVOS).
-     *   4. Ajusta el saldo de la cuenta a pagar de la factura referenciada (resta; admite negativo).
+     *   4. Inserta la cuenta a pagar propia de la nota, con el mismo total negativo
+     *      ('Saldo a favor'). La cuenta de la factura no se toca.
      * Si algo falla, se hace rollback de todo.
      * Ver NOTA_CREDITO_DEBITO_PLAN.md §4/§5/§8.
      *
@@ -172,16 +173,17 @@ public class NotaCreditoCompraService {
             }
 
             Long idFactura = nota.getFacturaCompra().getIdFacturaCompra();
-            long total = libroIva.getTotal() != null ? libroIva.getTotal() : 0L;
 
             // 3. Libro IVA con montos NEGATIVOS (la NC resta del período)
             negarMontos(libroIva);
             LibroIvaCompraDAO libroIvaDAO = new LibroIvaCompraDAO(conn);
-            libroIvaDAO.insertarLibroIvaNota(libroIva, idFactura, "NOTA_CRED", idNota, null);
+            libroIvaDAO.insertarLibroIvaNota(libroIva, idFactura,
+                    LibroIvaCompraDAO.ORIGEN_NOTA_CREDITO, idNota, null);
 
-            // 4. Ajustar saldo de la cuenta a pagar (resta; puede quedar negativo = saldo a favor)
-            CuentaPagarDAO cuentaPagarDAO = new CuentaPagarDAO(conn);
-            cuentaPagarDAO.ajustarSaldoPorNota(idFactura, total, CuentaPagarDAO.TipoNota.CREDITO, false);
+            // 4. Cuenta a pagar propia, con el mismo total que el libro IVA
+            long total = libroIva.getTotal() != null ? libroIva.getTotal() : 0L;
+            new CuentaPagarDAO(conn).insertarCuentaPagarNota(idFactura,
+                    CuentaPagarDAO.ORIGEN_NOTA_CREDITO, idNota, total, nota.getFechaEmision());
 
             conn.commit();
         } catch (SQLException e) {
@@ -203,30 +205,30 @@ public class NotaCreditoCompraService {
      * Anula una nota de crédito en una sola transacción:
      *   1. Estado de la nota a 'Anulado' (dispara el trigger de reposición de stock).
      *   2. Filas de libro IVA de la nota a 'Anulado' (preserva trazabilidad).
-     *   3. Reversa del ajuste de saldo de la cuenta a pagar (suma de vuelta el monto).
-     * El guard de "crédito ya neteado en una provisión" se valida en el servlet antes de llamar.
+     *   3. Su cuenta a pagar a 'Anulado'.
+     * Antes que nada se valida la cuenta a pagar de la nota, con la fila bloqueada: si ya está en
+     * una provisión, en una rendición o aplicada en una OP, se rechaza con el mensaje para el
+     * usuario. Ver NOTA_CREDITO_DEBITO_PLAN.md §4.4.
      *
-     * @param nota       nota a anular (con factura referenciada seteada)
-     * @param montoTotal total (positivo) de la nota, para revertir el saldo
-     * @throws SQLException si algo falla (ya se hizo rollback)
+     * @param nota nota a anular
+     * @throws SQLException si la validación rechaza o algo falla (ya se hizo rollback)
      */
-    public void anularNotaCreditoCompleta(NotaCreditoCompra nota, long montoTotal) throws SQLException {
+    public void anularNotaCreditoCompleta(NotaCreditoCompra nota) throws SQLException {
         Connection conn = null;
         try {
             conn = Conexion.getConnection();
             conn.setAutoCommit(false);
 
             Long idNota = nota.getIdNotaCreditoCompra();
-            Long idFactura = nota.getFacturaCompra().getIdFacturaCompra();
+
+            // Primero la cuenta a pagar: es la que puede rechazar la anulación
+            new CuentaPagarDAO(conn).anularCuentaPagarNota(CuentaPagarDAO.ORIGEN_NOTA_CREDITO, idNota);
 
             NotaCreditoCompraDAO dao = new NotaCreditoCompraDAO(conn);
             dao.anularNotaCredito(idNota);
 
             LibroIvaCompraDAO libroIvaDAO = new LibroIvaCompraDAO(conn);
             libroIvaDAO.anularPorNotaCredito(idNota);
-
-            CuentaPagarDAO cuentaPagarDAO = new CuentaPagarDAO(conn);
-            cuentaPagarDAO.ajustarSaldoPorNota(idFactura, montoTotal, CuentaPagarDAO.TipoNota.CREDITO, true);
 
             conn.commit();
         } catch (SQLException e) {

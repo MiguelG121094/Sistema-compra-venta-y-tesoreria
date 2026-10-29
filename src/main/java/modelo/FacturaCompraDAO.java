@@ -83,14 +83,16 @@ public class FacturaCompraDAO {
         List<FacturaCompra> facturas = new ArrayList<>();
         /* El estado del pago no vive en la factura: lo gobierna cuenta_pagar, que avanza
            Pendiente -> Rendida -> En provision -> Cancelado. Se trae con un LEFT JOIN para
-           mostrarlo en la grilla, sin duplicarlo en factura_compra_cabecera. */
+           mostrarlo en la grilla, sin duplicarlo en factura_compra_cabecera. Solo la fila de la
+           propia factura: sus notas tienen otra fila con el mismo id_fact_comp_cab. */
         String sql = "SELECT f.id_fact_comp_cab, f.fact_comp_numero, f.fact_comp_timbrado, f.fact_comp_fecha_venci_timb, " +
                     "f.fact_comp_fecha_emision, f.fact_comp_fecha_carga, f.fact_comp_condicion, f.fact_comp_plazo, " +
                     "f.fact_comp_fecha_venci, f.fact_comp_observacion, f.fact_comp_estado, f.fact_comp_tipo_factura, " +
                     "f.id_proveedor, f.id_sucursal, f.id_usuario, f.id_orden_compra_cab, " +
                     "cp.cta_pag_estado " +
                     "FROM factura_compra_cabecera f " +
-                    "LEFT JOIN cuenta_pagar cp ON cp.id_fact_comp_cab = f.id_fact_comp_cab";
+                    "LEFT JOIN cuenta_pagar cp ON cp.id_fact_comp_cab = f.id_fact_comp_cab " +
+                    "AND cp.cta_pag_origen = '" + CuentaPagarDAO.ORIGEN_FACTURA + "'";
 
         proveedorDAO = new ProveedorDAO(conn);
         sucursalDAO = new SucursalDAO(conn);

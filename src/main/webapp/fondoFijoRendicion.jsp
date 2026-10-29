@@ -171,7 +171,7 @@
                                             <thead>
                                                 <tr>
                                                     <th class="text-bg-dark text-center">Item</th>
-                                                    <th class="text-bg-dark text-center">Nro. de factura</th>
+                                                    <th class="text-bg-dark text-center">Comprobante</th>
                                                     <th class="text-bg-dark text-center">Proveedor</th>
                                                     <th class="text-bg-dark text-center">Fecha</th>
                                                     <th class="text-bg-dark text-center">Total</th>
@@ -184,7 +184,7 @@
                                                 <c:forEach var="det" items="${listaDetalle}" varStatus="st">
                                                     <tr>
                                                         <td class="text-center">${st.index + 1}</td>
-                                                        <td class="text-center">${det.cuentaPagar.facturaCompra.numero}</td>
+                                                        <td class="text-center">${det.cuentaPagar.comprobante}</td>
                                                         <td>${det.cuentaPagar.facturaCompra.proveedor.razonSocial}</td>
                                                         <td class="text-center"><fmt:formatDate value="${det.cuentaPagar.facturaCompra.fechaEmision}" pattern="dd/MM/yyyy"/></td>
                                                         <td class="text-end"><fmt:formatNumber value="${det.montoRendido}" pattern="#,##0"/></td>
@@ -272,7 +272,7 @@
                                         <table id="tablaCuentasPagar" class="table table-bordered table-striped">
                                             <thead>
                                                 <tr>
-                                                    <th class="text-bg-dark text-center">Nro. de factura</th>
+                                                    <th class="text-bg-dark text-center">Comprobante</th>
                                                     <th class="text-bg-dark text-center">Proveedor</th>
                                                     <th class="text-bg-dark text-center">Fecha</th>
                                                     <th class="text-bg-dark text-center">Importe total</th>
@@ -283,7 +283,7 @@
                                             <tbody>
                                                 <c:forEach var="cta" items="${listaCuentasPagar}">
                                                     <tr>
-                                                        <td class="text-center">${cta.facturaCompra.numero}</td>
+                                                        <td class="text-center">${cta.comprobante}</td>
                                                         <td>${cta.facturaCompra.proveedor.razonSocial}</td>
                                                         <td class="text-center"><fmt:formatDate value="${cta.facturaCompra.fechaEmision}" pattern="dd/MM/yyyy"/></td>
                                                         <td class="text-end"><fmt:formatNumber value="${cta.monto}" pattern="#,##0"/></td>

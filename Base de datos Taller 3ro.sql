@@ -1099,10 +1099,14 @@ CREATE TABLE public.cuenta_pagar (
                 cta_pag_fecha_venci DATE NOT NULL,
                 cta_pag_saldo INTEGER NOT NULL,
                 cta_pag_plazo INTEGER,
+                cta_pag_origen VARCHAR(10) DEFAULT 'FACTURA' NOT NULL,
+                id_nota_cred_comp_cab INTEGER,
+                id_nota_debi_comp_cab INTEGER,
                 CONSTRAINT id_cta_pagar PRIMARY KEY (id_cta_pagar, id_fact_comp_cab)
 );
 COMMENT ON TABLE public.cuenta_pagar IS 'una factura de fondo fijo está con estado RENDICION PENDIENTE y luego cuando se realiza la rendicion pasa a estado PENDIENTE DE PROVISION o PENDIENTE o algo asi';
 COMMENT ON COLUMN public.cuenta_pagar.cta_pag_plazo IS 'plazo total para pagar la factura, en días o meses';
+COMMENT ON COLUMN public.cuenta_pagar.cta_pag_origen IS 'comprobante de la fila: FACTURA, NOTA_CRED o NOTA_DEBI. Las notas llevan el id_fact_comp_cab de la factura que corrigen';
 
 
 ALTER SEQUENCE public.cuenta_pagar_id_cta_pagar_seq OWNED BY public.cuenta_pagar.id_cta_pagar;
@@ -2399,6 +2403,20 @@ NOT DEFERRABLE;
 ALTER TABLE public.libro_iva_compra ADD CONSTRAINT nota_credito_compra_cabecera_libro_iva_compra_fk
 FOREIGN KEY (id_nota_cred_comp_cab)
 REFERENCES public.nota_credito_compra_cabecera (id_nota_cred_comp_cab)
+ON DELETE NO ACTION
+ON UPDATE NO ACTION
+NOT DEFERRABLE;
+
+ALTER TABLE public.cuenta_pagar ADD CONSTRAINT nota_credito_compra_cabecera_cuenta_pagar_fk
+FOREIGN KEY (id_nota_cred_comp_cab)
+REFERENCES public.nota_credito_compra_cabecera (id_nota_cred_comp_cab)
+ON DELETE NO ACTION
+ON UPDATE NO ACTION
+NOT DEFERRABLE;
+
+ALTER TABLE public.cuenta_pagar ADD CONSTRAINT nota_debito_compra_cabecera_cuenta_pagar_fk
+FOREIGN KEY (id_nota_debi_comp_cab)
+REFERENCES public.nota_debito_compra_cabecera (id_nota_debi_comp_cab)
 ON DELETE NO ACTION
 ON UPDATE NO ACTION
 NOT DEFERRABLE;

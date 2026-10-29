@@ -89,7 +89,10 @@ public class ProvisionCuentaPagarService {
                 dao.insertarDetalle(det, idProvision);
                 Long idFactura = det.getCuentaPagar().getFacturaCompra().getIdFacturaCompra();
                 cuentaPagarDAO.marcarEnProvision(det.getCuentaPagar().getIdCuentaPagar(), idFactura);
-                facturaDAO.actualizarEstado(idFactura, FacturaCompraDAO.ESTADO_PROCESADA);
+                // Una línea de nota lleva el id de su factura, pero no es la factura la que se provisiona.
+                if (det.getCuentaPagar().isOrigenFactura()) {
+                    facturaDAO.actualizarEstado(idFactura, FacturaCompraDAO.ESTADO_PROCESADA);
+                }
             }
 
             // Si la provisión se armó desde una rendición, la rendición queda tomada: el modal de
@@ -164,7 +167,9 @@ public class ProvisionCuentaPagarService {
                 cuentaPagarDAO.revertirProvision(
                     det.getCuentaPagar().getIdCuentaPagar(), idFactura, idRendicion != null);
                 // La factura vuelve a 'Pendiente': deshacer la provision la saca del circuito.
-                facturaDAO.actualizarEstado(idFactura, FacturaCompraDAO.ESTADO_PENDIENTE);
+                if (det.getCuentaPagar().isOrigenFactura()) {
+                    facturaDAO.actualizarEstado(idFactura, FacturaCompraDAO.ESTADO_PENDIENTE);
+                }
             }
             if (idRendicion != null) {
                 new FondoFijoRendicionDAO(conn).actualizarEstado(

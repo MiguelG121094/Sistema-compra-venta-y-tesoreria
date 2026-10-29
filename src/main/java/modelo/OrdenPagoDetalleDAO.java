@@ -41,10 +41,12 @@ public class OrdenPagoDetalleDAO {
     public List<OrdenPagoDetalle> listarPorOrden(Long idOrdenPago) throws SQLException {
         List<OrdenPagoDetalle> detalles = new ArrayList<>();
         String sql = "SELECT d.id_orden_pago_det, d.orden_pag_det_monto, d.id_cta_pagar, d.id_fact_comp_cab, "
-                   + "cp.cta_pag_monto, cp.cta_pag_saldo, cp.cta_pag_plazo, f.fact_comp_numero "
+                   + "cp.cta_pag_monto, cp.cta_pag_saldo, cp.cta_pag_plazo, f.fact_comp_numero, "
+                   + CuentaPagarDAO.COLUMNAS_COMPROBANTE
                    + "FROM orden_pago_detalle d "
                    + "JOIN cuenta_pagar cp ON d.id_cta_pagar = cp.id_cta_pagar AND d.id_fact_comp_cab = cp.id_fact_comp_cab "
                    + "JOIN factura_compra_cabecera f ON d.id_fact_comp_cab = f.id_fact_comp_cab "
+                   + CuentaPagarDAO.JOIN_COMPROBANTE
                    + "WHERE d.id_orden_pago = ? ORDER BY d.id_orden_pago_det";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setLong(1, idOrdenPago);
@@ -60,6 +62,7 @@ public class OrdenPagoDetalleDAO {
                     cp.setSaldo(rs.getLong("cta_pag_saldo"));
                     long plazo = rs.getLong("cta_pag_plazo");
                     cp.setPlazo(rs.wasNull() ? null : plazo);
+                    CuentaPagarDAO.leerComprobante(rs, cp);
 
                     OrdenPagoDetalle det = new OrdenPagoDetalle();
                     det.setIdOrdenPagoDet(rs.getLong("id_orden_pago_det"));

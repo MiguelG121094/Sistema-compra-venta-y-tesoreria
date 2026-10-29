@@ -625,23 +625,25 @@ public class NotaCreditoDebitoServlet extends HttpServlet {
             return;
         }
 
-        // TODO: guard "crédito ya neteado en una provisión" (§8.2/§6) cuando exista el módulo de provisión.
-
-        long total = 0L;
-        for (NotaCreditoCompraDetalle d : estado.listaDetalle) {
-            if (d.getCantidad() != null && d.getMonto() != null) {
-                total += d.getCantidad() * d.getMonto();
-            }
-        }
-
+        /* Si la cuenta a pagar de la nota ya entró en una provisión, una rendición o una OP, el
+           Service rechaza con el mensaje para el usuario. La validación va allá, con la fila
+           bloqueada dentro de la transacción. Ver NOTA_CREDITO_DEBITO_PLAN.md §4.4. */
         estado.nota.setFacturaCompra(estado.facturaReferenciada);
-        if ("debito".equals(estado.tipoNota)) {
-            NotaDebitoCompra nd = mapAsDebito(estado.nota);
-            nd.setIdNotaDebitoCompra(estado.idNotaExistente);
-            notaDebitoService.anularNotaDebitoCompleta(nd, total);
-        } else {
-            estado.nota.setIdNotaCreditoCompra(estado.idNotaExistente);
-            notaCreditoService.anularNotaCreditoCompleta(estado.nota, total);
+        try {
+            if ("debito".equals(estado.tipoNota)) {
+                NotaDebitoCompra nd = mapAsDebito(estado.nota);
+                nd.setIdNotaDebitoCompra(estado.idNotaExistente);
+                notaDebitoService.anularNotaDebitoCompleta(nd);
+            } else {
+                estado.nota.setIdNotaCreditoCompra(estado.idNotaExistente);
+                notaCreditoService.anularNotaCreditoCompleta(estado.nota);
+            }
+        } catch (SQLException e) {
+            LOGGER.log(Level.WARNING, "No se pudo anular la nota " + estado.idNotaExistente, e);
+            mostrarMensaje(request, e.getMessage(), "alert-warning");
+            cargarDatosParaVista(request, estado, token);
+            forward(request, response, JSP_NOTA);
+            return;
         }
 
         limpiarEstado(session, token);

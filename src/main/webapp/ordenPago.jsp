@@ -438,7 +438,7 @@
                                             <thead>
                                                 <tr>
                                                     <th class="text-bg-dark text-center">Item</th>
-                                                    <th class="text-bg-dark text-center">Nro. de factura</th>
+                                                    <th class="text-bg-dark text-center">Comprobante</th>
                                                     <th class="text-bg-dark text-center">Importe total</th>
                                                     <th class="text-bg-dark text-center">Saldo pendiente</th>
                                                     <th class="text-bg-dark text-center">Importe a pagar</th>
@@ -449,7 +449,7 @@
                                                 <c:forEach var="det" items="${listaDetalle}" varStatus="st">
                                                     <tr>
                                                         <td class="text-center">${st.index + 1}</td>
-                                                        <td class="text-center">${det.cuentaPagar.facturaCompra.numero}</td>
+                                                        <td class="text-center">${det.cuentaPagar.comprobante}</td>
                                                         <td class="text-end"><fmt:formatNumber value="${det.cuentaPagar.monto}" pattern="#,##0"/></td>
                                                         <td class="text-end"><fmt:formatNumber value="${det.cuentaPagar.saldo}" pattern="#,##0"/></td>
                                                         <td class="text-end"><fmt:formatNumber value="${det.monto}" pattern="#,##0"/></td>

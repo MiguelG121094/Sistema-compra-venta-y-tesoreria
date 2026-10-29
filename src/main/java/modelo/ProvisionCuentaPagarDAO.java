@@ -160,10 +160,12 @@ public class ProvisionCuentaPagarDAO {
     public List<ProvisionCuentaPagarDetalle> listarDetallesPorProvision(Long idProvision) throws SQLException {
         List<ProvisionCuentaPagarDetalle> detalles = new ArrayList<>();
         String sql = "SELECT d.id_provi_cta_pagar_detalle, d.id_cta_pagar, d.id_fact_comp_cab, d.prov_cta_pag_monto, "
-                   + "cp.cta_pag_monto, cp.cta_pag_saldo, cp.cta_pag_plazo, f.fact_comp_numero "
+                   + "cp.cta_pag_monto, cp.cta_pag_saldo, cp.cta_pag_plazo, f.fact_comp_numero, "
+                   + CuentaPagarDAO.COLUMNAS_COMPROBANTE
                    + "FROM provision_cuenta_pagar_detalle d "
                    + "JOIN cuenta_pagar cp ON d.id_cta_pagar = cp.id_cta_pagar AND d.id_fact_comp_cab = cp.id_fact_comp_cab "
                    + "JOIN factura_compra_cabecera f ON d.id_fact_comp_cab = f.id_fact_comp_cab "
+                   + CuentaPagarDAO.JOIN_COMPROBANTE
                    + "WHERE d.id_provi_cta_pagar_cabecera = ? ORDER BY d.id_provi_cta_pagar_detalle";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setLong(1, idProvision);
@@ -179,6 +181,7 @@ public class ProvisionCuentaPagarDAO {
                     cp.setSaldo(rs.getLong("cta_pag_saldo"));
                     long plazo = rs.getLong("cta_pag_plazo");
                     cp.setPlazo(rs.wasNull() ? null : plazo);
+                    CuentaPagarDAO.leerComprobante(rs, cp);
 
                     ProvisionCuentaPagarDetalle det = new ProvisionCuentaPagarDetalle();
                     det.setIdProvisionCuentaPagarDetalle(rs.getLong("id_provi_cta_pagar_detalle"));

@@ -314,7 +314,7 @@ Faltan crear las vistas para las nuevas funcionalidades:
 - [x] Sincronización Cuenta a Pagar al editar/anular Factura ✅ (2026-03)
 - [x] Validación de plazo en facturas a crédito ✅ (2026-04)
 - [⚠] Nota de Remisión Compra (vista inicial creada)
-- [x] Nota Crédito Compra ✅ (2026-07 — `NotaCreditoDebitoServlet` + `notaCreditoDebito.jsp`; ajusta `cuenta_pagar` con **saldo negativo permitido** (Enfoque 1 c/ neteo en la provisión), fila propia en el Libro IVA y triggers de stock por devolución. Validación de **cantidad devuelta ≤ comprada** ✅ 2026-08-13 — ver [plan](NOTA_CREDITO_DEBITO_PLAN.md) §5.3)
+- [x] Nota Crédito Compra ✅ (2026-07 — `NotaCreditoDebitoServlet` + `notaCreditoDebito.jsp`; **fila propia en `cuenta_pagar`** desde 2026-10-29 (antes mutaba el saldo de la factura), fila propia en el Libro IVA y triggers de stock por devolución. Validación de **cantidad devuelta ≤ comprada** ✅ 2026-08-13 — ver [plan](NOTA_CREDITO_DEBITO_PLAN.md) §5.3)
 - [x] Nota Débito Compra ✅ (2026-07 — mismo servlet/vista; aumenta el saldo de `cuenta_pagar` y registra su fila en el Libro IVA; no mueve stock)
 
 #### Tesorería *(plan detallado: [MODULO_TESORERIA_PLAN.md](MODULO_TESORERIA_PLAN.md))*
@@ -427,6 +427,25 @@ Todas las entidades siguen el patrón POJO:
 ---
 
 ## Historial de Cambios
+
+### 2026-10-29 — Notas de crédito/débito con fila propia en cuenta a pagar
+
+Hasta ahora la NC/ND sumaba o restaba sobre el saldo de la cuenta a pagar de su factura. Eso pisaba el
+estado de la factura (una factura 'En provision' o 'Rendida' volvía a Pendiente y se podía provisionar
+dos veces), mezclaba en un solo saldo la factura y sus notas y no permitía bloquear la anulación de una
+NC ya usada. Ahora **cada nota tiene su propia fila en `cuenta_pagar`**, igual que ya la tenía en el
+Libro IVA y con el mismo importe con signo: la NC nace 'Saldo a favor' (negativa) y la ND 'Pendiente'.
+La fila lleva el `id_fact_comp_cab` de la factura que corrige, así que la PK compuesta y las FKs de
+provisión, OP y rendición no cambiaron. El saldo a favor se sigue consumiendo en la provisión, ahora
+como una línea propia que muestra el número de la nota.
+
+La anulación de la nota se bloquea si su fila está en una provisión, en una rendición o ya aplicada en
+una OP (validado en el Service con la fila bloqueada). Las consultas de la factura (`getByFactura`,
+anulación, `tienePagosAplicados`, la grilla de facturas y la anulación del Libro IVA) quedaron
+restringidas al origen FACTURA, y la provisión sólo marca 'Procesada' a la factura en sus propias
+líneas. La conciliación bancaria no se ve afectada: trabaja con formas de pago, débitos y créditos.
+**Requiere correr `Migracion cuenta pagar por comprobante.sql`.** Detalle en
+`NOTA_CREDITO_DEBITO_PLAN.md` §4.
 
 ### 2026-10-04 al 06 — ABM de artículos y pantalla de Stock
 
