@@ -150,7 +150,8 @@ public class CuentaPagarDAO {
         }
 
         String sql = "INSERT INTO cuenta_pagar (id_fact_comp_cab, cta_pag_monto, cta_pag_estado, " +
-                    "cta_pag_fecha_venci, cta_pag_saldo, cta_pag_plazo) VALUES (?, ?, ?, ?, ?, ?)";
+                    "cta_pag_fecha_venci, cta_pag_saldo, cta_pag_plazo, cta_pag_origen) " +
+                    "VALUES (?, ?, ?, ?, ?, ?, ?)";
 
         try (PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             stmt.setLong(1, cuentaPagar.getFacturaCompra().getIdFacturaCompra());
@@ -163,6 +164,8 @@ public class CuentaPagarDAO {
             } else {
                 stmt.setNull(6, java.sql.Types.INTEGER);
             }
+            // Las filas de nota van por insertarCuentaPagarNota: acá siempre es la de la factura.
+            stmt.setString(7, cuentaPagar.getOrigen() != null ? cuentaPagar.getOrigen() : ORIGEN_FACTURA);
 
             int filasAfectadas = stmt.executeUpdate();
             if (filasAfectadas == 0) {

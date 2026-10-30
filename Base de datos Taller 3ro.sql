@@ -1161,9 +1161,9 @@ CREATE TABLE public.cuenta_pagar (
                 cta_pag_fecha_venci DATE NOT NULL,
                 cta_pag_saldo INTEGER NOT NULL,
                 cta_pag_plazo INTEGER,
-                cta_pag_origen VARCHAR(10) NOT NULL,
+                cta_pag_origen VARCHAR(10) DEFAULT 'FACTURA' NOT NULL,
                 id_nota_cred_comp_cab INTEGER,
-                id_nota_debi_comp_cab INTEGER NOT NULL,
+                id_nota_debi_comp_cab INTEGER,
                 CONSTRAINT id_cta_pagar PRIMARY KEY (id_cta_pagar, id_fact_comp_cab)
 );
 COMMENT ON TABLE public.cuenta_pagar IS 'una factura de fondo fijo está con estado RENDICION PENDIENTE y luego cuando se realiza la rendicion pasa a estado PENDIENTE DE PROVISION o PENDIENTE o algo asi';

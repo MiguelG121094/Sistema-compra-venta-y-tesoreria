@@ -211,6 +211,7 @@ public class FacturaCompraService {
             // 3. Crear cuenta a pagar
             CuentaPagarDAO cuentaPagarDAO = new CuentaPagarDAO(conn);
             cuentaPagar.setFacturaCompra(new FacturaCompra(idInsertado));
+            cuentaPagar.setOrigen(CuentaPagarDAO.ORIGEN_FACTURA);
             cuentaPagarDAO.insertarCuentaPagar(cuentaPagar);
 
             // 4. Registrar en libro IVA compra

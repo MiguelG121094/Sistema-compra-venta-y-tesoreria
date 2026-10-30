@@ -547,8 +547,15 @@ public class NotaCreditoDebitoServlet extends HttpServlet {
             return;
         }
 
+        if (estado.nota.getFechaVenciTimbrado() == null) {
+            mostrarMensaje(request, "Debe ingresar la fecha de vencimiento del timbrado", "alert-warning");
+            cargarDatosParaVista(request, estado, token);
+            forward(request, response, JSP_NOTA);
+            return;
+        }
+
         // Validar fecha de vencimiento del timbrado estrictamente mayor a hoy (igual que Factura de Compra)
-        if (estado.nota.getFechaVenciTimbrado() != null) {
+        {
             java.util.Calendar calVenc = java.util.Calendar.getInstance();
             calVenc.setTime(estado.nota.getFechaVenciTimbrado());
             calVenc.set(java.util.Calendar.HOUR_OF_DAY, 0);
@@ -564,6 +571,17 @@ public class NotaCreditoDebitoServlet extends HttpServlet {
 
             if (!calVenc.after(calActual)) {
                 mostrarMensaje(request, "La fecha de vencimiento del timbrado debe ser mayor a la fecha actual", "alert-warning");
+                cargarDatosParaVista(request, estado, token);
+                forward(request, response, JSP_NOTA);
+                return;
+            }
+        }
+
+        for (NotaCreditoCompraDetalle det : estado.listaDetalle) {
+            if (det.getCantidad() == null || det.getCantidad() <= 0
+                    || det.getMonto() == null || det.getMonto() <= 0) {
+                mostrarMensaje(request, "Cada línea debe tener cantidad y precio mayores a cero. "
+                        + "Elimine las líneas que no correspondan.", "alert-warning");
                 cargarDatosParaVista(request, estado, token);
                 forward(request, response, JSP_NOTA);
                 return;
@@ -593,17 +611,27 @@ public class NotaCreditoDebitoServlet extends HttpServlet {
         TotalesIva totales = calcularTotalesIva(estado.listaDetalle);
         LibroIvaCompra libroIva = construirLibroIvaNota(totales, estado.nota.getFechaEmision());
 
-        if ("debito".equals(estado.tipoNota)) {
-            NotaDebitoCompra nd = mapAsDebito(estado.nota);
-            List<NotaDebitoCompraDetalle> dets = mapDetallesDebito(estado.listaDetalle);
-            Long id = notaDebitoService.guardarNotaDebitoCompleta(nd, dets, libroIva);
-            limpiarEstado(session, token);
-            mostrarMensaje(request, "Nota de Débito guardada. ID: " + id, "alert-success");
-        } else {
-            Long id = notaCreditoService.guardarNotaCreditoCompleta(estado.nota, estado.listaDetalle, libroIva);
-            limpiarEstado(session, token);
-            mostrarMensaje(request, "Nota de Crédito guardada. ID: " + id, "alert-success");
+        String mensajeOk;
+        try {
+            if ("debito".equals(estado.tipoNota)) {
+                NotaDebitoCompra nd = mapAsDebito(estado.nota);
+                List<NotaDebitoCompraDetalle> dets = mapDetallesDebito(estado.listaDetalle);
+                Long id = notaDebitoService.guardarNotaDebitoCompleta(nd, dets, libroIva);
+                mensajeOk = "Nota de Débito guardada. ID: " + id;
+            } else {
+                Long id = notaCreditoService.guardarNotaCreditoCompleta(estado.nota, estado.listaDetalle, libroIva);
+                mensajeOk = "Nota de Crédito guardada. ID: " + id;
+            }
+        } catch (SQLException e) {
+            // El Service ya hizo rollback; se vuelve a la nota con lo cargado.
+            LOGGER.log(Level.SEVERE, "No se pudo guardar la nota", e);
+            mostrarMensaje(request, "No se pudo guardar la nota: " + e.getMessage(), "alert-danger");
+            cargarDatosParaVista(request, estado, token);
+            forward(request, response, JSP_NOTA);
+            return;
         }
+        limpiarEstado(session, token);
+        mostrarMensaje(request, mensajeOk, "alert-success");
         accionListarModal(request, response);
     }
 
