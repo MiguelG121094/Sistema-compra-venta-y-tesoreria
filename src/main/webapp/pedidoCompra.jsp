@@ -324,35 +324,45 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                 </div>
 
                                 <form action="PedidoCompraServlet?menu=PedidoCompra" method="POST">
-                                    <div class="row" style="margin-top: 23px">
+                                    <div class="row align-items-center" style="margin-top: 23px">
                                         <div class="col-auto">
+                                            <button type="button" href="" data-bs-toggle="modal" data-bs-target="#modalArticulos" class="btn btn-outline-primary"
+                                                    <c:if test="${pedidoCompra.getIdPedido() == null && newIdPedido == null && listaDepositos.size()<=0 || empty listaDepositos || not empty esReadOnly}">
+                                                        <c:out value="disabled='disabled'"/></c:if>>Buscar Artículo</button>
+                                        </div>
+                                        <div class="col-md-1">
                                             <div class="form-floating mb-3 mb-md-0">
-                                                <button type="button" href="" data-bs-toggle="modal" data-bs-target="#modalArticulos" class="btn btn-outline-primary"
-                                                        <c:if test="${pedidoCompra.getIdPedido() == null && newIdPedido == null && listaDepositos.size()<=0 || empty listaDepositos || not empty esReadOnly}">
-                                                            <c:out value="disabled='disabled'"/></c:if>>Buscar Artículo</button>
+                                                <input type="text" id="idArticulo" name="txtIdArticulo" placeholder="Id. Artículo" value="${artACargar.getIdArticulo()}" class="form-control" disabled="true">
+                                                <label for="idArticulo">Id. Artículo</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-floating mb-3 mb-md-0">
+                                                <input type="text" id="descripcionArticulo" placeholder="Descripción" value="${artACargar.getDescripcion()}" class="form-control"  disabled="true">
+                                                <label for="descripcionArticulo">Descripción</label>
                                             </div>
                                         </div>
                                         <div class="col-md-1">
-                                            <input type="text" name="txtIdArticulo" placeholder="Id. Artículo" value="${artACargar.getIdArticulo()}" class="form-control" disabled="true">
-                                        </div>
-                                        <div class="col-md-4">
-                                            <input type="text" placeholder="Descripción" value="${artACargar.getDescripcion()}" class="form-control"  disabled="true">
-                                        </div>
-                                        <div class="col-md-1">
-                                            <input type="number" name="txtCantidad" min="1" <c:if test="${artACargar.getIdArticulo() == null}"><c:out 
-                                                            value="disabled='disabled'"/></c:if>  placeholder="Cantidad" class="form-control" required="true">
+                                            <div class="form-floating mb-3 mb-md-0">
+                                                <input type="number" id="cantidad" name="txtCantidad" min="1" <c:if test="${artACargar.getIdArticulo() == null}"><c:out 
+                                                                value="disabled='disabled'"/></c:if>  placeholder="Cantidad" class="form-control" required="true">
+                                                <label for="cantidad">Cantidad</label>
+                                            </div>
                                         </div>
                                         <div class="col-md-2">
-                                            <select id="selectDeposito" required="true" name="idDeposito" class="form-control" ${empty listaDepositos ? 'disabled' : ''}
-                                                    <c:if test="${artACargar.getIdArticulo() == null}"><c:out 
-                                                            value="disabled='disabled'"/></c:if>>
-                                                <option value="">Seleccione un depósito</option>
-                                                <c:forEach var="depositos" items="${listaDepositos}">
-                                                    <option value="${depositos.getIdDeposito()}" ${depositos.getIdDeposito() == idDepositoSeleccionado ? 'selected' : ''}>
-                                                        ${depositos.getDescripcion()}
-                                                    </option>
-                                                </c:forEach>
-                                            </select>
+                                            <div class="form-floating mb-3 mb-md-0">
+                                                <select id="selectDeposito" required="true" name="idDeposito" class="form-select" ${empty listaDepositos ? 'disabled' : ''}
+                                                        <c:if test="${artACargar.getIdArticulo() == null}"><c:out 
+                                                                value="disabled='disabled'"/></c:if>>
+                                                    <option value="">Seleccione un depósito</option>
+                                                    <c:forEach var="depositos" items="${listaDepositos}">
+                                                        <option value="${depositos.getIdDeposito()}" ${depositos.getIdDeposito() == idDepositoSeleccionado ? 'selected' : ''}>
+                                                            ${depositos.getDescripcion()}
+                                                        </option>
+                                                    </c:forEach>
+                                                </select>
+                                                <label for="selectDeposito">Depósito destino</label>
+                                            </div>
                                         </div>
                                         <div class="col-md-2">
                                             <button type="submit" name="accion" value="AgregarArticuloADetalle"

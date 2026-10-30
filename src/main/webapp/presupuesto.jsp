@@ -451,34 +451,49 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                 </form>
 
                                 <form id="formModificarArticulo" action="PresupuestoServlet?menu=Presupuesto" method="POST" onsubmit="limpiarMascaras(this)">
-                                    <div class="row" style="margin-top: 23px">
+                                    <div class="row align-items-center" style="margin-top: 23px">
                                         <div class="col-md-1">
-                                            <input type="text" name="txtIdArticulo" placeholder="Id. Artículo" value="${presupuestoDetSeleccionado.getArticulo().getIdArticulo()}"
-                                                   class="form-control" disabled="true">
+                                            <div class="form-floating mb-3 mb-md-0">
+                                                <input type="text" id="idArticulo" name="txtIdArticulo" placeholder="Id. Artículo" value="${presupuestoDetSeleccionado.getArticulo().getIdArticulo()}"
+                                                       class="form-control" disabled="true">
+                                                <label for="idArticulo">Id. Artículo</label>
+                                            </div>
                                         </div>
                                         <div class="col-md-3">
-                                            <input type="text" placeholder="Descripción" value="${presupuestoDetSeleccionado.getArticulo().getDescripcion()}"
-                                                   class="form-control"  disabled="true">
+                                            <div class="form-floating mb-3 mb-md-0">
+                                                <input type="text" id="descripcionArticulo" placeholder="Descripción" value="${presupuestoDetSeleccionado.getArticulo().getDescripcion()}"
+                                                       class="form-control"  disabled="true">
+                                                <label for="descripcionArticulo">Descripción</label>
+                                            </div>
                                         </div>
                                         <div class="col-md-1">
-                                            <input type="text" inputmode="numeric" name="txtCantidad"
-                                                   value="${presupuestoDetSeleccionado.getCantidad()}"
-                                                   <c:if test="${presupuestoDetSeleccionado.getArticulo().getIdArticulo() == null}">
-                                                       <c:out value="disabled='disabled'"/></c:if>  placeholder="Cantidad" class="form-control mask-miles" required="true">
+                                            <div class="form-floating mb-3 mb-md-0">
+                                                <input type="text" inputmode="numeric" id="cantidad" name="txtCantidad"
+                                                       value="${presupuestoDetSeleccionado.getCantidad()}"
+                                                       <c:if test="${presupuestoDetSeleccionado.getArticulo().getIdArticulo() == null}">
+                                                           <c:out value="disabled='disabled'"/></c:if>  placeholder="Cantidad" class="form-control mask-miles" required="true">
+                                                <label for="cantidad">Cantidad</label>
+                                            </div>
                                         </div>
                                         <%-- Referencia de precio: lo que se pagó en la última factura de compra
                                              de este artículo. La Factura de Compra actualiza art_precio_compra al
                                              guardar, así que este valor sigue siempre a la última compra real. --%>
                                         <div class="col-md-2">
-                                            <input type="text" class="form-control bg-light" disabled="true"
-                                                   title="Precio de la última compra de este artículo"
-                                                   placeholder="Últ. compra (Gs.)"
-                                                   value="<c:if test="${not empty presupuestoDetSeleccionado.getArticulo().getPrecioCompra()}"><fmt:formatNumber value="${presupuestoDetSeleccionado.getArticulo().getPrecioCompra()}" pattern="#,###"/></c:if>">
+                                            <div class="form-floating mb-3 mb-md-0">
+                                                <input type="text" id="ultimaCompra" class="form-control bg-light" disabled="true"
+                                                       title="Precio de la última compra de este artículo"
+                                                       placeholder="Últ. compra (Gs.)"
+                                                       value="<c:if test="${not empty presupuestoDetSeleccionado.getArticulo().getPrecioCompra()}"><fmt:formatNumber value="${presupuestoDetSeleccionado.getArticulo().getPrecioCompra()}" pattern="#,###"/></c:if>">
+                                                <label for="ultimaCompra">Últ. compra (Gs.)</label>
+                                            </div>
                                         </div>
                                         <div class="col-md-2">
-                                            <input type="text" inputmode="numeric" name="txtPrecioCompra" value="${presupuestoDetSeleccionado.getPrecioCompra()}"
-                                                   <c:if test="${presupuestoDetSeleccionado.getArticulo().getIdArticulo() == null}">
-                                                       <c:out value="disabled='disabled'"/></c:if>  placeholder="Precio de Compra" class="form-control mask-miles" required="true">
+                                            <div class="form-floating mb-3 mb-md-0">
+                                                <input type="text" inputmode="numeric" id="precioCompra" name="txtPrecioCompra" value="${presupuestoDetSeleccionado.getPrecioCompra()}"
+                                                       <c:if test="${presupuestoDetSeleccionado.getArticulo().getIdArticulo() == null}">
+                                                           <c:out value="disabled='disabled'"/></c:if>  placeholder="Precio de Compra" class="form-control mask-miles" required="true">
+                                                <label for="precioCompra">Precio de Compra</label>
+                                            </div>
                                         </div>
                                         <div class="col-md-2">
                                             <input type="hidden" name="idArt" value="${presupuestoDetSeleccionado.getArticulo().getIdArticulo()}">
