@@ -253,25 +253,37 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                             <div class="col custom-card">
                                 <h3>Cabecera</h3>
 
-                                <div class="row" style="margin-top: 23px">
-                                    <div class="col-md-2 d-flex align-items-center">
-                                        <label style="white-space: nowrap;" class="me-2">Pedido N°:</label>
-                                        <input type="text" value="${pedidoCompra.getIdPedido() == null ? newIdPedido : pedidoCompra.getIdPedido()}" class="form-control" disabled="">
-                                    </div>
-                                    <div class="col-md-2 d-flex align-items-center">
-                                        <label class="me-2">Usuario:</label>
-                                        <input type="text" value="${pedidoCompra.getUsuario().getUsername()}"
-                                               class="form-control" disabled="true">
-                                    </div>
-                                    <div class="col-md-2 d-flex align-items-center">
-                                        <label class="me-2">Fecha:</label>
-                                        <input value="<%=fechaFormateada %>" class="form-control" disabled="true">
-                                    </div>
-                                    <div class="col-md-2 d-flex align-items-center">
-                                        <label class="me-2">Sucursal:</label>
-                                            <%-- La sucursal es la del usuario logueado: se muestra, no se elige --%>
-                                            <input id="selectSucursal" class="form-control" type="text" readonly
-                                                   value="${pedidoCompra.sucursal.descripcion}" />
+                                <div class="card-body">
+                                    <div class="card-body">
+                                        <div class="row mb-3">
+                                            <div class="col-md-2">
+                                                <div class="form-floating mb-3 mb-md-0">
+                                                    <input class="form-control" id="nroPedido" type="text" placeholder="Pedido N°" disabled
+                                                           value="${pedidoCompra.getIdPedido() == null ? newIdPedido : pedidoCompra.getIdPedido()}" />
+                                                    <label for="nroPedido">Pedido N°</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <div class="form-floating mb-3 mb-md-0">
+                                                    <input class="form-control" id="usuario" type="text" placeholder="Usuario" disabled
+                                                           value="${pedidoCompra.getUsuario().getUsername()}" />
+                                                    <label for="usuario">Usuario</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <div class="form-floating mb-3 mb-md-0">
+                                                    <input class="form-control" id="fecha" type="text" placeholder="Fecha" disabled
+                                                           value="<%=fechaFormateada %>" />
+                                                    <label for="fecha">Fecha</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <div class="form-floating mb-3 mb-md-0">
+                                                    <%-- La sucursal es la del usuario logueado: se muestra, no se elige --%>
+                                                    <input class="form-control" id="selectSucursal" type="text" placeholder="Sucursal" readonly
+                                                           value="${pedidoCompra.sucursal.descripcion}" />
+                                                    <label for="selectSucursal">Sucursal</label>
+                                                </div>
                                                 <!--script para iniciallizar tooltipo y mostrar desde el servlet 
                                                 (servlet PedidoCompraServlet -> request.setAttribute("mensajeTooltip", "Debe seleccionar una sucursal");)-->
                                                 <script>
@@ -299,11 +311,15 @@ usuario inicio sesion, se debe agregar esta validación en cada una de las vista
                                                     });
                                                 </script>
                                                 </c:if>
-    
-                                    </div>
-                                    <div class="col-md-2 d-flex align-items-center">
-                                        <label class="me-2">Estado:</label>
-                                        <input type="text" value="${pedidoCompra.getEstado()}" class="form-control" disabled="true">
+                                            </div>
+                                            <div class="col-md-2">
+                                                <div class="form-floating mb-3 mb-md-0">
+                                                    <input class="form-control" id="estado" type="text" placeholder="Estado" disabled
+                                                           value="${pedidoCompra.getEstado()}" />
+                                                    <label for="estado">Estado</label>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 

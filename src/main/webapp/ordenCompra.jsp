@@ -316,67 +316,97 @@ usuario inicio sesion, se debe agregar esta validacion en cada una de las vistas
                             <div class="col custom-card">
                                 <h3>Cabecera</h3>
 
-                                <div class="row" style="margin-top: 23px">
-                                    <div class="col-md-2 d-flex align-items-center">
-                                        <label style="white-space: nowrap;" class="me-2">Orden N°:</label>
-                                        <input type="text" value="${ordenCompra.getIdOrdenCompra() == null ? newIdOrdenCompra : ordenCompra.getIdOrdenCompra()}" class="form-control" disabled="">
-                                    </div>
-                                    <div class="col-md-2 d-flex align-items-center">
-                                        <label class="me-2">Usuario:</label>
-                                        <input type="text" value="${ordenCompra.getUsuario().getUsername()}"
-                                               class="form-control" disabled="true">
-                                    </div>
-                                    <div class="col-md-2 d-flex align-items-center">
-                                        <label class="me-2">Fecha:</label>
-                                        <input value="<%=fechaFormateada %>" class="form-control" disabled="true">
-                                    </div>
-                                    <div class="col-md-2 d-flex align-items-center">
-                                        <label class="me-2">Estado:</label>
-                                        <input type="text" value="${ordenCompra.getEstado()}" class="form-control" disabled="true">
-                                    </div>
-                                    <div class="col-md-2 d-flex align-items-center">
-                                        <label style="white-space: nowrap;" class="me-2">Presupuesto N°:</label>
-                                        <input type="text" value="${ordenCompra.getPresupuesto().getIdPresupuesto()}" class="form-control" disabled="">
-                                    </div>
-                                    <div class="col-md-2 d-flex align-items-center">
-                                        <label style="white-space: nowrap;" class="me-2">Pedido N°:</label>
-                                        <input type="text" value="${ordenCompra.getPedidoCompra().getIdPedido()}" class="form-control" disabled="">
+                                <div class="card-body">
+                                    <div class="card-body">
+                                        <div class="row mb-3">
+                                            <div class="col-md-2">
+                                                <div class="form-floating mb-3 mb-md-0">
+                                                    <input class="form-control" id="nroOrden" type="text" placeholder="Orden N°" disabled
+                                                           value="${ordenCompra.getIdOrdenCompra() == null ? newIdOrdenCompra : ordenCompra.getIdOrdenCompra()}" />
+                                                    <label for="nroOrden">Orden N°</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <div class="form-floating mb-3 mb-md-0">
+                                                    <input class="form-control" id="usuario" type="text" placeholder="Usuario" disabled
+                                                           value="${ordenCompra.getUsuario().getUsername()}" />
+                                                    <label for="usuario">Usuario</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <div class="form-floating mb-3 mb-md-0">
+                                                    <input class="form-control" id="fecha" type="text" placeholder="Fecha" disabled
+                                                           value="<%=fechaFormateada %>" />
+                                                    <label for="fecha">Fecha</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <div class="form-floating mb-3 mb-md-0">
+                                                    <input class="form-control" id="estado" type="text" placeholder="Estado" disabled
+                                                           value="${ordenCompra.getEstado()}" />
+                                                    <label for="estado">Estado</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <div class="form-floating mb-3 mb-md-0">
+                                                    <input class="form-control" id="nroPresupuesto" type="text" placeholder="Presupuesto N°" disabled
+                                                           value="${ordenCompra.getPresupuesto().getIdPresupuesto()}" />
+                                                    <label for="nroPresupuesto">Presupuesto N°</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <div class="form-floating mb-3 mb-md-0">
+                                                    <input class="form-control" id="nroPedido" type="text" placeholder="Pedido N°" disabled
+                                                           value="${ordenCompra.getPedidoCompra().getIdPedido()}" />
+                                                    <label for="nroPedido">Pedido N°</label>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
                                 <!-- Proveedor -->
-                                <div class="row" style="margin-top: 23px">
-<!--                                    <div class="col-md-1">
-                                        <input type="text" placeholder="Id. Prov" value="${proveedorSeleccionado.getIdProveedor()}"
-                                               class="form-control" disabled="true">
-                                    </div>-->
-                                    <div class="col-md-4 d-flex align-items-center">
-                                        <label style="white-space: nowrap;" class="me-1">Proveedor:</label>
-                                        <input type="text" placeholder="Razon Social" value="${proveedorSeleccionado.getRazonSocial()}"
-                                               class="form-control" disabled="true">
-                                    </div>
-                                    <div class="col-md-2">
-                                        <input type="text" placeholder="Ruc" value="${proveedorSeleccionado.getRuc()}" class="form-control"
-                                               disabled="true">
-                                    </div>
-                                    <div class="col-md-2 d-flex align-items-center">
-                                        <label class="me-2">Sucursal:</label>
-                                        <%-- La sucursal es la del usuario logueado: se muestra, no se elige --%>
-                                        <input class="form-control" type="text" readonly
-                                               value="${sucursalSeleccionada.descripcion}" />
-                                    </div>
-                                    <div class="col-md-3 d-flex align-items-center">
-                                        <label style="white-space:" class="me-2">Condición de la compra:</label>
-                                        <form action="OrdenCompraServlet?menu=OrdenCompra&accion=GuardarCondicionCompra" method="POST">
-                                            <select name="condicionCompra" class="form-select" onchange="this.form.submit()"
-                                                <c:if test="${newIdOrdenCompra == null && ordenCompra.getIdOrdenCompra() == null 
-                                                              || not puedeInsertar || not empty esReadOnly}">
-                                                    disabled</c:if>>
-                                                <option value="">Seleccionar...</option>
-                                                <option value="Contado" ${ordenCompra.getCondicionCompra() eq 'Contado' ? 'selected' : ''}>Contado</option>
-                                                <option value="Credito" ${ordenCompra.getCondicionCompra() eq 'Credito' ? 'selected' : ''}>Crédito</option>
-                                            </select>
-                                        </form>
+                                <div class="card-body">
+                                    <div class="card-body">
+                                        <div class="row mb-3">
+                                            <div class="col-md-4">
+                                                <div class="form-floating mb-3 mb-md-0">
+                                                    <input class="form-control" id="razonSocial" type="text" placeholder="Razón Social" disabled
+                                                           value="${proveedorSeleccionado.getRazonSocial()}" />
+                                                    <label for="razonSocial">Proveedor</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <div class="form-floating mb-3 mb-md-0">
+                                                    <input class="form-control" id="ruc" type="text" placeholder="RUC" disabled
+                                                           value="${proveedorSeleccionado.getRuc()}" />
+                                                    <label for="ruc">RUC</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <div class="form-floating mb-3 mb-md-0">
+                                                    <%-- La sucursal es la del usuario logueado: se muestra, no se elige --%>
+                                                    <input class="form-control" id="sucursal" type="text" placeholder="Sucursal" readonly
+                                                           value="${sucursalSeleccionada.descripcion}" />
+                                                    <label for="sucursal">Sucursal</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <form action="OrdenCompraServlet?menu=OrdenCompra&accion=GuardarCondicionCompra" method="POST">
+                                                    <div class="form-floating mb-3 mb-md-0">
+                                                        <select id="condicionCompra" name="condicionCompra" class="form-select" onchange="this.form.submit()"
+                                                            <c:if test="${newIdOrdenCompra == null && ordenCompra.getIdOrdenCompra() == null 
+                                                                          || not puedeInsertar || not empty esReadOnly}">
+                                                                disabled</c:if>>
+                                                            <option value="">Seleccionar...</option>
+                                                            <option value="Contado" ${ordenCompra.getCondicionCompra() eq 'Contado' ? 'selected' : ''}>Contado</option>
+                                                            <option value="Credito" ${ordenCompra.getCondicionCompra() eq 'Credito' ? 'selected' : ''}>Crédito</option>
+                                                        </select>
+                                                        <label for="condicionCompra">Condición de la compra</label>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
